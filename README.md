@@ -46,12 +46,12 @@ A página busca a tap list a cada minuto, então as mudanças aparecem sozinhas.
 
 ## Tap list automática pelo xMenu
 
-Com autorização do suporte do xMenu, a tap list da **Aldeota** (loja 20476) vem direto da categoria "TAP LIST" do cardápio xMenu. O barman atualiza só no xMenu, e o site, a TV e os preços acompanham em até 1 minuto.
+Com autorização do suporte do xMenu, a tap list da **Aldeota** (loja 20476) e da **Maraponga** (loja 20409) vem direto da categoria "TAP LIST" do cardápio xMenu. O barman atualiza só no xMenu, e o site, a TV e os preços acompanham em até 1 minuto.
 
-- Ligação unidade → loja do xMenu: `DH_XMENU_LOJAS` em `site/inc/xmenu.php`. Para ligar a Maraponga, basta adicionar o código da loja dela.
+- Ligação unidade → loja do xMenu: `DH_XMENU_LOJAS` em `site/inc/xmenu.php`.
 - O site junta cada cerveja do xMenu com o cadastro do painel (foto e descrição) pelo nome, sem o tamanho. Se o nome for diferente, preencha **Nome no xMenu** na cerveja. As que não tiverem cadastro aparecem com o logo e um aviso no painel.
 - O resultado fica em cache por 1 minuto em `dados/xmenu-<unidade>.json`. Se o xMenu cair, o site usa a última lista lida.
-- Unidades sem xMenu (hoje, a Maraponga) usam a tap list montada no painel.
+- Uma unidade sem loja no xMenu usaria a tap list montada no painel.
 
 ## Publicar na Locaweb
 

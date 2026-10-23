@@ -2,8 +2,8 @@
 // Tap list vinda do cardápio xMenu (Netcontroll), com autorização do suporte do xMenu.
 // Lê a categoria "TAP LIST" da loja e junta com o catálogo do painel (foto, descrição).
 
-// Unidade => código da loja no xMenu. A Maraponga entra aqui quando tiver o código dela.
-const DH_XMENU_LOJAS = ['aldeota' => '20476'];
+// Unidade => código da loja no xMenu
+const DH_XMENU_LOJAS = ['aldeota' => '20476', 'maraponga' => '20409'];
 const DH_XMENU_GRUPO = 'TAP LIST';
 const DH_XMENU_CACHE_SEG = 60;
 
