@@ -1,22 +1,24 @@
+DirectoryIndex index.php index.html
+Options -Indexes
+
 # Força HTTPS e o endereço com www
 RewriteEngine On
 RewriteCond %{HTTPS} off [OR]
 RewriteCond %{HTTP_HOST} !^www\. [NC]
 RewriteRule ^ https://www.donkeyheadcervejaria.com.br%{REQUEST_URI} [L,R=301]
 
-# Cache de arquivos estáticos
+# Endereço antigo da página inicial
+RewriteRule ^index\.html$ / [L,R=301]
+
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType text/css "access plus 7 days"
   ExpiresByType application/javascript "access plus 7 days"
-  ExpiresByType image/svg+xml "access plus 30 days"
   ExpiresByType image/png "access plus 30 days"
   ExpiresByType image/jpeg "access plus 30 days"
-  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType video/mp4 "access plus 30 days"
 </IfModule>
 
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/css application/javascript image/svg+xml
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
 </IfModule>
-
-ErrorDocument 404 /index.html

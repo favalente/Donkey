@@ -1,0 +1,489 @@
+<?php
+// Painel da Donkey Head: cadastro de cervejas e tap list de cada unidade.
+require __DIR__ . '/../inc/dados.php';
+
+const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
+const DH_ARQ_FALHAS = DH_RAIZ . '/dados/login-falhas.json';
+const DH_DIR_UPLOAD = DH_RAIZ . '/uploads/cervejas';
+const DH_MAX_FALHAS = 5;
+const DH_BLOQUEIO_MIN = 15;
+
+header('X-Robots-Tag: noindex, nofollow');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: same-origin');
+
+session_name('dh_admin');
+session_set_cookie_params([
+    'httponly' => true,
+    'samesite' => 'Strict',
+    'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    'path' => dirname($_SERVER['SCRIPT_NAME']) . '/',
+]);
+session_start();
+
+if (empty($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(16));
+}
+
+function config_admin(): ?array
+{
+    $c = json_decode((string) @file_get_contents(DH_ARQ_ADMIN), true);
+    return is_array($c) && !empty($c['hash']) ? $c : null;
+}
+
+function gravar_json(string $arq, array $dados): void
+{
+    if (!is_dir(dirname($arq))) {
+        mkdir(dirname($arq), 0755, true);
+    }
+    file_put_contents($arq, json_encode($dados), LOCK_EX);
+}
+
+function ir(string $destino, ?string $msg = null): void
+{
+    if ($msg) {
+        $_SESSION['flash'] = $msg;
+    }
+    // Caminho absoluto do painel, para o redirecionamento funcionar em qualquer servidor
+    $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/';
+    header('Location: ' . $base . ltrim($destino, './'));
+    exit;
+}
+
+function exigir_post(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !hash_equals($_SESSION['csrf'], (string) ($_POST['csrf'] ?? ''))) {
+        http_response_code(400);
+        exit('Sessão expirada. Volte e tente novamente.');
+    }
+}
+
+function ip_cliente(): string
+{
+    return hash('sha256', $_SERVER['REMOTE_ADDR'] ?? '');
+}
+
+function bloqueado(): bool
+{
+    $f = json_decode((string) @file_get_contents(DH_ARQ_FALHAS), true) ?: [];
+    $r = $f[ip_cliente()] ?? null;
+    return $r && $r['n'] >= DH_MAX_FALHAS && time() - $r['t'] < DH_BLOQUEIO_MIN * 60;
+}
+
+function registrar_falha(bool $limpar = false): void
+{
+    $f = json_decode((string) @file_get_contents(DH_ARQ_FALHAS), true) ?: [];
+    foreach ($f as $k => $r) {
+        if (time() - $r['t'] > DH_BLOQUEIO_MIN * 60) {
+            unset($f[$k]);
+        }
+    }
+    if ($limpar) {
+        unset($f[ip_cliente()]);
+    } else {
+        $r = $f[ip_cliente()] ?? ['n' => 0];
+        $f[ip_cliente()] = ['n' => $r['n'] + 1, 't' => time()];
+    }
+    gravar_json(DH_ARQ_FALHAS, $f);
+}
+
+// Recebe a foto do rótulo, valida e regrava em JPEG (máx. 900px) para ficar leve.
+function salvar_imagem(array $arq, string $id): string
+{
+    if ($arq['error'] !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Falha no envio da foto (código ' . $arq['error'] . '). Tente uma imagem menor.');
+    }
+    $info = @getimagesize($arq['tmp_name']);
+    $tipos = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+    if (!$info || !isset($tipos[$info[2]])) {
+        throw new RuntimeException('A foto precisa ser JPG, PNG ou WEBP.');
+    }
+    if (!is_dir(DH_DIR_UPLOAD)) {
+        mkdir(DH_DIR_UPLOAD, 0755, true);
+    }
+    $nome = $id . '-' . date('YmdHis') . '.jpg';
+    $destino = DH_DIR_UPLOAD . '/' . $nome;
+
+    if (function_exists('imagecreatefromstring')) {
+        $img = @imagecreatefromstring((string) file_get_contents($arq['tmp_name']));
+        if (!$img) {
+            throw new RuntimeException('Não foi possível ler a foto.');
+        }
+        if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+            $ori = (@exif_read_data($arq['tmp_name'])['Orientation'] ?? 1);
+            $giro = [3 => 180, 6 => -90, 8 => 90][$ori] ?? 0;
+            if ($giro) {
+                $img = imagerotate($img, $giro, 0);
+            }
+        }
+        $w = imagesx($img);
+        $h = imagesy($img);
+        $escala = min(1, 900 / max($w, $h));
+        $nw = (int) round($w * $escala);
+        $nh = (int) round($h * $escala);
+        $nova = imagecreatetruecolor($nw, $nh);
+        imagefill($nova, 0, 0, imagecolorallocate($nova, 255, 255, 255));
+        imagecopyresampled($nova, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        imagejpeg($nova, $destino, 82);
+    } else {
+        $nome = $id . '-' . date('YmdHis') . '.' . $tipos[$info[2]];
+        $destino = DH_DIR_UPLOAD . '/' . $nome;
+        move_uploaded_file($arq['tmp_name'], $destino);
+    }
+    return 'uploads/cervejas/' . $nome;
+}
+
+function apagar_upload(string $caminho): void
+{
+    if (strpos($caminho, 'uploads/cervejas/') === 0) {
+        @unlink(DH_RAIZ . '/' . $caminho);
+    }
+}
+
+$acao = $_GET['acao'] ?? 'taplist';
+$config = config_admin();
+$erro = null;
+
+// Primeiro acesso: cria a senha do painel
+if (!$config) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        exigir_post();
+        $s = (string) ($_POST['senha'] ?? '');
+        if (strlen($s) < 8) {
+            $erro = 'A senha precisa ter pelo menos 8 caracteres.';
+        } elseif ($s !== ($_POST['senha2'] ?? '')) {
+            $erro = 'As senhas não conferem.';
+        } else {
+            gravar_json(DH_ARQ_ADMIN, ['hash' => password_hash($s, PASSWORD_DEFAULT)]);
+            session_regenerate_id(true);
+            $_SESSION['logado'] = true;
+            ir('./', 'Senha criada! Bem-vindo ao painel.');
+        }
+    }
+    $tela = 'primeiro-acesso';
+} elseif (empty($_SESSION['logado'])) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        exigir_post();
+        if (bloqueado()) {
+            $erro = 'Muitas tentativas erradas. Aguarde ' . DH_BLOQUEIO_MIN . ' minutos.';
+        } elseif (password_verify((string) ($_POST['senha'] ?? ''), $config['hash'])) {
+            registrar_falha(true);
+            session_regenerate_id(true);
+            $_SESSION['logado'] = true;
+            ir('./');
+        } else {
+            registrar_falha();
+            sleep(1);
+            $erro = 'Senha incorreta.';
+        }
+    }
+    $tela = 'login';
+} else {
+    $tela = $acao;
+    $dados = dh_carregar();
+    $porId = dh_por_id($dados);
+
+    try {
+        switch ($acao) {
+            case 'sair':
+                exigir_post();
+                session_destroy();
+                ir('./');
+
+            case 'salvar-taplist':
+                exigir_post();
+                $u = (string) ($_POST['unidade'] ?? '');
+                if (!isset(DH_UNIDADES[$u])) {
+                    ir('./');
+                }
+                $lista = array_values(array_filter((array) ($_POST['torneira'] ?? []), fn($id) => isset($porId[$id])));
+                $dados['torneiras'][$u] = $lista;
+                dh_salvar($dados);
+                ir('./?unidade=' . $u, 'Tap list da ' . DH_UNIDADES[$u] . ' atualizada no site!');
+
+            case 'salvar-cerveja':
+                exigir_post();
+                $id = (string) ($_POST['id'] ?? '');
+                $nova = !isset($porId[$id]);
+                $nome = trim((string) ($_POST['nome'] ?? ''));
+                if ($nome === '') {
+                    throw new RuntimeException('Informe o nome da cerveja.');
+                }
+                if ($nova) {
+                    $base = dh_slug($nome);
+                    $id = $base;
+                    for ($i = 2; isset($porId[$id]); $i++) {
+                        $id = $base . '-' . $i;
+                    }
+                }
+                $num = fn($k) => str_replace(',', '.', trim((string) ($_POST[$k] ?? '')));
+                $c = $porId[$id] ?? ['id' => $id, 'imagem' => ''];
+                $c = array_merge($c, [
+                    'nome' => $nome,
+                    'estilo' => trim((string) ($_POST['estilo'] ?? '')),
+                    'pais' => in_array($_POST['pais'] ?? '', DH_PAISES, true) ? $_POST['pais'] : '',
+                    'abv' => $num('abv'),
+                    'ibu' => $num('ibu'),
+                    'srm' => $num('srm'),
+                    'ebc' => $num('ebc'),
+                    'descricao' => trim(str_replace("\r\n", "\n", (string) ($_POST['descricao'] ?? ''))),
+                    'ativa' => !empty($_POST['ativa']),
+                ]);
+                if (!empty($_FILES['imagem']['name'])) {
+                    $antiga = $c['imagem'];
+                    $c['imagem'] = salvar_imagem($_FILES['imagem'], $id);
+                    apagar_upload($antiga);
+                }
+                if ($c['imagem'] === '') {
+                    $c['imagem'] = 'assets/img/rotulo-padrao.png';
+                }
+                if ($nova) {
+                    $dados['cervejas'][] = $c;
+                } else {
+                    foreach ($dados['cervejas'] as $i => $x) {
+                        if ($x['id'] === $id) {
+                            $dados['cervejas'][$i] = $c;
+                        }
+                    }
+                }
+                usort($dados['cervejas'], fn($a, $b) => strcasecmp(dh_slug($a['nome']), dh_slug($b['nome'])));
+                dh_salvar($dados);
+                ir('./?acao=cervejas', '"' . $nome . '" salva!');
+
+            case 'excluir-cerveja':
+                exigir_post();
+                $id = (string) ($_POST['id'] ?? '');
+                if (isset($porId[$id])) {
+                    $dados['cervejas'] = array_values(array_filter($dados['cervejas'], fn($c) => $c['id'] !== $id));
+                    foreach ($dados['torneiras'] as $u => $lista) {
+                        $dados['torneiras'][$u] = array_values(array_filter($lista, fn($x) => $x !== $id));
+                    }
+                    apagar_upload($porId[$id]['imagem']);
+                    dh_salvar($dados);
+                }
+                ir('./?acao=cervejas', '"' . ($porId[$id]['nome'] ?? '') . '" excluída.');
+
+            case 'trocar-senha':
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    exigir_post();
+                    $s = (string) ($_POST['senha'] ?? '');
+                    if (!password_verify((string) ($_POST['atual'] ?? ''), $config['hash'])) {
+                        $erro = 'Senha atual incorreta.';
+                    } elseif (strlen($s) < 8) {
+                        $erro = 'A nova senha precisa ter pelo menos 8 caracteres.';
+                    } elseif ($s !== ($_POST['senha2'] ?? '')) {
+                        $erro = 'As senhas não conferem.';
+                    } else {
+                        gravar_json(DH_ARQ_ADMIN, ['hash' => password_hash($s, PASSWORD_DEFAULT)]);
+                        ir('./', 'Senha alterada.');
+                    }
+                }
+                break;
+
+            case 'editar':
+            case 'cervejas':
+            case 'taplist':
+                break;
+
+            default:
+                $tela = 'taplist';
+        }
+    } catch (RuntimeException $ex) {
+        $erro = $ex->getMessage();
+        $tela = $acao === 'salvar-cerveja' ? 'editar' : 'cervejas';
+    }
+}
+
+$flash = $_SESSION['flash'] ?? null;
+unset($_SESSION['flash']);
+$csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">';
+?>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Painel · Donkey Head</title>
+  <link rel="icon" href="../favicon.ico">
+  <link rel="stylesheet" href="admin.css?v=1">
+</head>
+<body>
+<?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
+  <main class="login">
+    <img src="../assets/img/logo-donkey-head.png" alt="Donkey Head" width="110">
+    <h1>Painel Donkey Head</h1>
+    <?php if ($tela === 'primeiro-acesso'): ?>
+      <p>Primeiro acesso: crie a senha do painel. Ela será usada pela equipe para atualizar as cervejas e a tap list.</p>
+    <?php endif; ?>
+    <?php if ($erro): ?><p class="erro"><?= e($erro) ?></p><?php endif; ?>
+    <form method="post">
+      <?= $csrf ?>
+      <label>Senha <input type="password" name="senha" required autofocus autocomplete="<?= $tela === 'login' ? 'current-password' : 'new-password' ?>"></label>
+      <?php if ($tela === 'primeiro-acesso'): ?>
+        <label>Repita a senha <input type="password" name="senha2" required autocomplete="new-password"></label>
+      <?php endif; ?>
+      <button class="btn primario"><?= $tela === 'login' ? 'Entrar' : 'Criar senha' ?></button>
+    </form>
+  </main>
+<?php else: ?>
+  <header class="topo">
+    <a class="marca" href="./"><img src="../assets/img/logo-donkey-head.png" alt="" width="28"> Painel</a>
+    <nav>
+      <a href="./" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>">Tap List</a>
+      <a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>">Cervejas</a>
+      <a href="../" target="_blank">Ver site ↗</a>
+    </nav>
+  </header>
+  <main class="conteudo">
+    <?php if ($flash): ?><p class="ok"><?= e($flash) ?></p><?php endif; ?>
+    <?php if ($erro): ?><p class="erro"><?= e($erro) ?></p><?php endif; ?>
+
+    <?php if ($tela === 'taplist'):
+        $uSel = isset(DH_UNIDADES[$_GET['unidade'] ?? '']) ? $_GET['unidade'] : array_key_first(DH_UNIDADES);
+        $opcoes = $dados['cervejas'];
+    ?>
+      <h1>Tap List</h1>
+      <p class="dica">Escolha a cerveja de cada torneira e toque em <strong>Salvar</strong>. Para desengatar, escolha "— vazia —". Só aparecem aqui as cervejas cadastradas em <a href="./?acao=cervejas">Cervejas</a>.</p>
+      <div class="abas">
+        <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
+          <a href="./?unidade=<?= $u ?>" class="<?= $u === $uSel ? 'ativo' : '' ?>"><?= e($nomeU) ?> <small><?= count($dados['torneiras'][$u]) ?></small></a>
+        <?php endforeach; ?>
+      </div>
+      <form method="post" action="./?acao=salvar-taplist" class="taplist">
+        <?= $csrf ?>
+        <input type="hidden" name="unidade" value="<?= e($uSel) ?>">
+        <?php $atuais = $dados['torneiras'][$uSel]; $linhas = max(count($atuais) + 3, 8);
+        for ($i = 0; $i < $linhas; $i++): $sel = $atuais[$i] ?? ''; ?>
+          <label class="linha<?= $sel ? ' cheia' : '' ?>">
+            <span class="num"><?= $i + 1 ?></span>
+            <select name="torneira[]">
+              <option value="">— vazia —</option>
+              <?php foreach ($opcoes as $c): ?>
+                <option value="<?= e($c['id']) ?>" <?= $c['id'] === $sel ? 'selected' : '' ?>><?= e($c['nome']) ?> · <?= e($c['estilo']) ?><?= empty($c['ativa']) ? ' (oculta)' : '' ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+        <?php endfor; ?>
+        <p class="dica">Precisa de mais torneiras? Salve, e novas linhas vazias aparecem.</p>
+        <div class="barra-salvar"><button class="btn primario">Salvar tap list da <?= e(DH_UNIDADES[$uSel]) ?></button></div>
+      </form>
+
+    <?php elseif ($tela === 'cervejas'):
+        $onde = [];
+        foreach ($dados['torneiras'] as $u => $lista) {
+            foreach ($lista as $id) {
+                $onde[$id][] = DH_UNIDADES[$u];
+            }
+        }
+    ?>
+      <div class="titulo-acao">
+        <h1>Cervejas <small><?= count($dados['cervejas']) ?></small></h1>
+        <a class="btn primario" href="./?acao=editar">+ Nova cerveja</a>
+      </div>
+      <input type="search" id="busca" placeholder="Buscar por nome ou estilo…" class="busca">
+      <ul class="lista">
+        <?php foreach ($dados['cervejas'] as $c): ?>
+          <li data-busca="<?= e(mb_strtolower($c['nome'] . ' ' . $c['estilo'])) ?>">
+            <a href="./?acao=editar&id=<?= e($c['id']) ?>">
+              <img src="../<?= e($c['imagem']) ?>" alt="" width="56" height="56" loading="lazy">
+              <span class="info">
+                <strong><?= e($c['nome']) ?></strong>
+                <span><?= e($c['estilo']) ?><?= $c['abv'] !== '' ? ' · ' . e(dh_num($c['abv'])) . '%' : '' ?></span>
+                <span class="tags">
+                  <?php if (empty($c['ativa'])): ?><em class="tag cinza">Oculta no site</em><?php endif; ?>
+                  <?php foreach ($onde[$c['id']] ?? [] as $u): ?><em class="tag">Engatada · <?= e($u) ?></em><?php endforeach; ?>
+                </span>
+              </span>
+              <span class="seta">›</span>
+            </a>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+
+    <?php elseif ($tela === 'editar'):
+        $id = (string) ($_GET['id'] ?? $_POST['id'] ?? '');
+        $c = $porId[$id] ?? ['id' => '', 'nome' => '', 'estilo' => '', 'pais' => '', 'abv' => '', 'ibu' => '', 'srm' => '', 'ebc' => '', 'descricao' => '', 'imagem' => '', 'ativa' => true];
+        if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $c = array_merge($c, array_intersect_key($_POST, $c));
+            $c['ativa'] = !empty($_POST['ativa']);
+        }
+    ?>
+      <p><a href="./?acao=cervejas">‹ Voltar para Cervejas</a></p>
+      <h1><?= $c['id'] ? 'Editar ' . e($c['nome']) : 'Nova cerveja' ?></h1>
+      <form method="post" action="./?acao=salvar-cerveja" enctype="multipart/form-data" class="form-cerveja">
+        <?= $csrf ?>
+        <input type="hidden" name="id" value="<?= e($c['id']) ?>">
+        <div class="foto-atual">
+          <?php if ($c['imagem']): ?><img src="../<?= e($c['imagem']) ?>" alt="Rótulo atual" id="previa"><?php else: ?><img src="" alt="" id="previa" hidden><?php endif; ?>
+          <label>Foto do rótulo <?= $c['imagem'] ? '(envie para trocar)' : '' ?>
+            <input type="file" name="imagem" accept="image/jpeg,image/png,image/webp" id="arquivo">
+          </label>
+          <small>De preferência quadrada. Pode tirar a foto direto do celular.</small>
+        </div>
+        <label>Nome <input name="nome" value="<?= e($c['nome']) ?>" required maxlength="80"></label>
+        <div class="duas">
+          <label>Estilo <input name="estilo" value="<?= e($c['estilo']) ?>" placeholder="Ex.: American IPA" maxlength="80"></label>
+          <label>Escola / país
+            <select name="pais">
+              <option value="">—</option>
+              <?php foreach (DH_PAISES as $p): ?><option <?= $p === $c['pais'] ? 'selected' : '' ?>><?= e($p) ?></option><?php endforeach; ?>
+            </select>
+          </label>
+        </div>
+        <div class="quatro">
+          <label>ABV (%) <input name="abv" value="<?= e(dh_num($c['abv'])) ?>" inputmode="decimal" maxlength="6"></label>
+          <label>IBU <input name="ibu" value="<?= e(dh_num($c['ibu'])) ?>" inputmode="decimal" maxlength="6"></label>
+          <label>SRM <input name="srm" value="<?= e(dh_num($c['srm'])) ?>" inputmode="decimal" maxlength="6"></label>
+          <label>EBC <input name="ebc" value="<?= e(dh_num($c['ebc'])) ?>" inputmode="decimal" maxlength="6"></label>
+        </div>
+        <label>Descrição <small>(deixe uma linha em branco entre os parágrafos)</small>
+          <textarea name="descricao" rows="9"><?= e($c['descricao']) ?></textarea>
+        </label>
+        <label class="check"><input type="checkbox" name="ativa" value="1" <?= !empty($c['ativa']) ? 'checked' : '' ?>> Mostrar no catálogo "Nossas cervejas" do site</label>
+        <div class="barra-salvar"><button class="btn primario">Salvar cerveja</button></div>
+      </form>
+      <?php if ($c['id']): ?>
+        <form method="post" action="./?acao=excluir-cerveja" class="excluir" onsubmit="return confirm('Excluir &quot;<?= e($c['nome']) ?>&quot; de vez? Para só esconder do site, desmarque &quot;Mostrar no catálogo&quot;.');">
+          <?= $csrf ?>
+          <input type="hidden" name="id" value="<?= e($c['id']) ?>">
+          <button class="btn perigo">Excluir cerveja</button>
+        </form>
+      <?php endif; ?>
+
+    <?php elseif ($tela === 'trocar-senha'): ?>
+      <h1>Trocar senha</h1>
+      <form method="post" action="./?acao=trocar-senha" class="form-cerveja">
+        <?= $csrf ?>
+        <label>Senha atual <input type="password" name="atual" required autocomplete="current-password"></label>
+        <label>Nova senha <input type="password" name="senha" required autocomplete="new-password"></label>
+        <label>Repita a nova senha <input type="password" name="senha2" required autocomplete="new-password"></label>
+        <button class="btn primario">Trocar senha</button>
+      </form>
+    <?php endif; ?>
+
+    <footer class="rodape">
+      <a href="./?acao=trocar-senha">Trocar senha</a>
+      <form method="post" action="./?acao=sair"><?= $csrf ?><button class="link">Sair</button></form>
+    </footer>
+  </main>
+  <script>
+    var busca = document.getElementById('busca');
+    if (busca) busca.addEventListener('input', function () {
+      var q = busca.value.toLowerCase().trim();
+      document.querySelectorAll('.lista li').forEach(function (li) {
+        li.hidden = q && li.getAttribute('data-busca').indexOf(q) === -1;
+      });
+    });
+    var arq = document.getElementById('arquivo');
+    if (arq) arq.addEventListener('change', function () {
+      var p = document.getElementById('previa');
+      if (arq.files[0]) { p.src = URL.createObjectURL(arq.files[0]); p.hidden = false; }
+    });
+    document.querySelectorAll('.taplist select').forEach(function (s) {
+      s.addEventListener('change', function () { s.parentNode.classList.toggle('cheia', !!s.value); });
+    });
+  </script>
+<?php endif; ?>
+</body>
+</html>

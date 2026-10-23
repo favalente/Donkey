@@ -1,0 +1,5 @@
+# Dados gravados pelo painel no servidor
+site/dados/*
+!site/dados/.htaccess
+site/uploads/cervejas/*
+!site/uploads/cervejas/.gitkeep

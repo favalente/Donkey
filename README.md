@@ -1,57 +1,64 @@
 # Site Donkey Head Cervejaria
 
-Site novo de www.donkeyheadcervejaria.com.br. É um site estático (HTML, CSS e JS, sem banco de dados), hospedado na Locaweb.
+Remodelação de www.donkeyheadcervejaria.com.br com o conteúdo do site atual (história, rótulos, galeria, contatos) e um **painel admin** para a equipe atualizar as cervejas e a **tap list** de cada unidade.
+
+Funciona na hospedagem Linux da Locaweb (PHP 7.4+), **sem banco de dados**: o painel grava tudo em um arquivo JSON.
 
 ## Estrutura
 
 ```
-site/                  tudo que vai para a hospedagem (public_html)
-  index.html           página única: história, cervejas, unidades, chope delivery, eventos
-  .htaccess            força HTTPS + www e ativa cache
-  assets/css/style.css
-  assets/js/main.js    aviso de 18+, menu mobile, animações
-  assets/img/          logo, imagem de compartilhamento (og.png)
-.github/workflows/deploy.yml   publica na Locaweb a cada push na branch main
+site/                         tudo que vai para public_html
+  index.php                   página do site
+  admin/                      painel da equipe → www.donkeyheadcervejaria.com.br/admin/
+  inc/dados.php               leitura/gravação dos dados (bloqueado na web)
+  dados-iniciais/cervejas.json  32 rótulos importados do site antigo (bloqueado na web)
+  dados/                      criado pelo painel no servidor: cervejas, tap list, senha e backups diários
+  uploads/cervejas/           fotos de rótulos enviadas pelo painel
+  assets/                     CSS, JS, vídeo do chope, logo, rótulos e galeria (imagens otimizadas)
+.github/workflows/deploy.yml  publica na Locaweb a cada push na main
 ```
 
-Para ver o site no computador, abra `site/index.html` no navegador.
+`dados/` e `uploads/` **nunca** são enviados nem apagados pela publicação. O que a equipe faz no painel não se perde quando o site é atualizado.
+
+## Painel (admin)
+
+Endereço: `/admin/`
+
+- **Primeiro acesso:** a tela pede para criar a senha. Abra o `/admin/` **logo depois de publicar**, porque quem chegar primeiro define a senha.
+- **Tap List:** escolha a cerveja de cada torneira, separado por unidade (Aldeota e Maraponga), e toque em Salvar. O site atualiza na hora.
+- **Cervejas:** cadastre, edite ou exclua rótulos. Dá para mandar a foto do rótulo direto do celular, porque ela é reduzida automaticamente. Para tirar um rótulo do catálogo sem apagá-lo, desmarque "Mostrar no catálogo".
+- Segurança: senha com hash, proteção CSRF e bloqueio de 15 minutos após 5 senhas erradas.
+- Se o painel disser que não consegue gravar, dê permissão de escrita (755 ou 775) às pastas `dados` e `uploads/cervejas` no Gerenciador de Arquivos da Locaweb.
+- Esqueceu a senha? Apague `dados/admin.json` pelo FTP e crie uma nova no `/admin/`.
 
 ## Publicar na Locaweb
 
-### Opção A: manual
-1. Painel da Locaweb → Hospedagem → **Gerenciador de Arquivos** (ou FTP com FileZilla).
-2. **Faça backup** do conteúdo atual de `public_html`.
-3. Envie todo o conteúdo da pasta `site/` (incluindo o `.htaccess`) para `public_html`.
+Antes de tudo, **faça backup** do `public_html` atual.
 
-### Opção B: automática (GitHub Actions)
-No GitHub, abra o repositório → Settings → Secrets and variables → Actions e crie:
+**Manual:** envie o conteúdo da pasta `site/`, incluindo os arquivos `.htaccess`, para `public_html`. Os arquivos do site antigo podem ficar, porque o `index.php` tem prioridade e o `index.html` antigo redireciona para a nova home.
+
+**Automático:** no GitHub, abra Settings → Secrets and variables → Actions e crie:
 
 | Secret | Valor (Painel Locaweb → Hospedagem → FTP) |
 |---|---|
-| `LOCAWEB_FTP_HOST` | endereço do FTP (ex.: `ftp.donkeyheadcervejaria.com.br`) |
+| `LOCAWEB_FTP_HOST` | endereço do FTP |
 | `LOCAWEB_FTP_USER` | usuário do FTP |
 | `LOCAWEB_FTP_PASSWORD` | senha do FTP |
 | `LOCAWEB_FTP_DIR` | opcional; padrão `public_html/` |
 
-A partir daí, toda alteração em `site/` que entrar na branch `main` é publicada sozinha. Também dá para rodar manualmente em Actions → "Publicar na Locaweb" → Run workflow.
-Se a conexão falhar, troque `protocol: ftps` por `protocol: ftp` em `deploy.yml`.
+Toda alteração em `site/` na branch `main` é publicada sozinha. Se a conexão falhar, troque `protocol: ftps` por `ftp` no `deploy.yml`.
 
-## Conferir antes de publicar
+## Testar no computador
 
-As informações foram tiradas de fontes públicas (imprensa local, Untappd, cadastros). Confirme:
+```
+php -S localhost:8000 -t site
+```
+Depois abra http://localhost:8000 e http://localhost:8000/admin/.
 
-- [ ] Telefone/WhatsApp **(85) 98212-4149** (usado em todos os botões de WhatsApp)
-- [ ] Endereços: Rua Norvinda Pires, **42** (Aldeota). Uma fonte cita o nº 100. Av. Godofredo Maciel, 2127 (Maraponga)
-- [ ] Instagrams `@donkeyheadcervejaria` e `@donkeyheadmaraponga`
-- [ ] Rótulos e descrições das cervejas (seção `#cervejas` do `index.html`)
-- [ ] Texto "Nossa história", que é uma proposta e deve ser ajustado com a história real
-- [ ] Chope delivery: barris a partir de 30 L e até 2 estilos por chopeira
-- [ ] Link do cardápio online (`donkey-head-cervejaria.ola.click`)
-- [ ] Horários de funcionamento (hoje o site manda conferir no Instagram)
+## O que mudou em relação ao site antigo
 
-## Melhorias recomendadas
-
-- **Logo oficial**: substitua `site/assets/img/logo.svg` (o atual é provisório).
-- **Fotos**: coloque uma foto do bar/torneiras em `site/assets/img/hero.jpg` (1920px, < 400 KB) e adicione em `.hero` no CSS:
-  `url("../img/hero.jpg") center / cover no-repeat,` antes de `var(--bg);`.
-- Fotos das latas/copos para os cards de cerveja.
+- Visual novo e responsivo, sem Bootstrap/jQuery, e com aviso de 18+.
+- O vídeo do topo era um GIF de 91 MB e virou um MP4 de menos de 1 MB. A galeria e os rótulos também foram otimizados (de 108 MB para cerca de 11 MB no total).
+- Nova seção **Tap List** por unidade e o selo "Engatada" nos rótulos.
+- Textos mantidos. Foram corrigidos só trechos duplicados por engano no HTML antigo (em Rye Se Lascar, West Coast Chocolate Stout e Pele Encarnada) e alguns erros de digitação.
+- Vale conferir no painel: a **Peste Negra** tem SRM 4,7 e EBC 9,2, valores iguais aos da StigmAPA, provável erro do site antigo. Na **Pardal Negro**, o SRM 71,1 não bate com o EBC 14.
