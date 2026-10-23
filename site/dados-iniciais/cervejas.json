@@ -102,7 +102,8 @@
       "imagem": "assets/img/cervejas/premium_lager.jpg",
       "ativa": true,
       "preco_300": "12.00",
-      "preco_1l": "30.00"
+      "preco_1l": "30.00",
+      "nome_xmenu": "Premium Lager"
     },
     {
       "id": "galo-campina",

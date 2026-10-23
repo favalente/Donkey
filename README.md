@@ -38,11 +38,18 @@ Endereços (tela cheia, TV na horizontal):
 - Aldeota: `https://www.donkeyheadcervejaria.com.br/tv/?unidade=aldeota`
 - Maraponga: `https://www.donkeyheadcervejaria.com.br/tv/?unidade=maraponga`
 
-A página busca a tap list do painel a cada minuto, então o que o barman salva aparece sozinho. Mostra número da torneira, rótulo, nome, estilo, ABV, IBU e preços de 300 ml e 1 L. Se houver mais de 12 torneiras, alterna as páginas a cada 15 s. Se a internet cair, mantém a última lista na tela.
+A página busca a tap list a cada minuto, então as mudanças aparecem sozinhas. Mostra número da torneira, rótulo, nome, estilo, ABV, IBU e preços de 300 ml e 1 L. Se houver mais de 12 torneiras, alterna as páginas a cada 15 s. Se a internet cair, mantém a última lista na tela.
 
 **Aparelho:** o Roku não tem navegador de verdade. Use um Fire TV Stick ou um Chromecast com Google TV com o app **Fully Kiosk Browser**, configurado com o endereço acima como página inicial e para abrir ao ligar.
 
-**xMenu:** os dados de produtos do xMenu (Netcontroll) bloqueiam acesso de outros sites (`ORIGEM_NAO_AUTORIZADA`). Se o xMenu autorizar o domínio do site ou fornecer uma API oficial, a tap list pode passar a vir direto de lá.
+## Tap list automática pelo xMenu
+
+Com autorização do suporte do xMenu, a tap list da **Aldeota** (loja 20476) vem direto da categoria "TAP LIST" do cardápio xMenu. O barman atualiza só no xMenu, e o site, a TV e os preços acompanham em até 1 minuto.
+
+- Ligação unidade → loja do xMenu: `DH_XMENU_LOJAS` em `site/inc/xmenu.php`. Para ligar a Maraponga, basta adicionar o código da loja dela.
+- O site junta cada cerveja do xMenu com o cadastro do painel (foto e descrição) pelo nome, sem o tamanho. Se o nome for diferente, preencha **Nome no xMenu** na cerveja. As que não tiverem cadastro aparecem com o logo e um aviso no painel.
+- O resultado fica em cache por 1 minuto em `dados/xmenu-<unidade>.json`. Se o xMenu cair, o site usa a última lista lida.
+- Unidades sem xMenu (hoje, a Maraponga) usam a tap list montada no painel.
 
 ## Publicar na Locaweb
 

@@ -2,15 +2,18 @@
 require __DIR__ . '/inc/dados.php';
 
 $dados = dh_carregar();
-$porId = dh_por_id($dados);
 $catalogo = array_values(array_filter($dados['cervejas'], fn($c) => !empty($c['ativa'])));
+$taplists = [];
 $engatadas = [];
 foreach (DH_UNIDADES as $u => $_) {
-    foreach ($dados['torneiras'][$u] as $id) {
-        $engatadas[$id][] = $u;
+    $taplists[$u] = dh_taplist($dados, $u);
+    foreach ($taplists[$u] as $c) {
+        if ($c['id']) {
+            $engatadas[$c['id']][] = $u;
+        }
     }
 }
-$temTaplist = (bool) $engatadas;
+$temTaplist = (bool) array_filter($taplists);
 
 $galeria = [1, 2, 3, 4, 24, 28, 34, 35, 36, 49, 5, 6, 47, 45, 29, 30, 9, 15, 11, 12, 13, 23, 26, 16, 17, 18, 19, 7, 21, 25, 8, 22, 27, 31, 32, 33, 37, 38, 39, 40, 41, 42, 43, 50];
 $cardapio = 'https://xmenu.com.br/pedidos/?loja=20476&camp=XMENU-TESTE';
@@ -154,25 +157,25 @@ function detalhe(array $c): string
         </div>
         <div class="tabs" role="tablist">
           <?php $primeira = true; foreach (DH_UNIDADES as $u => $nomeU): ?>
-            <button class="tab" role="tab" id="tab-<?= $u ?>" aria-controls="tap-<?= $u ?>" aria-selected="<?= $primeira ? 'true' : 'false' ?>"><?= e($nomeU) ?> <span class="contagem"><?= count($dados['torneiras'][$u]) ?></span></button>
+            <button class="tab" role="tab" id="tab-<?= $u ?>" aria-controls="tap-<?= $u ?>" aria-selected="<?= $primeira ? 'true' : 'false' ?>"><?= e($nomeU) ?> <span class="contagem"><?= count($taplists[$u]) ?></span></button>
           <?php $primeira = false; endforeach; ?>
         </div>
         <?php $primeira = true; foreach (DH_UNIDADES as $u => $nomeU): ?>
           <div class="taps" role="tabpanel" id="tap-<?= $u ?>" aria-labelledby="tab-<?= $u ?>" <?= $primeira ? '' : 'hidden' ?>>
-            <?php if (!$dados['torneiras'][$u]): ?>
+            <?php if (!$taplists[$u]): ?>
               <p class="vazio">Tap list da unidade <?= e($nomeU) ?> em atualização. Pergunte ao nosso barman!</p>
             <?php endif; ?>
             <ol>
-              <?php foreach ($dados['torneiras'][$u] as $n => $id): if (!isset($porId[$id])) continue; $c = $porId[$id]; ?>
+              <?php foreach ($taplists[$u] as $n => $c): ?>
                 <li>
-                  <button class="tap" data-cerveja="<?= e($id) ?>">
+                  <button class="tap"<?= $c['id'] ? ' data-cerveja="' . e($c['id']) . '"' : ' disabled' ?>>
                     <span class="tap-num"><?= $n + 1 ?></span>
                     <img src="<?= e($c['imagem']) ?>" alt="" loading="lazy" width="64" height="64">
                     <span class="tap-info">
                       <strong><?= e($c['nome']) ?></strong>
                       <span><?= e($c['estilo']) ?></span>
-                      <?php $p300 = dh_preco($c['preco_300'] ?? ''); $p1l = dh_preco($c['preco_1l'] ?? ''); if ($p300 || $p1l): ?>
-                        <span class="tap-preco"><?php if ($p300): ?><span>300 ml <?= e($p300) ?></span><?php endif; ?><?php if ($p1l): ?><span>1 L <?= e($p1l) ?></span><?php endif; ?></span>
+                      <?php if ($c['precos']): ?>
+                        <span class="tap-preco"><?php foreach ($c['precos'] as $p): ?><span><?= e($p['tam']) ?> <?= e(dh_preco($p['valor'])) ?></span><?php endforeach; ?></span>
                       <?php endif; ?>
                     </span>
                     <span class="tap-abv"><?= $c['abv'] !== '' ? e(dh_num($c['abv'])) . '%' : '' ?><?php if ($c['ibu'] !== ''): ?><small><?= e($c['ibu']) ?> IBU</small><?php endif; ?></span>
@@ -182,9 +185,6 @@ function detalhe(array $c): string
             </ol>
           </div>
         <?php $primeira = false; endforeach; ?>
-        <?php if ($dados['atualizado']): ?>
-          <p class="note">Atualizado em <?= e(date('d/m/Y \à\s H:i', strtotime($dados['atualizado']))) ?>.</p>
-        <?php endif; ?>
       </div>
     </section>
     <?php endif; ?>

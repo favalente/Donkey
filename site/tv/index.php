@@ -102,8 +102,7 @@ header('Cache-Control: no-store');
           '<div class="info"><div class="nome' + (t.nome.length > 24 ? ' muito-longo' : t.nome.length > 18 ? ' longo' : '') + '">' + esc(t.nome) + '</div>' +
           '<div class="estilo">' + esc(t.estilo) + (meta ? ' · ' + meta : '') + '</div></div>' +
           '<div class="precos">' +
-            (t.p300 ? '<div class="preco"><small>300 ML</small>' + esc(t.p300) + '</div>' : '') +
-            (t.p1l ? '<div class="preco"><small>1 L</small>' + esc(t.p1l) + '</div>' : '') +
+            (t.precos || []).map(function (p) { return '<div class="preco"><small>' + esc(p.tam) + '</small>' + esc(p.valor) + '</div>'; }).join('') +
           '</div></div>';
       }).join('') : '<div class="vazio">Tap list em atualização<br>Pergunte ao nosso barman!</div>';
       var dots = '';

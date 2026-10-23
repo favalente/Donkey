@@ -225,6 +225,7 @@ if (!$config) {
                     'pais' => in_array($_POST['pais'] ?? '', DH_PAISES, true) ? $_POST['pais'] : '',
                     'abv' => $num('abv'),
                     'ibu' => $num('ibu'),
+                    'nome_xmenu' => trim((string) ($_POST['nome_xmenu'] ?? '')),
                     'preco_300' => $num('preco_300'),
                     'preco_1l' => $num('preco_1l'),
                     'descricao' => trim(str_replace("\r\n", "\n", (string) ($_POST['descricao'] ?? ''))),
@@ -307,7 +308,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=2">
+  <link rel="stylesheet" href="admin.css?v=3">
 </head>
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
@@ -345,13 +346,35 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         $opcoes = $dados['cervejas'];
     ?>
       <h1>Tap List</h1>
-      <p class="dica">Escolha a cerveja de cada torneira e toque em <strong>Salvar</strong>. Para desengatar, escolha "— vazia —". Só aparecem aqui as cervejas cadastradas em <a href="./?acao=cervejas">Cervejas</a>.</p>
       <div class="abas">
         <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
-          <a href="./?unidade=<?= $u ?>" class="<?= $u === $uSel ? 'ativo' : '' ?>"><?= e($nomeU) ?> <small><?= count($dados['torneiras'][$u]) ?></small></a>
+          <a href="./?unidade=<?= $u ?>" class="<?= $u === $uSel ? 'ativo' : '' ?>"><?= e($nomeU) ?> <small><?= count(dh_taplist($dados, $u)) ?></small></a>
         <?php endforeach; ?>
       </div>
-      <form method="post" action="./?acao=salvar-taplist" class="taplist">
+      <?php if (dh_usa_xmenu($uSel)): $doXmenu = dh_xmenu_taplist($uSel, $dados['cervejas']); ?>
+        <p class="aviso">A tap list da <?= e(DH_UNIDADES[$uSel]) ?> vem <strong>automaticamente do xMenu</strong> (categoria "TAP LIST"). Para trocar uma cerveja, mude no xMenu: o site e a TV atualizam em até 1 minuto. Preços também vêm do xMenu.</p>
+        <?php if ($doXmenu === null): ?>
+          <p class="erro">Não foi possível ler o xMenu agora. Tente de novo em alguns minutos.</p>
+        <?php else: ?>
+          <ul class="lista">
+            <?php foreach ($doXmenu as $n => $c): ?>
+              <li><a href="./?acao=<?= $c['id'] ? 'editar&id=' . e($c['id']) : 'editar&nome=' . e(rawurlencode($c['nome'])) ?>">
+                <span class="num-tap"><?= $n + 1 ?></span>
+                <img src="../<?= e($c['imagem']) ?>" alt="" width="56" height="56" loading="lazy">
+                <span class="info">
+                  <strong><?= e($c['nome']) ?></strong>
+                  <span><?= e(implode(' · ', array_map(fn($p) => $p['tam'] . ' ' . dh_preco($p['valor']), $c['precos']))) ?></span>
+                  <?php if (!$c['id']): ?><span class="tags"><em class="tag alerta">Sem cadastro: toque para adicionar foto e descrição</em></span><?php endif; ?>
+                </span>
+                <span class="seta">›</span>
+              </a></li>
+            <?php endforeach; ?>
+          </ul>
+          <p class="dica">Se uma cerveja aparecer "sem cadastro" mas já existir em Cervejas com outro nome, preencha o campo <strong>Nome no xMenu</strong> dela.</p>
+        <?php endif; ?>
+      <?php else: ?>
+      <p class="dica">Escolha a cerveja de cada torneira e toque em <strong>Salvar</strong>. Para desengatar, escolha "— vazia —". Só aparecem aqui as cervejas cadastradas em <a href="./?acao=cervejas">Cervejas</a>.</p>
+      <form method="post"" action="./?acao=salvar-taplist" class="taplist">
         <?= $csrf ?>
         <input type="hidden" name="unidade" value="<?= e($uSel) ?>">
         <?php $atuais = $dados['torneiras'][$uSel]; $linhas = max(count($atuais) + 3, 8);
@@ -369,6 +392,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <p class="dica">Precisa de mais torneiras? Salve, e novas linhas vazias aparecem.</p>
         <div class="barra-salvar"><button class="btn primario">Salvar tap list da <?= e(DH_UNIDADES[$uSel]) ?></button></div>
       </form>
+      <?php endif; ?>
 
     <?php elseif ($tela === 'cervejas'):
         $onde = [];
@@ -422,7 +446,9 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
           </label>
           <small>De preferência quadrada. Pode tirar a foto direto do celular.</small>
         </div>
-        <label>Nome <input name="nome" value="<?= e($c['nome']) ?>" required maxlength="80"></label>
+        <label>Nome <input name="nome" value="<?= e($c['nome'] ?: ($_GET['nome'] ?? '')) ?>" required maxlength="80"></label>
+        <label>Nome no xMenu <small>(só se for diferente do nome acima, sem o tamanho. Ex.: "Premium Lager")</small>
+          <input name="nome_xmenu" value="<?= e($c['nome_xmenu'] ?? '') ?>" maxlength="80"></label>
         <div class="duas">
           <label>Estilo <input name="estilo" value="<?= e($c['estilo']) ?>" placeholder="Ex.: American IPA" maxlength="80"></label>
           <label>Escola / país

@@ -4,6 +4,7 @@
 // o site usa dados-iniciais/cervejas.json, que veio do site antigo.
 
 const DH_RAIZ = __DIR__ . '/..';
+require_once __DIR__ . '/xmenu.php';
 const DH_ARQ_DADOS = DH_RAIZ . '/dados/cervejas.json';
 const DH_ARQ_INICIAL = DH_RAIZ . '/dados-iniciais/cervejas.json';
 const DH_UNIDADES = ['aldeota' => 'Aldeota', 'maraponga' => 'Maraponga'];
@@ -82,30 +83,54 @@ function dh_preco($v): string
     return is_numeric($v) ? 'R$ ' . number_format((float) $v, 2, ',', '.') : '';
 }
 
+// Torneiras de uma unidade: do xMenu quando a unidade está ligada a ele, senão do painel.
+// Cada item é a cerveja do catálogo (ou dados do xMenu, se não cadastrada) com "precos".
+function dh_taplist(array $dados, string $unidade): array
+{
+    $xmenu = dh_xmenu_taplist($unidade, $dados['cervejas']);
+    if ($xmenu !== null) {
+        return $xmenu;
+    }
+    $porId = dh_por_id($dados);
+    $lista = [];
+    foreach ($dados['torneiras'][$unidade] ?? [] as $id) {
+        if (!isset($porId[$id])) {
+            continue;
+        }
+        $c = $porId[$id];
+        $c['precos'] = [];
+        foreach (['preco_300' => '300 ml', 'preco_1l' => '1 L'] as $k => $tam) {
+            if (is_numeric($c[$k] ?? '')) {
+                $c['precos'][] = ['tam' => $tam, 'valor' => (float) $c[$k]];
+            }
+        }
+        $lista[] = $c;
+    }
+    return $lista;
+}
+
+function dh_usa_xmenu(string $unidade): bool
+{
+    return isset(DH_XMENU_LOJAS[$unidade]);
+}
+
 // Torneiras de uma unidade, no formato usado pela tela da TV
 function dh_tap_tv(string $unidade): array
 {
     if (!isset(DH_UNIDADES[$unidade])) {
         $unidade = array_key_first(DH_UNIDADES);
     }
-    $dados = dh_carregar();
-    $porId = dh_por_id($dados);
     $taps = [];
-    foreach ($dados['torneiras'][$unidade] as $n => $id) {
-        if (!isset($porId[$id])) {
-            continue;
-        }
-        $c = $porId[$id];
+    foreach (dh_taplist(dh_carregar(), $unidade) as $n => $c) {
         $taps[] = [
             'n' => $n + 1,
             'nome' => $c['nome'],
             'estilo' => $c['estilo'],
             'abv' => $c['abv'] !== '' ? dh_num($c['abv']) . '%' : '',
             'ibu' => $c['ibu'] !== '' ? $c['ibu'] . ' IBU' : '',
-            'p300' => dh_preco($c['preco_300'] ?? ''),
-            'p1l' => dh_preco($c['preco_1l'] ?? ''),
+            'precos' => array_map(fn($p) => ['tam' => strtoupper($p['tam']), 'valor' => dh_preco($p['valor'])], array_slice($c['precos'], 0, 2)),
             'img' => '../' . $c['imagem'],
         ];
     }
-    return ['unidade' => DH_UNIDADES[$unidade], 'taps' => $taps, 'atualizado' => $dados['atualizado']];
+    return ['unidade' => DH_UNIDADES[$unidade], 'taps' => $taps];
 }
