@@ -1,0 +1,27 @@
+name: Publicar na Locaweb
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enviar arquivos por FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.LOCAWEB_FTP_HOST }}
+          username: ${{ secrets.LOCAWEB_FTP_USER }}
+          password: ${{ secrets.LOCAWEB_FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./site/
+          server-dir: ${{ secrets.LOCAWEB_FTP_DIR || 'public_html/' }}
