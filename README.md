@@ -61,4 +61,4 @@ Depois abra http://localhost:8000 e http://localhost:8000/admin/.
 - O vídeo do topo era um GIF de 91 MB e virou um MP4 de menos de 1 MB. A galeria e os rótulos também foram otimizados (de 108 MB para cerca de 11 MB no total).
 - Nova seção **Tap List** por unidade e o selo "Engatada" nos rótulos.
 - Textos mantidos. Foram corrigidos só trechos duplicados por engano no HTML antigo (em Rye Se Lascar, West Coast Chocolate Stout e Pele Encarnada) e alguns erros de digitação.
-- Vale conferir no painel: a **Peste Negra** tem SRM 4,7 e EBC 9,2, valores iguais aos da StigmAPA, provável erro do site antigo. Na **Pardal Negro**, o SRM 71,1 não bate com o EBC 14.
+- As fichas mostram só ABV e IBU (SRM e EBC foram removidos).

@@ -18,7 +18,7 @@ $cardapio = 'https://xmenu.com.br/pedidos/?loja=20476&camp=XMENU-TESTE';
 function ficha(array $c): string
 {
     $itens = [];
-    foreach (['abv' => 'ABV', 'ibu' => 'IBU', 'srm' => 'SRM', 'ebc' => 'EBC'] as $k => $rot) {
+    foreach (['abv' => 'ABV', 'ibu' => 'IBU'] as $k => $rot) {
         if (($c[$k] ?? '') !== '') {
             $itens[] = '<div><dt>' . $rot . '</dt><dd>' . e(dh_num($c[$k])) . ($k === 'abv' ? '%' : '') . '</dd></div>';
         }
@@ -57,7 +57,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=2">
+  <link rel="stylesheet" href="assets/css/style.css?v=3">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -218,11 +218,9 @@ function detalhe(array $c): string
           <?php endforeach; ?>
         </div>
         <details class="legendas">
-          <summary>O que significam ABV, IBU, SRM e EBC?</summary>
+          <summary>O que significam ABV e IBU?</summary>
           <dl>
             <dt>IBU</dt><dd>International Bitterness Unit (Unidade Internacional de Amargor): unidade que permite classificar uma cerveja pelo nível de amargor apresentado.</dd>
-            <dt>SRM</dt><dd>Standard Reference Method, uma escala usada nos Estados Unidos para determinar a coloração da cerveja. Ele pode variar entre 2 - 3, que é Amarelo-Palha (Lite American Lager), até 40+, conhecido por Preto opaco (Russian Imperial Stout).</dd>
-            <dt>EBC</dt><dd>European Brewing Convention (Convenção de Cervejeiros da Europa), escala usada na Europa para determinar a coloração da cerveja. A escala europeia classifica como cerveja clara a que tiver a cor correspondente a menos de 20 unidades EBC, e como cerveja escura a que tiver cor correspondente a 20 unidades EBC ou mais.</dd>
             <dt>ABV</dt><dd>Alcohol by Volume (álcool por volume), também conhecida por gradação alcoólica, foi adotada internacionalmente para indicar o percentual em volume da quantidade de álcool em uma bebida.</dd>
           </dl>
         </details>

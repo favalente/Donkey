@@ -7,8 +7,6 @@
       "pais": "EUA",
       "abv": "5.4",
       "ibu": "45",
-      "srm": "4.7",
-      "ebc": "9.2",
       "descricao": "Uma Pale Ale que utiliza lúpulos americanos, aromática de corpo médio-baixo. Boa drinkability, refrescante, lupulada e equilibrada.\n\nO aroma é acentuado por um duplo dry hopping, trazendo notas cítricas, florais e de frutas tropicais. No sabor, um amargor moderado e limpo permitindo assim que você deguste vários exemplares. Cheers!",
       "imagem": "assets/img/cervejas/strigm_apa1.jpg",
       "ativa": true
@@ -20,8 +18,6 @@
       "pais": "EUA",
       "abv": "6.6",
       "ibu": "70",
-      "srm": "5.6",
-      "ebc": "13.4",
       "descricao": "Uma IPA com uma carga generosa de lúpulo americano. Sua receita é inspirada na autêntica West Coast, trazendo um forte amargor e a complexidade dos lúpulos Simcoe, Azacca e Mosaic, unindo nota cítricas, resinosas, amadeiradas e florais. Para dar ainda mais balanço foi adicionado um malte de tosta média.\n\nO nome MandacarIPA é uma homenagem ao mandacaru, uma planta bastante conhecida no nosso Ceará, embora possua espinhos, floresce lindamente alegrando o coração do sertanejo na esperança da chuva, como já dizia o grande poeta Luiz Gonzaga: \"Mandacaru quando fulora na seca é o sinal que a chuva chega no sertão...\"",
       "imagem": "assets/img/cervejas/mandacar_ipa.jpg",
       "ativa": true
@@ -33,8 +29,6 @@
       "pais": "EUA",
       "abv": "7.0",
       "ibu": "80",
-      "srm": "29.8",
-      "ebc": "78",
       "descricao": "Esta é uma Black IPA autêntica, uma junção do estilo American IPA com um torrado leve e corpo médio, o que a torna fácil de beber, quebrando o mito de que cervejas escuras são \"pesadas\" ao paladar.\n\nUtilizamos apenas um tipo de lúpulo nesta receita, processo conhecido como single hop. Possui amargor e aroma potente advindo do lúpulo Centennial.\n\nUma homenagem ao Assum Preto, um belo pássaro fácil de encontrar pelo sertão nordestino, ele canta apenas à noite quando está bastante escuro, ou como diz o cearense, no brêu!",
       "imagem": "assets/img/cervejas/assum_preto.jpg",
       "ativa": true
@@ -46,8 +40,6 @@
       "pais": "Irlanda",
       "abv": "4.5",
       "ibu": "23",
-      "srm": "11.2",
-      "ebc": "28.2",
       "descricao": "Uma cerveja leve, refrescante e fácil de beber. Um dos estilos mais populares na Irlanda.\n\nLigeiramente maltada no balanço, com retrogosto que lembra caramelo e biscoito, possui final seco. Baixa presença de lúpulo, proporcionando um amargor discreto.\n\nO nome homenageia um passaro que vive em bandos nas caatingas em quase todo o Nordeste brasileiro.",
       "imagem": "assets/img/cervejas/galo_campina.jpg",
       "ativa": true
@@ -59,8 +51,6 @@
       "pais": "Inglaterra",
       "abv": "12.0",
       "ibu": "100",
-      "srm": "4.7",
-      "ebc": "9.2",
       "descricao": "Escura, intensamente saborosa, forte, orientada ao sabor do malte tostado. Em sua receita está presente aveia, melaço, coco queimado e baunilha.\n\nO conjunto remete a notas de café, chocolate, frutas secas, coco e baunilha. Apesar da sua potência, o álcool está muito bem inserido.\n\nNa receita utilizamos maltes importados de dupla tosta para oferecer uma maior complexidade.",
       "imagem": "assets/img/cervejas/peste_negra.jpg",
       "ativa": true
@@ -72,8 +62,6 @@
       "pais": "Inglaterra",
       "abv": "4.5",
       "ibu": "24",
-      "srm": "3.5",
-      "ebc": "7",
       "descricao": "Criamos esta receita pensando naqueles que estão iniciando no mundo da cerveja artesanal ou não são simpatizantes de extremo amargor.\n\nUma cerveja clara levemente lupulada, com altíssima drinkability e refrescância. Aroma moderadamente baixo de lúpulo cítrico, maltado leve sem caramelo. Uma excelente alternativa às cervejas tipo pilsen do mercado.",
       "imagem": "assets/img/cervejas/velas_do_mucuripe.jpg",
       "ativa": true
@@ -85,8 +73,6 @@
       "pais": "EUA",
       "abv": "7",
       "ibu": "60",
-      "srm": "4.4",
-      "ebc": "8.7",
       "descricao": "Uma IPA que utiliza centeio (rye) em sua composição, proporcionando um leve condimentado, textura macia e um final mais seco sem dulçor residual.\n\nUma cerveja bem lupulada que traz um amargor na medida e aroma acentuado por um generoso dry hop com uma mescla de modernos lúpulos americanos que conferem com notas cítricas, florais, resinosas, de frutas tropicais e de caroço.\n\nO nome é uma homenagem a um personagem conhecido da cultura popular cearense, adivinha quem é?",
       "imagem": "assets/img/cervejas/rye_se_lascar.jpg",
       "ativa": true
@@ -98,8 +84,6 @@
       "pais": "EUA",
       "abv": "4.5",
       "ibu": "24",
-      "srm": "3.5",
-      "ebc": "7",
       "descricao": "Gosta de cerveja? Gosta de café? E que tal unir os dois mundos? Essa é a proposta da Arábica Typica, o nome refere-se a espécie do café verde utilizado na maturação.\n\nUma cerveja leve, refrescante e exótica: feche os olhos e sinta o aroma de café, abra os olhos e verá uma cerveja dourada.",
       "imagem": "assets/img/cervejas/arabica_typica.jpg",
       "ativa": true
@@ -111,8 +95,6 @@
       "pais": "EUA",
       "abv": "6.5",
       "ibu": "60",
-      "srm": "5.3",
-      "ebc": "10.4",
       "descricao": "New England IPA, também conhecida por outros nomes como Juicy IPA ou Vermont IPA, é uma variação de IPA que surgiu no nordeste dos EUA.\n\nPossui cor amarelada, turva e aromas intensos remetendo a frutas tropicais como goiaba, mamão, manga, melão e lichia.\n\nUm diferencial em relação à IPA tradicional é o baixo amargor e dulçor, corpo mais aveludado advindo do uso de aveia nesta receita, e sabores de lúpulo bem presentes.\n\nCaldo de Bila é uma expressão cearense que se refere a algo leve, justamente uma referência ao amargor mais ameno deste estilo.",
       "imagem": "assets/img/cervejas/caldo_de_bila.jpg",
       "ativa": true
@@ -124,8 +106,6 @@
       "pais": "Alemanha",
       "abv": "5.2",
       "ibu": "11",
-      "srm": "4",
-      "ebc": "8.8",
       "descricao": "Esta é uma clássica cerveja de trigo alemã. Clara, refrescante, com alta carbonatação, final seco e sensação na boca cremosa.\n\nNo aroma possui notas frutadas de banana e fenólicas do cravo, ambos provenientes da fermentação. Uma cerveja que combina muito bem com o nosso clima!",
       "imagem": "assets/img/cervejas/asa_branca.jpg",
       "ativa": true
@@ -137,8 +117,6 @@
       "pais": "Bélgica",
       "abv": "5.2",
       "ibu": "12",
-      "srm": "4.0",
-      "ebc": "7.9",
       "descricao": "Uma ale de estilo belga à base de trigo, cerveja bem refrescante, condimentada, perfumada e saborosa.\n\nAo invés da tradicional semente de coentro utilizamos o manjericão, que em conjunto com as raspas de casca de laranja proporcionou um incrível aroma e sabor cítrico delicioso.\n\nComplementam o conjunto notas herbais e picantes, possui baixo nível de amargor.",
       "imagem": "assets/img/cervejas/vixe_bier.jpg",
       "ativa": true
@@ -150,8 +128,6 @@
       "pais": "Alemanha",
       "abv": "3.5",
       "ibu": "3",
-      "srm": "3.5",
-      "ebc": "7",
       "descricao": "Berliner Weiss é uma cerveja de trigo originalmente alemã, ácida, clara, refrescante e de baixo teor alcoólico. Possui acidez limpa e moderada, além de alta carbonatação para dar um efeito frisante.\n\nO nome Severina Sour faz alusão à Catharina Sour, uma Berliner que utiliza frutas da região sul do Brasil, já a Severina Sour é uma série que engloba frutas tropicais da região nordeste.",
       "imagem": "assets/img/cervejas/severina_sour_caju.jpg",
       "ativa": true
@@ -163,8 +139,6 @@
       "pais": "EUA",
       "abv": "5.6",
       "ibu": "50",
-      "srm": "40.6",
-      "ebc": "80",
       "descricao": "Esta cerveja possui corpo e sabores escuros típicos das Stouts, porém possui um caráter mais agressivo e amargo de lúpulos americanos.\n\nPossui notas de café e chocolate, provenientes dos maltes escuros e da adição de cacau e chocolate na maturação.",
       "imagem": "assets/img/cervejas/west_coast_chocolate_stout.jpg",
       "ativa": true
@@ -176,8 +150,6 @@
       "pais": "EUA",
       "abv": "4",
       "ibu": "40",
-      "srm": "3.2",
-      "ebc": "6.4",
       "descricao": "A IPA é um estilo que caiu nas graças dos amantes da cerveja artesanal, a versão session é uma boa alternativa para quem gosta de amargor mas deseja tomar uma cerveja mais leve, ou seja, com menos teor alcoólico.\n\nLeveza e refrescância são pontos altos do estilo, itens que combinam muito bem com o clima da nossa terrinha.",
       "imagem": "assets/img/cervejas/soft_hop.jpg",
       "ativa": true
@@ -189,8 +161,6 @@
       "pais": "EUA",
       "abv": "5.0",
       "ibu": "38",
-      "srm": "19.6",
-      "ebc": "38.7",
       "descricao": "Uma cerveja âmbar, com boa lupulagem de amargor, de corpo médio baixo e sabor maltado de caramelo. A combinação de lúpulos americanos com o caramelado dos maltes traz um sabor único para esta cerveja.\n\nO nome é uma homenagem a tribo indígena dos “Peles Vermelhas”. Popularmente no interior do Ceará nossos avós costumavam chamar de “encarnada” qualquer coisa que tivesse a cor vermelha!",
       "imagem": "assets/img/cervejas/pele_encarnada.jpg",
       "ativa": true
@@ -202,8 +172,6 @@
       "pais": "EUA",
       "abv": "4.5",
       "ibu": "29",
-      "srm": "3.55",
-      "ebc": "7",
       "descricao": "Uma receita desenvolvida para agradar a todos os paladares, com um amargor médio baixo, corpo leve, refrescante e aroma balanceado entre malte e lúpulo.\n\nClara e com altíssima drinkability (fácil de beber). Aroma médio baixo de lúpulos americanos que remete a frutas tropicais. Como se diz no Ceará, essa é pra tomar de ruma!",
       "imagem": "assets/img/cervejas/miolo_de_pote.jpg",
       "ativa": true
@@ -215,8 +183,6 @@
       "pais": "EUA",
       "abv": "6.6",
       "ibu": "66",
-      "srm": "4.2",
-      "ebc": "9.8",
       "descricao": "Todo o nosso amor fez parte da produção desta cerveja. Uma pancada de lúpulo tal qual o vocal de Robert Plant através de insanos 06 dry hops.\n\nUma variedade tal qual os solos de Jimmy Page através de 5 lúpulos distintos.\n\nTudo isso para proporcionar sabores e aromas de lúpulos intensos como a banda Led Zeppelin.",
       "imagem": "assets/img/cervejas/all_my_love.jpg",
       "ativa": true
@@ -228,8 +194,6 @@
       "pais": "EUA",
       "abv": "6.5",
       "ibu": "65",
-      "srm": "4.2",
-      "ebc": "9.8",
       "descricao": "O nome é um trocadilho que faz a alusão à absurdas doses do lúpulo americano CITRA através de 04 dry hops, proporcionando um incrível aroma.\n\nO rótulo faz homenagem a Romero Brito, um artista plástico nordestino de grande renome internacional.\n\nO estilo New England IPA, também conhecido por outros nomes como Juicy IPA ou Vermont IPA, é uma variação de IPA que surgiu no nordeste dos EUA.",
       "imagem": "assets/img/cervejas/citr_anela.jpg",
       "ativa": true
@@ -241,8 +205,6 @@
       "pais": "Bélgica",
       "abv": "9",
       "ibu": "33",
-      "srm": "5.5",
-      "ebc": "10.9",
       "descricao": "Uma cerveja pouco condimentada, frutada, seca e forte, com um agradável sabor arredondado de malte e um amargor firme.\n\nApesar do teor aolcoólico possui surpreendente drinkability e baixo dulçor, uma estratégia para isto foi utilizar açucar demerara.",
       "imagem": "assets/img/cervejas/padim_cicu_tripel.jpg",
       "ativa": true
@@ -254,8 +216,6 @@
       "pais": "Bélgica",
       "abv": "10",
       "ibu": "22",
-      "srm": "",
-      "ebc": "",
       "descricao": "Um estilo de origem belga, cerveja complexa e forte onde o malte é o grande protagonista. Traz uma mistura de maltes escuros que proporcionam aroma e sabor caramelado intenso.\n\nPresença de ésteres frutados provenientes da complexa levedura de abadia que utilizamos nesta receita.\n\nEmbora possua teor alcoólico alto, o dulçor residual é baixo e corpo médio, o que a torna fácil de beber. O aquecimento alcoólico é perceptível, mas não desagradável, algo desejado no estilo.",
       "imagem": "assets/img/cervejas/padim_cicu_10.jpg",
       "ativa": true
@@ -267,8 +227,6 @@
       "pais": "EUA",
       "abv": "5.3",
       "ibu": "31",
-      "srm": "3.4",
-      "ebc": "6.7",
       "descricao": "Nesta cerveja fizemos a adição de mel de rapadura na fervura, e goiaba na maturação a frio. Leveza e refrescância são os pontos altos, itens que combinam muito bem com o clima da nossa terrinha.\n\nA goiaba traz um grande complemento ao conjunto, sendo protagonista nesta receita. O nome é uma homenagem ao bar de um grande amigo da Donkey Head, o Mel Amigo.",
       "imagem": "assets/img/cervejas/mel_da_goiaba.jpg",
       "ativa": true
@@ -280,8 +238,6 @@
       "pais": "Bélgica",
       "abv": "8",
       "ibu": "60",
-      "srm": "5.1",
-      "ebc": "10.8",
       "descricao": "Metanoia significa, em uma definição simples, uma mudança profunda de pensamento sobre o que você acredita, isso é o que esperamos de você quando degustar esta cerveja, uma IPA diferente do tradicional.\n\nImagine uma fusão de uma boa tripel com o amargor de uma IPA! Esta cerveja mescla os aromas frutados e fenólicos provenientes da levedura belga com os aromas cítricos, resinosos e florais dos lúpulos utilizados.\n\nO resultado é uma cerveja excepcional e complexa, mais seca e alcoólica como é o costume da escola belga.",
       "imagem": "assets/img/cervejas/metanoia1.jpg",
       "ativa": true
@@ -293,8 +249,6 @@
       "pais": "EUA",
       "abv": "8.7",
       "ibu": "35",
-      "srm": "3.6",
-      "ebc": "7.1",
       "descricao": "Cerveja, champagne ou vinho, que tal os três? Uma cerveja diferente de tudo que você já provou, essa é a proposta da nossa Brut IPA.\n\nNesta receita única utilizamos o Nelson Sauvin, um famoso lupulo da Nova Zelândia, raro de encontrar, sim, porém, mais raro ainda é o seu perfil com notas de cabernet sauvignon blanc, acentuadas pela adição de uva verde na maturação.\n\nO conjunto lembra um bom vinho branco aliado a uma alta carbonatação, trazendo o efeito frisante do champagne, uma combinação única e inesquecível.",
       "imagem": "assets/img/cervejas/brut_de_sauvin1.jpg",
       "ativa": true
@@ -306,8 +260,6 @@
       "pais": "Inglaterra",
       "abv": "10.0",
       "ibu": "80",
-      "srm": "71.1",
-      "ebc": "14.0",
       "descricao": "Escura, intensamente saborosa, forte, orientada ao sabor do malte tostado. Em sua receita está presente aveia, castanha e coco.\n\nO conjunto remete a notas de café, chocolate, castanha e coco. Apesar da sua potência, o álcool está muito bem inserido.\n\nEsta cerveja homenageia um pássaro muito comum em nossa região e ao mesmo tempo o picolé de castanha mais famoso do Ceará. O pardal negro é conhecido como o macho dominante, só há um por bando.",
       "imagem": "assets/img/cervejas/pardal_negro.jpg",
       "ativa": true
@@ -319,8 +271,6 @@
       "pais": "Alemanha",
       "abv": "3.5",
       "ibu": "3",
-      "srm": "3.5",
-      "ebc": "7",
       "descricao": "Berliner Weiss é uma cerveja de trigo originalmente alemã, ácida, clara, refrescante e de baixo teor alcoólico. Possui acidez limpa e moderada, além de alta carbonatação para dar um efeito frisante.\n\nO nome Severina Sour faz alusão à Catharina Sour, uma Berliner que utiliza frutas da região sul do Brasil, já a Severina Sour é uma série que engloba frutas tropicais da região nordeste.",
       "imagem": "assets/img/cervejas/severina_sour_acerola.jpg",
       "ativa": true
@@ -332,8 +282,6 @@
       "pais": "Alemanha",
       "abv": "5",
       "ibu": "20",
-      "srm": "3.55",
-      "ebc": "7.1",
       "descricao": "Este estilo foi criado em Munique em 1894 na Cervejaria Spaten para competir com as cervejas claras tipo Pilsner. Atualmente é o estilo mais popular no sul da Alemanha.\n\nFizemos esta cerveja seguindo à risca a receita tradicional alemã: cor dourada, perfil orientado a sabor de malte com um final suave e seco. O lúpulo se apresenta de forma bem sutil.",
       "imagem": "assets/img/cervejas/reliz.jpg",
       "ativa": true
@@ -345,8 +293,6 @@
       "pais": "EUA",
       "abv": "6",
       "ibu": "65",
-      "srm": "15",
-      "ebc": "30.3",
       "descricao": "Esta é uma IPA de cor avermelhada, com uma carga generosa de lúpulos americanos Mosaic e Citra. Amargor potente aliado ao sabor de maltes com 3 tipos de tosta, trazendo um fundo caramelado.\n\nA combinação de lúpulos americanos de amargor e aroma com a tosta dos maltes traz um sabor especial e único para esta cerveja.\n\nO nome é um trocadilho com as características da cerveja e uma famosa banda de rock, quem aí adivinha?",
       "imagem": "assets/img/cervejas/red_hop.jpg",
       "ativa": true
@@ -358,8 +304,6 @@
       "pais": "Alemanha",
       "abv": "3.5",
       "ibu": "3",
-      "srm": "3.5",
-      "ebc": "7",
       "descricao": "Berliner Weiss é uma cerveja de trigo originalmente alemã, ácida, clara, refrescante e de baixo teor alcoólico. Possui acidez limpa e moderada, além de alta carbonatação para dar um efeito frisante. O nome Severina Sour faz alusão à Catharina Sour, uma Berliner que utiliza frutas da região sul do Brasil, já a Severina Sour é uma série que engloba frutas tropicais da região nordeste.",
       "imagem": "assets/img/cervejas/severina_sour_goiaba1.jpg",
       "ativa": true
@@ -371,8 +315,6 @@
       "pais": "EUA",
       "abv": "5.4",
       "ibu": "25",
-      "srm": "3.4",
-      "ebc": "6.6",
       "descricao": "O estilo American Wheat Ale, nada mais é do que uma cerveja de trigo que não possui os aromas de cravo e banana típicos da Weiss alemã, a levedura produz um caráter neutro para dar destaque ao aroma e sabor de lúpulo.\n\nNesta receita utilizamos uma combinação de lúpulos inusitada, o Sorachi Ace que traz notas de limão, e o Citra que remete frutas tropicais.\n\nVocê deve estar se perguntando o que significa “Pifitão das Véia”, pois bem, nosso cervejeiro fez uma justa homenagem ao seu avô, que gostava muito de jogar dominó, esse era o nome que ele chamava a pedra de pio, mas o porquê, nós nunca saberemos, haha!\n\nE esse chifre em cima da mesa? Era o recipiente que ele usava para guardar o seu rapé, ai de quem “bulice” nele.",
       "imagem": "assets/img/cervejas/pifitao_das_veia.jpg",
       "ativa": true
@@ -384,8 +326,6 @@
       "pais": "Brasil",
       "abv": "5",
       "ibu": "4",
-      "srm": "3.1",
-      "ebc": "6",
       "descricao": "Uma Sour Ale com adição de morango e baunilha, adições estas feitas na maturação para dar maior sensação de morangos frescos.\n\nTrouxemos pra você uma cerveja refrescante com acidez média e limpa, a alta carbonatação completa o conjunto perfeito para o nosso clima.\n\nEm uma explicação simplificada poderíamos dizer que a Catharina Sour é como se fosse o estilo alemão Berliner Weiss um pouco mais forte e com adições de frutas frescas na maturação.\n\nO nome é uma homenagem a uma música dos Beatles. Os invejosos irão dizer que o clipe foi gravado em Liverpool, mas todo mundo sabe que foi no Ceará, basta ver o rótulo rs.",
       "imagem": "assets/img/cervejas/strawberry_fields_forever.jpg",
       "ativa": true
@@ -397,8 +337,6 @@
       "pais": "EUA",
       "abv": "5.2",
       "ibu": "40",
-      "srm": "3.5",
-      "ebc": "6.8",
       "descricao": "Esta cerveja homenageia dois personagens bem conhecidos no nosso Ceará, você sabe quais são?\n\nUma APA que utiliza centeio (RYE) em sua composição, proporcionando um leve condimentado, textura macia e um final mais seco sem dulçor residual.\n\nAmargor médio e aroma acentuado por um dry hop de três maravilhosos lúpulos: Galaxy, Ariana e Yelow Sub, que conferem notas cítricas de frutas tropicais. Perfeita para o nosso Ceará!",
       "imagem": "assets/img/cervejas/rye_timbora.jpg",
       "ativa": true
@@ -410,8 +348,6 @@
       "pais": "EUA",
       "abv": "4",
       "ibu": "10",
-      "srm": "",
-      "ebc": "",
       "descricao": "Puro Malte ou Puro Marketing? Segundo a lei da pureza (Reinheitsgebot) da Baviera criada em 1516, uma cerveja puro malte é feita apenas com água, malte, lúpulo e levedura, ou seja, sem adjuntos.\n\nMas isso a torna melhor que outras? Cervejas que não seguem a lei da pureza são ruins? A sátira que você ver neste rótulo é apenas para ajudar a desmitificar essa ideia de que cerveja boa só se for puro malte.\n\nTanto é que, cervejeiros da escola belga costumam “temperar” suas receitas com diversos adjuntos, como por exemplo o estilo Witbier, que leva em sua composição semente de coentro e raspas de casca de laranja.\n\nO que dizer então das cervejas com adição de frutas? Essas trazem uma infinidade de combinações entre sabores e aromas. O que torna a cerveja artesanal interessante são estas inúmeras possibilidades.\n\nPortanto, entenda que esta lei foi criada com interesses comerciais da época. Cerveja boa é a que melhor te agradar!\n\nAh, e sim, esta cerveja é puro malte!",
       "imagem": "assets/img/cervejas/premium_lager.jpg",
       "ativa": true
