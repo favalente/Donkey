@@ -52,8 +52,8 @@ jobs:
           server: ${{ secrets.LOCAWEB_FTP_HOST }}
           username: ${{ secrets.LOCAWEB_FTP_USER }}
           password: ${{ secrets.LOCAWEB_FTP_PASSWORD }}
-          protocol: ftps
-          security: loose
+          # O FTP desta hospedagem não aceita FTPS (responde 500 ao comando AUTH)
+          protocol: ftp
           local-dir: ./site/
           server-dir: ${{ env.FTP_DIR }}
           exclude: |

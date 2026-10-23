@@ -68,7 +68,7 @@ Antes de tudo, **faça backup** do `public_html` atual.
 | `LOCAWEB_FTP_PASSWORD` | senha do FTP |
 | `LOCAWEB_FTP_DIR` | opcional; padrão `public_html/` |
 
-Toda alteração em `site/` na branch `main` é publicada sozinha. Se a conexão falhar, troque `protocol: ftps` por `ftp` no `deploy.yml`.
+Toda alteração em `site/` na branch `main` é publicada sozinha. A hospedagem só aceita FTP comum (sem FTPS). Antes de cada publicação é feito um backup completo do servidor, que fica 90 dias nos "Artifacts" da execução em Actions.
 
 ## Testar no computador
 
