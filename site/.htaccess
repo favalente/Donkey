@@ -1,4 +1,5 @@
-DirectoryIndex index.php index.html
+# TEMPORÁRIO: servidor em PHP 5.3; volta a abrir o site antigo (index.html) até o PHP ser atualizado
+DirectoryIndex index.html index.php
 Options -Indexes
 
 # Força HTTPS e o endereço com www
@@ -7,8 +8,6 @@ RewriteCond %{HTTPS} off [OR]
 RewriteCond %{HTTP_HOST} !^www\. [NC]
 RewriteRule ^ https://www.donkeyheadcervejaria.com.br%{REQUEST_URI} [L,R=301]
 
-# Endereço antigo da página inicial
-RewriteRule ^index\.html$ / [L,R=301]
 
 <IfModule mod_expires.c>
   ExpiresActive On
