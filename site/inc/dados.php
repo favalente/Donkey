@@ -7,6 +7,8 @@ const DH_RAIZ = __DIR__ . '/..';
 require_once __DIR__ . '/xmenu.php';
 const DH_ARQ_DADOS = DH_RAIZ . '/dados/cervejas.json';
 const DH_ARQ_INICIAL = DH_RAIZ . '/dados-iniciais/cervejas.json';
+const DH_ARQ_GALERIA = DH_RAIZ . '/dados/galeria.json';
+const DH_ARQ_GALERIA_INICIAL = DH_RAIZ . '/dados-iniciais/galeria.json';
 const DH_UNIDADES = ['aldeota' => 'Aldeota', 'maraponga' => 'Maraponga'];
 const DH_PAISES = ['Alemanha', 'Bélgica', 'Brasil', 'EUA', 'Inglaterra', 'Irlanda', 'República Tcheca', 'Outro'];
 
@@ -133,4 +135,25 @@ function dh_tap_tv(string $unidade): array
         ];
     }
     return ['unidade' => DH_UNIDADES[$unidade], 'taps' => $taps];
+}
+
+function dh_galeria(): array
+{
+    $arq = is_file(DH_ARQ_GALERIA) ? DH_ARQ_GALERIA : DH_ARQ_GALERIA_INICIAL;
+    $g = json_decode((string) @file_get_contents($arq), true);
+    return is_array($g['fotos'] ?? null) ? $g['fotos'] : [];
+}
+
+function dh_galeria_salvar(array $fotos): void
+{
+    $dir = dirname(DH_ARQ_GALERIA);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    $json = json_encode(['fotos' => array_values($fotos)], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $tmp = DH_ARQ_GALERIA . '.' . bin2hex(random_bytes(4)) . '.tmp';
+    if (file_put_contents($tmp, $json, LOCK_EX) === false || !rename($tmp, DH_ARQ_GALERIA)) {
+        @unlink($tmp);
+        throw new RuntimeException('Não foi possível gravar a galeria. Verifique a permissão da pasta "dados".');
+    }
 }

@@ -75,3 +75,16 @@ label small { font-weight: 400; color: var(--muted); }
 .aviso { padding: 12px 16px; border-radius: 10px; background: rgba(233,162,59,.12); color: var(--text); }
 .num-tap { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--amber); color: #1a120a; font-weight: 700; font-size: .9rem; }
 .tag.alerta { background: rgba(229,83,61,.18); color: #ff9b8a; }
+.enviar-fotos { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.enviar-fotos .btn { width: 100%; }
+.grade-fotos { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.grade-fotos li { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.grade-fotos img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; display: block; }
+.grade-fotos .pos { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,.7); color: #fff; font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.grade-fotos form { display: flex; gap: 4px; padding: 6px; margin: 0; }
+.grade-fotos .legenda input { margin: 0; padding: 6px 8px; font-size: .85rem; }
+.grade-fotos .botoes { padding-top: 0; }
+.btn.mini { padding: 6px 10px; font-size: .85rem; background: #120e0b; color: var(--text); border: 1px solid var(--line); border-radius: 8px; }
+.btn.mini.perigo { margin-left: auto; color: var(--erro); }
+.btn.mini:disabled { opacity: .35; }
+.topo nav a { padding: 8px 10px; }

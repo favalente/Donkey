@@ -3,3 +3,5 @@ site/dados/*
 !site/dados/.htaccess
 site/uploads/cervejas/*
 !site/uploads/cervejas/.gitkeep
+site/uploads/galeria/*
+!site/uploads/galeria/.gitkeep

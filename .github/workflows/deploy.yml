@@ -19,7 +19,8 @@ jobs:
       - name: Verificar sintaxe do PHP
         run: find site -name '*.php' -print0 | xargs -0 -n1 php -l
 
-      # dados/ e uploads/ são gravados pelo painel no servidor: nunca são enviados nem apagados aqui
+      # O que o painel grava no servidor (dados/*.json, backups e fotos enviadas) não está no git,
+      # então a publicação nunca envia nem apaga esses arquivos. Os .htaccess de proteção são enviados.
       - name: Enviar arquivos por FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -32,5 +33,7 @@ jobs:
           exclude: |
             **/.git*
             **/.git*/**
-            dados/**
-            uploads/cervejas/**
+            dados/*.json
+            dados/backup/**
+            uploads/cervejas/*.jpg
+            uploads/galeria/**/*.jpg

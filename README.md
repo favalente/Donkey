@@ -14,6 +14,7 @@ site/                         tudo que vai para public_html
   dados-iniciais/cervejas.json  32 rótulos importados do site antigo (bloqueado na web)
   dados/                      criado pelo painel no servidor: cervejas, tap list, senha e backups diários
   uploads/cervejas/           fotos de rótulos enviadas pelo painel
+  uploads/galeria/            fotos da galeria enviadas pelo painel
   assets/                     CSS, JS, vídeo do chope, logo, rótulos e galeria (imagens otimizadas)
 .github/workflows/deploy.yml  publica na Locaweb a cada push na main
 ```
@@ -27,6 +28,7 @@ Endereço: `/admin/`
 - **Primeiro acesso:** a tela pede para criar a senha. Abra o `/admin/` **logo depois de publicar**, porque quem chegar primeiro define a senha.
 - **Tap List:** escolha a cerveja de cada torneira, separado por unidade (Aldeota e Maraponga), e toque em Salvar. O site atualiza na hora.
 - **Cervejas:** cadastre, edite ou exclua rótulos. Dá para mandar a foto do rótulo direto do celular, porque ela é reduzida automaticamente. Para tirar um rótulo do catálogo sem apagá-lo, desmarque "Mostrar no catálogo".
+- **Galeria:** envie várias fotos de uma vez pelo celular, com legenda opcional (ex.: o nome do prato). As fotos novas entram no início, e as 12 primeiras aparecem direto no site. Dá para reordenar, editar a legenda e excluir. As fotos são reduzidas no próprio celular antes do envio.
 - Segurança: senha com hash, proteção CSRF e bloqueio de 15 minutos após 5 senhas erradas.
 - Se o painel disser que não consegue gravar, dê permissão de escrita (755 ou 775) às pastas `dados` e `uploads/cervejas` no Gerenciador de Arquivos da Locaweb.
 - Esqueceu a senha? Apague `dados/admin.json` pelo FTP e crie uma nova no `/admin/`.

@@ -15,7 +15,7 @@ foreach (DH_UNIDADES as $u => $_) {
 }
 $temTaplist = (bool) array_filter($taplists);
 
-$galeria = [1, 2, 3, 4, 24, 28, 34, 35, 36, 49, 5, 6, 47, 45, 29, 30, 9, 15, 11, 12, 13, 23, 26, 16, 17, 18, 19, 7, 21, 25, 8, 22, 27, 31, 32, 33, 37, 38, 39, 40, 41, 42, 43, 50];
+$galeria = dh_galeria();
 $cardapio = 'https://xmenu.com.br/pedidos/?loja=20476&camp=XMENU-TESTE';
 
 function ficha(array $c): string
@@ -60,7 +60,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=4">
+  <link rel="stylesheet" href="assets/css/style.css?v=5">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -238,13 +238,14 @@ function detalhe(array $c): string
           <p>Toque nas fotos para ampliá-las.</p>
         </div>
         <div class="galeria">
-          <?php foreach ($galeria as $i => $n): ?>
-            <a href="assets/img/galeria/<?= $n ?>.jpg" class="foto<?= $i >= 12 ? ' extra' : '' ?>" data-indice="<?= $i ?>">
-              <img src="assets/img/galeria/mini/<?= $n ?>.jpg" alt="Foto <?= $i + 1 ?> da Donkey Head Cervejaria" loading="lazy">
+          <?php foreach ($galeria as $i => $f): ?>
+            <a href="<?= e($f['foto']) ?>" class="foto<?= $i >= 12 ? ' extra' : '' ?>" data-indice="<?= $i ?>"<?= $f['legenda'] !== '' ? ' data-legenda="' . e($f['legenda']) . '"' : '' ?>>
+              <img src="<?= e($f['mini']) ?>" alt="<?= e($f['legenda'] !== '' ? $f['legenda'] : 'Foto ' . ($i + 1) . ' da Donkey Head Cervejaria') ?>" loading="lazy">
+              <?php if ($f['legenda'] !== ''): ?><span class="legenda"><?= e($f['legenda']) ?></span><?php endif; ?>
             </a>
           <?php endforeach; ?>
         </div>
-        <p class="centro"><button class="btn btn-ghost" id="mais-fotos">Ver todas as <?= count($galeria) ?> fotos</button></p>
+        <?php if (count($galeria) > 12): ?><p class="centro"><button class="btn btn-ghost" id="mais-fotos">Ver todas as <?= count($galeria) ?> fotos</button></p><?php endif; ?>
       </div>
     </section>
 
@@ -311,10 +312,10 @@ function detalhe(array $c): string
   <dialog class="lightbox" id="lightbox" aria-label="Foto ampliada">
     <button class="fechar" aria-label="Fechar">×</button>
     <button class="nav-foto ant" aria-label="Foto anterior">‹</button>
-    <img alt="">
+    <figure><img alt=""><figcaption></figcaption></figure>
     <button class="nav-foto prox" aria-label="Próxima foto">›</button>
   </dialog>
 
-  <script src="assets/js/main.js?v=2"></script>
+  <script src="assets/js/main.js?v=3"></script>
 </body>
 </html>

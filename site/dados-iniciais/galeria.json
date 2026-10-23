@@ -1,0 +1,268 @@
+{
+  "fotos": [
+    {
+      "id": "g1",
+      "foto": "assets/img/galeria/1.jpg",
+      "mini": "assets/img/galeria/mini/1.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g2",
+      "foto": "assets/img/galeria/2.jpg",
+      "mini": "assets/img/galeria/mini/2.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g3",
+      "foto": "assets/img/galeria/3.jpg",
+      "mini": "assets/img/galeria/mini/3.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g4",
+      "foto": "assets/img/galeria/4.jpg",
+      "mini": "assets/img/galeria/mini/4.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g24",
+      "foto": "assets/img/galeria/24.jpg",
+      "mini": "assets/img/galeria/mini/24.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g28",
+      "foto": "assets/img/galeria/28.jpg",
+      "mini": "assets/img/galeria/mini/28.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g34",
+      "foto": "assets/img/galeria/34.jpg",
+      "mini": "assets/img/galeria/mini/34.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g35",
+      "foto": "assets/img/galeria/35.jpg",
+      "mini": "assets/img/galeria/mini/35.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g36",
+      "foto": "assets/img/galeria/36.jpg",
+      "mini": "assets/img/galeria/mini/36.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g49",
+      "foto": "assets/img/galeria/49.jpg",
+      "mini": "assets/img/galeria/mini/49.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g5",
+      "foto": "assets/img/galeria/5.jpg",
+      "mini": "assets/img/galeria/mini/5.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g6",
+      "foto": "assets/img/galeria/6.jpg",
+      "mini": "assets/img/galeria/mini/6.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g47",
+      "foto": "assets/img/galeria/47.jpg",
+      "mini": "assets/img/galeria/mini/47.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g45",
+      "foto": "assets/img/galeria/45.jpg",
+      "mini": "assets/img/galeria/mini/45.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g29",
+      "foto": "assets/img/galeria/29.jpg",
+      "mini": "assets/img/galeria/mini/29.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g30",
+      "foto": "assets/img/galeria/30.jpg",
+      "mini": "assets/img/galeria/mini/30.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g9",
+      "foto": "assets/img/galeria/9.jpg",
+      "mini": "assets/img/galeria/mini/9.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g15",
+      "foto": "assets/img/galeria/15.jpg",
+      "mini": "assets/img/galeria/mini/15.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g11",
+      "foto": "assets/img/galeria/11.jpg",
+      "mini": "assets/img/galeria/mini/11.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g12",
+      "foto": "assets/img/galeria/12.jpg",
+      "mini": "assets/img/galeria/mini/12.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g13",
+      "foto": "assets/img/galeria/13.jpg",
+      "mini": "assets/img/galeria/mini/13.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g23",
+      "foto": "assets/img/galeria/23.jpg",
+      "mini": "assets/img/galeria/mini/23.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g26",
+      "foto": "assets/img/galeria/26.jpg",
+      "mini": "assets/img/galeria/mini/26.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g16",
+      "foto": "assets/img/galeria/16.jpg",
+      "mini": "assets/img/galeria/mini/16.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g17",
+      "foto": "assets/img/galeria/17.jpg",
+      "mini": "assets/img/galeria/mini/17.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g18",
+      "foto": "assets/img/galeria/18.jpg",
+      "mini": "assets/img/galeria/mini/18.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g19",
+      "foto": "assets/img/galeria/19.jpg",
+      "mini": "assets/img/galeria/mini/19.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g7",
+      "foto": "assets/img/galeria/7.jpg",
+      "mini": "assets/img/galeria/mini/7.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g21",
+      "foto": "assets/img/galeria/21.jpg",
+      "mini": "assets/img/galeria/mini/21.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g25",
+      "foto": "assets/img/galeria/25.jpg",
+      "mini": "assets/img/galeria/mini/25.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g8",
+      "foto": "assets/img/galeria/8.jpg",
+      "mini": "assets/img/galeria/mini/8.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g22",
+      "foto": "assets/img/galeria/22.jpg",
+      "mini": "assets/img/galeria/mini/22.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g27",
+      "foto": "assets/img/galeria/27.jpg",
+      "mini": "assets/img/galeria/mini/27.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g31",
+      "foto": "assets/img/galeria/31.jpg",
+      "mini": "assets/img/galeria/mini/31.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g32",
+      "foto": "assets/img/galeria/32.jpg",
+      "mini": "assets/img/galeria/mini/32.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g33",
+      "foto": "assets/img/galeria/33.jpg",
+      "mini": "assets/img/galeria/mini/33.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g37",
+      "foto": "assets/img/galeria/37.jpg",
+      "mini": "assets/img/galeria/mini/37.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g38",
+      "foto": "assets/img/galeria/38.jpg",
+      "mini": "assets/img/galeria/mini/38.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g39",
+      "foto": "assets/img/galeria/39.jpg",
+      "mini": "assets/img/galeria/mini/39.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g40",
+      "foto": "assets/img/galeria/40.jpg",
+      "mini": "assets/img/galeria/mini/40.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g41",
+      "foto": "assets/img/galeria/41.jpg",
+      "mini": "assets/img/galeria/mini/41.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g42",
+      "foto": "assets/img/galeria/42.jpg",
+      "mini": "assets/img/galeria/mini/42.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g43",
+      "foto": "assets/img/galeria/43.jpg",
+      "mini": "assets/img/galeria/mini/43.jpg",
+      "legenda": ""
+    },
+    {
+      "id": "g50",
+      "foto": "assets/img/galeria/50.jpg",
+      "mini": "assets/img/galeria/mini/50.jpg",
+      "legenda": ""
+    }
+  ]
+}

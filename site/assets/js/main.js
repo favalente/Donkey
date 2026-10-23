@@ -91,11 +91,13 @@
   var fotos = Array.prototype.slice.call(document.querySelectorAll('.foto'));
   var lb = document.getElementById('lightbox');
   var lbImg = lb.querySelector('img');
+  var lbLegenda = lb.querySelector('figcaption');
   var atual = 0;
   function mostrar(i) {
     atual = (i + fotos.length) % fotos.length;
     lbImg.src = fotos[atual].getAttribute('href');
     lbImg.alt = fotos[atual].querySelector('img').alt;
+    lbLegenda.textContent = fotos[atual].getAttribute('data-legenda') || '';
   }
   fecharAoClicarFora(lb);
   fotos.forEach(function (a, i) {

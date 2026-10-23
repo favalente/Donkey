@@ -5,6 +5,7 @@ require __DIR__ . '/../inc/dados.php';
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
 const DH_ARQ_FALHAS = DH_RAIZ . '/dados/login-falhas.json';
 const DH_DIR_UPLOAD = DH_RAIZ . '/uploads/cervejas';
+const DH_DIR_GALERIA = DH_RAIZ . '/uploads/galeria';
 const DH_MAX_FALHAS = 5;
 const DH_BLOQUEIO_MIN = 15;
 
@@ -87,55 +88,72 @@ function registrar_falha(bool $limpar = false): void
     gravar_json(DH_ARQ_FALHAS, $f);
 }
 
-// Recebe a foto do rótulo, valida e regrava em JPEG (máx. 900px) para ficar leve.
-function salvar_imagem(array $arq, string $id): string
+// Valida a foto enviada e devolve a imagem GD já na orientação certa
+function abrir_foto(array $arq)
 {
     if ($arq['error'] !== UPLOAD_ERR_OK) {
         throw new RuntimeException('Falha no envio da foto (código ' . $arq['error'] . '). Tente uma imagem menor.');
     }
     $info = @getimagesize($arq['tmp_name']);
-    $tipos = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
-    if (!$info || !isset($tipos[$info[2]])) {
+    if (!$info || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
         throw new RuntimeException('A foto precisa ser JPG, PNG ou WEBP.');
     }
-    if (!is_dir(DH_DIR_UPLOAD)) {
-        mkdir(DH_DIR_UPLOAD, 0755, true);
+    if (!function_exists('imagecreatefromstring')) {
+        throw new RuntimeException('O servidor não tem a extensão GD do PHP ativa. Ative-a no painel da Locaweb.');
     }
-    $nome = $id . '-' . date('YmdHis') . '.jpg';
-    $destino = DH_DIR_UPLOAD . '/' . $nome;
+    $img = @imagecreatefromstring((string) file_get_contents($arq['tmp_name']));
+    if (!$img) {
+        throw new RuntimeException('Não foi possível ler a foto.');
+    }
+    if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+        $ori = (@exif_read_data($arq['tmp_name'])['Orientation'] ?? 1);
+        $giro = [3 => 180, 6 => -90, 8 => 90][$ori] ?? 0;
+        if ($giro) {
+            $img = imagerotate($img, $giro, 0);
+        }
+    }
+    return $img;
+}
 
-    if (function_exists('imagecreatefromstring')) {
-        $img = @imagecreatefromstring((string) file_get_contents($arq['tmp_name']));
-        if (!$img) {
-            throw new RuntimeException('Não foi possível ler a foto.');
-        }
-        if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
-            $ori = (@exif_read_data($arq['tmp_name'])['Orientation'] ?? 1);
-            $giro = [3 => 180, 6 => -90, 8 => 90][$ori] ?? 0;
-            if ($giro) {
-                $img = imagerotate($img, $giro, 0);
-            }
-        }
-        $w = imagesx($img);
-        $h = imagesy($img);
-        $escala = min(1, 900 / max($w, $h));
-        $nw = (int) round($w * $escala);
-        $nh = (int) round($h * $escala);
-        $nova = imagecreatetruecolor($nw, $nh);
-        imagefill($nova, 0, 0, imagecolorallocate($nova, 255, 255, 255));
-        imagecopyresampled($nova, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
-        imagejpeg($nova, $destino, 82);
-    } else {
-        $nome = $id . '-' . date('YmdHis') . '.' . $tipos[$info[2]];
-        $destino = DH_DIR_UPLOAD . '/' . $nome;
-        move_uploaded_file($arq['tmp_name'], $destino);
+// Grava a imagem em JPEG com no máximo $max px no maior lado (regravar remove qualquer conteúdo estranho)
+function gravar_jpeg($img, string $destino, int $max, int $qualidade = 82): void
+{
+    if (!is_dir(dirname($destino))) {
+        mkdir(dirname($destino), 0755, true);
     }
+    $w = imagesx($img);
+    $h = imagesy($img);
+    $escala = min(1, $max / max($w, $h));
+    $nw = (int) round($w * $escala);
+    $nh = (int) round($h * $escala);
+    $nova = imagecreatetruecolor($nw, $nh);
+    imagefill($nova, 0, 0, imagecolorallocate($nova, 255, 255, 255));
+    imagecopyresampled($nova, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    imagejpeg($nova, $destino, $qualidade);
+}
+
+function salvar_imagem(array $arq, string $id): string
+{
+    $nome = $id . '-' . date('YmdHis') . '.jpg';
+    gravar_jpeg(abrir_foto($arq), DH_DIR_UPLOAD . '/' . $nome, 900);
     return 'uploads/cervejas/' . $nome;
+}
+
+// Arquivos de upload separados por envio (um campo "fotos[]" com várias imagens)
+function lista_uploads(array $campo): array
+{
+    $lista = [];
+    foreach ((array) ($campo['name'] ?? []) as $i => $nome) {
+        if ($nome !== '' && $nome !== null) {
+            $lista[] = ['name' => $nome, 'tmp_name' => $campo['tmp_name'][$i], 'error' => $campo['error'][$i]];
+        }
+    }
+    return $lista;
 }
 
 function apagar_upload(string $caminho): void
 {
-    if (strpos($caminho, 'uploads/cervejas/') === 0) {
+    if (strpos($caminho, 'uploads/cervejas/') === 0 || strpos($caminho, 'uploads/galeria/') === 0) {
         @unlink(DH_RAIZ . '/' . $caminho);
     }
 }
@@ -282,6 +300,54 @@ if (!$config) {
                 }
                 break;
 
+            case 'galeria-enviar':
+                exigir_post();
+                $arquivos = lista_uploads($_FILES['fotos'] ?? []);
+                if (!$arquivos) {
+                    throw new RuntimeException('Escolha pelo menos uma foto.');
+                }
+                $fotos = dh_galeria();
+                $legenda = mb_substr(trim((string) ($_POST['legenda'] ?? '')), 0, 120);
+                $novas = [];
+                foreach ($arquivos as $arq) {
+                    $img = abrir_foto($arq);
+                    $id = 'f' . date('YmdHis') . bin2hex(random_bytes(3));
+                    gravar_jpeg($img, DH_DIR_GALERIA . '/' . $id . '.jpg', 1400, 80);
+                    gravar_jpeg($img, DH_DIR_GALERIA . '/mini/' . $id . '.jpg', 520, 72);
+                    $novas[] = ['id' => $id, 'foto' => 'uploads/galeria/' . $id . '.jpg', 'mini' => 'uploads/galeria/mini/' . $id . '.jpg', 'legenda' => $legenda];
+                }
+                dh_galeria_salvar(array_merge($novas, $fotos));
+                ir('./?acao=galeria', count($novas) === 1 ? 'Foto adicionada no início da galeria!' : count($novas) . ' fotos adicionadas no início da galeria!');
+
+            case 'galeria-alterar':
+                exigir_post();
+                $fotos = dh_galeria();
+                $id = (string) ($_POST['id'] ?? '');
+                $i = array_search($id, array_column($fotos, 'id'), true);
+                if ($i === false) {
+                    ir('./?acao=galeria');
+                }
+                $op = (string) ($_POST['op'] ?? '');
+                $msg = null;
+                if ($op === 'legenda') {
+                    $fotos[$i]['legenda'] = mb_substr(trim((string) ($_POST['legenda'] ?? '')), 0, 120);
+                    $msg = 'Legenda salva.';
+                } elseif ($op === 'subir' && $i > 0) {
+                    [$fotos[$i - 1], $fotos[$i]] = [$fotos[$i], $fotos[$i - 1]];
+                } elseif ($op === 'descer' && $i < count($fotos) - 1) {
+                    [$fotos[$i + 1], $fotos[$i]] = [$fotos[$i], $fotos[$i + 1]];
+                } elseif ($op === 'primeira') {
+                    array_unshift($fotos, array_splice($fotos, $i, 1)[0]);
+                } elseif ($op === 'excluir') {
+                    $f = array_splice($fotos, $i, 1)[0];
+                    apagar_upload($f['foto']);
+                    apagar_upload($f['mini']);
+                    $msg = 'Foto excluída.';
+                }
+                dh_galeria_salvar($fotos);
+                ir('./?acao=galeria#' . $id, $msg);
+
+            case 'galeria':
             case 'editar':
             case 'cervejas':
             case 'taplist':
@@ -292,7 +358,7 @@ if (!$config) {
         }
     } catch (RuntimeException $ex) {
         $erro = $ex->getMessage();
-        $tela = $acao === 'salvar-cerveja' ? 'editar' : 'cervejas';
+        $tela = $acao === 'salvar-cerveja' ? 'editar' : (strpos($acao, 'galeria') === 0 ? 'galeria' : 'cervejas');
     }
 }
 
@@ -308,7 +374,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=3">
+  <link rel="stylesheet" href="admin.css?v=4">
 </head>
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
@@ -334,7 +400,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
     <nav>
       <a href="./" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>">Tap List</a>
       <a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>">Cervejas</a>
-      <a href="../" target="_blank">Ver site ↗</a>
+      <a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>">Galeria</a>
+      <a href="../" target="_blank">Site ↗</a>
     </nav>
   </header>
   <main class="conteudo">
@@ -480,6 +547,41 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         </form>
       <?php endif; ?>
 
+    <?php elseif ($tela === 'galeria'): $fotos = dh_galeria(); ?>
+      <h1>Galeria <small><?= count($fotos) ?> fotos</small></h1>
+      <form method="post" action="./?acao=galeria-enviar" enctype="multipart/form-data" class="enviar-fotos" id="form-fotos">
+        <?= $csrf ?>
+        <label>Novas fotos <small>(pode escolher várias de uma vez)</small>
+          <input type="file" name="fotos[]" accept="image/jpeg,image/png,image/webp" multiple required id="fotos">
+        </label>
+        <label>Legenda <small>(opcional, ex.: nome do prato)</small>
+          <input name="legenda" maxlength="120" placeholder="Ex.: Burger Donkey na brasa">
+        </label>
+        <button class="btn primario" id="btn-enviar">Adicionar à galeria</button>
+        <p class="dica" id="progresso" hidden></p>
+      </form>
+      <p class="dica">As fotos novas entram no início. As 12 primeiras aparecem logo de cara no site.</p>
+      <ul class="grade-fotos">
+        <?php foreach ($fotos as $n => $f): ?>
+          <li id="<?= e($f['id']) ?>">
+            <a href="../<?= e($f['foto']) ?>" target="_blank"><img src="../<?= e($f['mini']) ?>" alt="" loading="lazy"></a>
+            <span class="pos"><?= $n + 1 ?></span>
+            <form method="post" action="./?acao=galeria-alterar" class="legenda">
+              <?= $csrf ?><input type="hidden" name="id" value="<?= e($f['id']) ?>"><input type="hidden" name="op" value="legenda">
+              <input name="legenda" value="<?= e($f['legenda']) ?>" maxlength="120" placeholder="Legenda">
+              <button class="btn mini" title="Salvar legenda">✓</button>
+            </form>
+            <form method="post" action="./?acao=galeria-alterar" class="botoes">
+              <?= $csrf ?><input type="hidden" name="id" value="<?= e($f['id']) ?>">
+              <button class="btn mini" name="op" value="primeira" title="Mover para o início" <?= $n === 0 ? 'disabled' : '' ?>>⇤</button>
+              <button class="btn mini" name="op" value="subir" title="Mover para trás" <?= $n === 0 ? 'disabled' : '' ?>>←</button>
+              <button class="btn mini" name="op" value="descer" title="Mover para frente" <?= $n === count($fotos) - 1 ? 'disabled' : '' ?>>→</button>
+              <button class="btn mini perigo" name="op" value="excluir" title="Excluir foto" aria-label="Excluir foto" onclick="return confirm('Excluir esta foto da galeria?')">✕</button>
+            </form>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+
     <?php elseif ($tela === 'trocar-senha'): ?>
       <h1>Trocar senha</h1>
       <form method="post" action="./?acao=trocar-senha" class="form-cerveja">
@@ -509,6 +611,46 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       var p = document.getElementById('previa');
       if (arq.files[0]) { p.src = URL.createObjectURL(arq.files[0]); p.hidden = false; }
     });
+    // Galeria: reduz as fotos no próprio celular antes de enviar (envio rápido e sem limite de tamanho do servidor)
+    var formFotos = document.getElementById('form-fotos');
+    if (formFotos && window.fetch && window.FormData && document.createElement('canvas').toBlob) {
+      formFotos.addEventListener('submit', function (ev) {
+        var arquivos = document.getElementById('fotos').files;
+        if (!arquivos.length) return;
+        ev.preventDefault();
+        var btn = document.getElementById('btn-enviar'), prog = document.getElementById('progresso');
+        btn.disabled = true; prog.hidden = false;
+        var dados = new FormData(formFotos);
+        dados.delete('fotos[]');
+        var feitos = 0;
+        function reduzir(arq) {
+          return createImageBitmap(arq, { imageOrientation: 'from-image' }).then(function (bmp) {
+            var esc = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+            var c = document.createElement('canvas');
+            c.width = Math.round(bmp.width * esc); c.height = Math.round(bmp.height * esc);
+            c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+            return new Promise(function (ok) { c.toBlob(ok, 'image/jpeg', 0.85); });
+          }).catch(function () { return arq; });
+        }
+        Array.prototype.reduce.call(arquivos, function (fila, arq) {
+          return fila.then(function () {
+            prog.textContent = 'Preparando foto ' + (++feitos) + ' de ' + arquivos.length + '…';
+            return reduzir(arq).then(function (b) { dados.append('fotos[]', b, (arq.name || 'foto').replace(/\.\w+$/, '') + '.jpg'); });
+          });
+        }, Promise.resolve()).then(function () {
+          prog.textContent = 'Enviando…';
+          return fetch(formFotos.action, { method: 'POST', body: dados, credentials: 'same-origin', redirect: 'manual' });
+        }).then(function (r) {
+          // Sucesso = redirecionamento (não seguido aqui, para a mensagem aparecer na próxima página)
+          if (r.type === 'opaqueredirect' || r.redirected) { location.href = './?acao=galeria'; return; }
+          // Erro de validação: mostra a página de resposta (com a mensagem)
+          return r.text().then(function (html) { document.open(); document.write(html); document.close(); });
+        }).catch(function () {
+          prog.textContent = 'Falha no envio. Verifique a internet e tente de novo.';
+          btn.disabled = false;
+        });
+      });
+    }
     document.querySelectorAll('.taplist select').forEach(function (s) {
       s.addEventListener('change', function () { s.parentNode.classList.toggle('cheia', !!s.value); });
     });
