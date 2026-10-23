@@ -115,27 +115,10 @@ function abrir_foto(array $arq)
     return $img;
 }
 
-// Grava a imagem em JPEG com no máximo $max px no maior lado (regravar remove qualquer conteúdo estranho)
-function gravar_jpeg($img, string $destino, int $max, int $qualidade = 82): void
-{
-    if (!is_dir(dirname($destino))) {
-        mkdir(dirname($destino), 0755, true);
-    }
-    $w = imagesx($img);
-    $h = imagesy($img);
-    $escala = min(1, $max / max($w, $h));
-    $nw = (int) round($w * $escala);
-    $nh = (int) round($h * $escala);
-    $nova = imagecreatetruecolor($nw, $nh);
-    imagefill($nova, 0, 0, imagecolorallocate($nova, 255, 255, 255));
-    imagecopyresampled($nova, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
-    imagejpeg($nova, $destino, $qualidade);
-}
-
 function salvar_imagem(array $arq, string $id): string
 {
     $nome = $id . '-' . date('YmdHis') . '.jpg';
-    gravar_jpeg(abrir_foto($arq), DH_DIR_UPLOAD . '/' . $nome, 900);
+    dh_gravar_jpeg(abrir_foto($arq), DH_DIR_UPLOAD . '/' . $nome, 900);
     return 'uploads/cervejas/' . $nome;
 }
 
@@ -312,8 +295,8 @@ if (!$config) {
                 foreach ($arquivos as $arq) {
                     $img = abrir_foto($arq);
                     $id = 'f' . date('YmdHis') . bin2hex(random_bytes(3));
-                    gravar_jpeg($img, DH_DIR_GALERIA . '/' . $id . '.jpg', 1400, 80);
-                    gravar_jpeg($img, DH_DIR_GALERIA . '/mini/' . $id . '.jpg', 520, 72);
+                    dh_gravar_jpeg($img, DH_DIR_GALERIA . '/' . $id . '.jpg', 1400, 80);
+                    dh_gravar_jpeg($img, DH_DIR_GALERIA . '/mini/' . $id . '.jpg', 520, 72);
                     $novas[] = ['id' => $id, 'foto' => 'uploads/galeria/' . $id . '.jpg', 'mini' => 'uploads/galeria/mini/' . $id . '.jpg', 'legenda' => $legenda];
                 }
                 dh_galeria_salvar(array_merge($novas, $fotos));
@@ -484,6 +467,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
                 <span><?= e($c['estilo']) ?><?= $c['abv'] !== '' ? ' · ' . e(dh_num($c['abv'])) . '%' : '' ?></span>
                 <span class="tags">
                   <?php if (empty($c['ativa'])): ?><em class="tag cinza">Oculta no site</em><?php endif; ?>
+                  <?php if (($c['origem'] ?? '') === 'xmenu'): ?><em class="tag cinza">Cadastrada pelo xMenu: revise</em><?php endif; ?>
                   <?php foreach ($onde[$c['id']] ?? [] as $u): ?><em class="tag">Engatada · <?= e($u) ?></em><?php endforeach; ?>
                 </span>
               </span>

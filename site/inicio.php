@@ -14,6 +14,9 @@ foreach (DH_UNIDADES as $u => $_) {
     }
 }
 $temTaplist = (bool) array_filter($taplists);
+// A tap list pode ter cadastrado cervejas novas vindas do xMenu: recarrega o catálogo
+$dados = dh_carregar();
+$catalogo = array_values(array_filter($dados['cervejas'], fn($c) => !empty($c['ativa'])));
 
 $galeria = dh_galeria();
 $cardapio = 'https://xmenu.com.br/pedidos/?loja=20476&camp=XMENU-TESTE';

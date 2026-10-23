@@ -157,3 +157,20 @@ function dh_galeria_salvar(array $fotos): void
         throw new RuntimeException('Não foi possível gravar a galeria. Verifique a permissão da pasta "dados".');
     }
 }
+
+// Grava a imagem em JPEG com no máximo $max px no maior lado (regravar remove qualquer conteúdo estranho)
+function dh_gravar_jpeg($img, string $destino, int $max, int $qualidade = 82): void
+{
+    if (!is_dir(dirname($destino))) {
+        mkdir(dirname($destino), 0755, true);
+    }
+    $w = imagesx($img);
+    $h = imagesy($img);
+    $escala = min(1, $max / max($w, $h));
+    $nw = (int) round($w * $escala);
+    $nh = (int) round($h * $escala);
+    $nova = imagecreatetruecolor($nw, $nh);
+    imagefill($nova, 0, 0, imagecolorallocate($nova, 255, 255, 255));
+    imagecopyresampled($nova, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    imagejpeg($nova, $destino, $qualidade);
+}
