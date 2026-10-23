@@ -33,7 +33,7 @@ jobs:
           sudo apt-get update -qq > /dev/null
           sudo apt-get install -y -qq lftp > /dev/null
           mkdir -p backup
-          lftp -e "set ftp:ssl-allow yes; set ssl:verify-certificate no; set net:max-retries 3; set net:timeout 30; mirror --no-perms --no-umask --parallel=4 \"$FTP_DIR\" backup/site; bye" --env-password -u "$FTP_USER" "$FTP_HOST"
+          lftp -e "set ftp:list-options -a; set ftp:ssl-allow yes; set ssl:verify-certificate no; set net:max-retries 3; set net:timeout 30; mirror --no-perms --no-umask --parallel=4 \"$FTP_DIR\" backup/site; bye" --env-password -u "$FTP_USER" "$FTP_HOST"
           echo "Arquivos no backup: $(find backup -type f | wc -l)"
           du -sh backup
 
