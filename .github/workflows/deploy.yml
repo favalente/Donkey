@@ -3,12 +3,15 @@ name: Publicar na Locaweb
 on:
   push:
     branches: [main]
-    paths: ["site/**"]
+    paths: ["site/**", ".github/workflows/deploy.yml"]
   workflow_dispatch:
 
 concurrency:
   group: deploy
   cancel-in-progress: false
+
+env:
+  FTP_DIR: ${{ secrets.LOCAWEB_FTP_DIR || 'public_html/' }}
 
 jobs:
   deploy:
@@ -19,6 +22,28 @@ jobs:
       - name: Verificar sintaxe do PHP
         run: find site -name '*.php' -print0 | xargs -0 -n1 php -l
 
+      # Cópia de tudo que está no servidor (site e dados do painel) antes de publicar.
+      # Se o backup falhar, a publicação não acontece.
+      - name: Backup do site no servidor
+        env:
+          FTP_HOST: ${{ secrets.LOCAWEB_FTP_HOST }}
+          FTP_USER: ${{ secrets.LOCAWEB_FTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.LOCAWEB_FTP_PASSWORD }}
+        run: |
+          sudo apt-get update -qq > /dev/null
+          sudo apt-get install -y -qq lftp > /dev/null
+          mkdir -p backup
+          lftp -e "set ftp:ssl-allow yes; set ssl:verify-certificate no; set net:max-retries 3; set net:timeout 30; mirror --parallel=4 \"$FTP_DIR\" backup/site; bye" --env-password -u "$FTP_USER" "$FTP_HOST"
+          echo "Arquivos no backup: $(find backup -type f | wc -l)"
+          du -sh backup
+
+      - name: Guardar backup (90 dias)
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-site-${{ github.run_number }}
+          path: backup/
+          retention-days: 90
+
       # O que o painel grava no servidor (dados/*.json, backups e fotos enviadas) não está no git,
       # então a publicação nunca envia nem apaga esses arquivos. Os .htaccess de proteção são enviados.
       - name: Enviar arquivos por FTP
@@ -28,8 +53,9 @@ jobs:
           username: ${{ secrets.LOCAWEB_FTP_USER }}
           password: ${{ secrets.LOCAWEB_FTP_PASSWORD }}
           protocol: ftps
+          security: loose
           local-dir: ./site/
-          server-dir: ${{ secrets.LOCAWEB_FTP_DIR || 'public_html/' }}
+          server-dir: ${{ env.FTP_DIR }}
           exclude: |
             **/.git*
             **/.git*/**
