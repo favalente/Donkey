@@ -57,7 +57,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=3">
+  <link rel="stylesheet" href="assets/css/style.css?v=4">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -171,6 +171,9 @@ function detalhe(array $c): string
                     <span class="tap-info">
                       <strong><?= e($c['nome']) ?></strong>
                       <span><?= e($c['estilo']) ?></span>
+                      <?php $p300 = dh_preco($c['preco_300'] ?? ''); $p1l = dh_preco($c['preco_1l'] ?? ''); if ($p300 || $p1l): ?>
+                        <span class="tap-preco"><?php if ($p300): ?><span>300 ml <?= e($p300) ?></span><?php endif; ?><?php if ($p1l): ?><span>1 L <?= e($p1l) ?></span><?php endif; ?></span>
+                      <?php endif; ?>
                     </span>
                     <span class="tap-abv"><?= $c['abv'] !== '' ? e(dh_num($c['abv'])) . '%' : '' ?><?php if ($c['ibu'] !== ''): ?><small><?= e($c['ibu']) ?> IBU</small><?php endif; ?></span>
                   </button>

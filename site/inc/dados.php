@@ -75,3 +75,37 @@ function dh_num($v): string
 {
     return str_replace('.', ',', (string) $v);
 }
+
+// Preço no formato R$ 16,00 (vazio se não informado)
+function dh_preco($v): string
+{
+    return is_numeric($v) ? 'R$ ' . number_format((float) $v, 2, ',', '.') : '';
+}
+
+// Torneiras de uma unidade, no formato usado pela tela da TV
+function dh_tap_tv(string $unidade): array
+{
+    if (!isset(DH_UNIDADES[$unidade])) {
+        $unidade = array_key_first(DH_UNIDADES);
+    }
+    $dados = dh_carregar();
+    $porId = dh_por_id($dados);
+    $taps = [];
+    foreach ($dados['torneiras'][$unidade] as $n => $id) {
+        if (!isset($porId[$id])) {
+            continue;
+        }
+        $c = $porId[$id];
+        $taps[] = [
+            'n' => $n + 1,
+            'nome' => $c['nome'],
+            'estilo' => $c['estilo'],
+            'abv' => $c['abv'] !== '' ? dh_num($c['abv']) . '%' : '',
+            'ibu' => $c['ibu'] !== '' ? $c['ibu'] . ' IBU' : '',
+            'p300' => dh_preco($c['preco_300'] ?? ''),
+            'p1l' => dh_preco($c['preco_1l'] ?? ''),
+            'img' => '../' . $c['imagem'],
+        ];
+    }
+    return ['unidade' => DH_UNIDADES[$unidade], 'taps' => $taps, 'atualizado' => $dados['atualizado']];
+}

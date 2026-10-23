@@ -31,6 +31,19 @@ Endereço: `/admin/`
 - Se o painel disser que não consegue gravar, dê permissão de escrita (755 ou 775) às pastas `dados` e `uploads/cervejas` no Gerenciador de Arquivos da Locaweb.
 - Esqueceu a senha? Apague `dados/admin.json` pelo FTP e crie uma nova no `/admin/`.
 
+## Tap list na TV
+
+Endereços (tela cheia, TV na horizontal):
+
+- Aldeota: `https://www.donkeyheadcervejaria.com.br/tv/?unidade=aldeota`
+- Maraponga: `https://www.donkeyheadcervejaria.com.br/tv/?unidade=maraponga`
+
+A página busca a tap list do painel a cada minuto, então o que o barman salva aparece sozinho. Mostra número da torneira, rótulo, nome, estilo, ABV, IBU e preços de 300 ml e 1 L. Se houver mais de 12 torneiras, alterna as páginas a cada 15 s. Se a internet cair, mantém a última lista na tela.
+
+**Aparelho:** o Roku não tem navegador de verdade. Use um Fire TV Stick ou um Chromecast com Google TV com o app **Fully Kiosk Browser**, configurado com o endereço acima como página inicial e para abrir ao ligar.
+
+**xMenu:** os dados de produtos do xMenu (Netcontroll) bloqueiam acesso de outros sites (`ORIGEM_NAO_AUTORIZADA`). Se o xMenu autorizar o domínio do site ou fornecer uma API oficial, a tap list pode passar a vir direto de lá.
+
 ## Publicar na Locaweb
 
 Antes de tudo, **faça backup** do `public_html` atual.

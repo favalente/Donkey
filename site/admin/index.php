@@ -225,6 +225,8 @@ if (!$config) {
                     'pais' => in_array($_POST['pais'] ?? '', DH_PAISES, true) ? $_POST['pais'] : '',
                     'abv' => $num('abv'),
                     'ibu' => $num('ibu'),
+                    'preco_300' => $num('preco_300'),
+                    'preco_1l' => $num('preco_1l'),
                     'descricao' => trim(str_replace("\r\n", "\n", (string) ($_POST['descricao'] ?? ''))),
                     'ativa' => !empty($_POST['ativa']),
                 ]);
@@ -402,7 +404,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
 
     <?php elseif ($tela === 'editar'):
         $id = (string) ($_GET['id'] ?? $_POST['id'] ?? '');
-        $c = $porId[$id] ?? ['id' => '', 'nome' => '', 'estilo' => '', 'pais' => '', 'abv' => '', 'ibu' => '', 'descricao' => '', 'imagem' => '', 'ativa' => true];
+        $c = $porId[$id] ?? ['id' => '', 'nome' => '', 'estilo' => '', 'pais' => '', 'abv' => '', 'ibu' => '', 'preco_300' => '', 'preco_1l' => '', 'descricao' => '', 'imagem' => '', 'ativa' => true];
         if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $c = array_merge($c, array_intersect_key($_POST, $c));
             $c['ativa'] = !empty($_POST['ativa']);
@@ -433,6 +435,10 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <div class="duas">
           <label>ABV (%) <input name="abv" value="<?= e(dh_num($c['abv'])) ?>" inputmode="decimal" maxlength="6"></label>
           <label>IBU <input name="ibu" value="<?= e(dh_num($c['ibu'])) ?>" inputmode="decimal" maxlength="6"></label>
+        </div>
+        <div class="duas">
+          <label>Preço 300 ml (R$) <input name="preco_300" value="<?= e(dh_num($c['preco_300'] ?? '')) ?>" inputmode="decimal" maxlength="8" placeholder="Ex.: 16,00"></label>
+          <label>Preço 1 litro (R$) <input name="preco_1l" value="<?= e(dh_num($c['preco_1l'] ?? '')) ?>" inputmode="decimal" maxlength="8" placeholder="Ex.: 42,00"></label>
         </div>
         <label>Descrição <small>(deixe uma linha em branco entre os parágrafos)</small>
           <textarea name="descricao" rows="9"><?= e($c['descricao']) ?></textarea>

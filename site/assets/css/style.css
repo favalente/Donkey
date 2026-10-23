@@ -107,6 +107,8 @@ p { margin: 0 0 1em; }
 .tap-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .tap-info strong { font-size: 1.05rem; }
 .tap-info span { color: var(--muted); font-size: .88rem; }
+.tap-info .tap-preco { display: flex; flex-wrap: wrap; gap: 0 10px; margin-top: 2px; }
+.tap-info .tap-preco span { color: var(--amber); font-weight: 600; font-size: .82rem; white-space: nowrap; }
 .tap-abv { text-align: right; font-family: var(--display); font-size: 1.6rem; color: var(--cream); line-height: 1; }
 .tap-abv small { display: block; font-family: var(--body); font-size: .72rem; color: var(--muted); margin-top: 4px; }
 .vazio { color: var(--muted); }
