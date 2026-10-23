@@ -71,7 +71,7 @@ function detalhe(array $c): string
     "sameAs": ["https://www.instagram.com/donkeyheadcervejaria/", "https://www.facebook.com/donkeyheadcervejaria/"],
     "location": [
       {"@type": "Place", "name": "Donkey Head Aldeota", "telephone": "+55-85-98212-4149", "address": {"@type": "PostalAddress", "streetAddress": "R. Norvinda Píres, 42", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60150-280", "addressCountry": "BR"}},
-      {"@type": "Place", "name": "Donkey Head Maraponga", "telephone": "+55-85-9420-6246", "address": {"@type": "PostalAddress", "streetAddress": "Av. Godofredo Maciel, 2127", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60710-001", "addressCountry": "BR"}}
+      {"@type": "Place", "name": "Donkey Head Maraponga", "telephone": "+55-85-98194-3774", "address": {"@type": "PostalAddress", "streetAddress": "Av. Godofredo Maciel, 2127", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60710-001", "addressCountry": "BR"}}
     ]
   }
   </script>
@@ -282,7 +282,7 @@ function detalhe(array $c): string
             <h3>Sede Maraponga</h3>
             <p class="addr">Av. Godofredo Maciel, 2127 · Maraponga<br>Fortaleza - CE, 60710-001</p>
             <div class="unit-actions">
-              <a class="btn btn-whats btn-sm" href="https://wa.me/558594206246" target="_blank" rel="noopener">WhatsApp (85) 9420-6246</a>
+              <a class="btn btn-whats btn-sm" href="https://wa.me/5585981943774" target="_blank" rel="noopener">WhatsApp (85) 98194-3774</a>
               <a class="btn btn-ghost btn-sm" href="https://www.instagram.com/donkeyheadmaraponga" target="_blank" rel="noopener">Instagram</a>
               <a class="btn btn-ghost btn-sm" href="https://www.facebook.com/donkeyheadmaraponga" target="_blank" rel="noopener">Facebook</a>
             </div>
@@ -290,7 +290,6 @@ function detalhe(array $c): string
           </article>
         </div>
         <div class="contato-extra">
-          <a href="https://wa.me/5585992938600" target="_blank" rel="noopener"><strong>WhatsApp Comercial</strong> (85) 99293-8600</a>
           <a href="mailto:contato@donkeyheadcervejaria.com.br"><strong>E-mail</strong> contato@donkeyheadcervejaria.com.br</a>
         </div>
       </div>
