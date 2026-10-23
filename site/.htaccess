@@ -1,5 +1,4 @@
-# TEMPORÁRIO: servidor em PHP 5.3; volta a abrir o site antigo (index.html) até o PHP ser atualizado
-DirectoryIndex index.html index.php
+DirectoryIndex index.php index.html
 Options -Indexes
 
 # Força HTTPS e o endereço com www
