@@ -122,7 +122,7 @@ function detalhe(array $c): string
         <img class="hero-logo" src="assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="400" height="566">
         <div class="hero-texto">
           <h1><img src="assets/img/mais-cerveja-menos-arenga.png" alt="Mais cerveja, menos arenga!" width="1003" height="324"></h1>
-          <p class="lead">Cerveja artesanal produzida em Fortaleza, do fermentador direto para a câmara fria e para o seu copo.</p>
+          <p class="lead">Cerveja artesanal feita aqui, gastronomia de verdade e muito rock. Aqui, a vida acontece fora da tela.</p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="<?= $temTaplist ? '#taplist' : '#cervejas' ?>"><?= $temTaplist ? 'O que está engatado' : 'Nossas cervejas' ?></a>
             <a class="btn btn-ghost" href="#contato">Onde estamos</a>
