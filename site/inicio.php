@@ -265,9 +265,9 @@ function detalhe(array $c): string
     <section class="section" id="contato">
       <div class="container">
         <div class="section-head">
-          <p class="eyebrow">Contate-nos</p>
-          <h2>Venha nos visitar</h2>
-          <p>Para dúvidas, parcerias, críticas, sugestões e demais assuntos, fale com a gente.</p>
+          <p class="eyebrow">Fale com a gente</p>
+          <h2>Bora se encontrar?</h2>
+          <p>Quer tirar uma dúvida, mandar uma ideia, fazer uma parceria ou até puxar nossa orelha? Pode chamar. A gente gosta de uma boa conversa!</p>
         </div>
         <div class="units">
           <article class="unit">
