@@ -63,7 +63,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=5">
+  <link rel="stylesheet" href="assets/css/style.css?v=6">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -71,7 +71,7 @@ function detalhe(array $c): string
     "name": "Donkey Head Cervejaria",
     "url": "https://www.donkeyheadcervejaria.com.br/",
     "email": "contato@donkeyheadcervejaria.com.br",
-    "sameAs": ["https://www.instagram.com/donkeyheadcervejaria/", "https://www.facebook.com/donkeyheadcervejaria/"],
+    "sameAs": ["https://www.instagram.com/donkeyheadcervejaria/", "https://www.instagram.com/donkeyheadmaraponga/"],
     "location": [
       {"@type": "Place", "name": "Donkey Head Aldeota", "telephone": "+55-85-98212-4149", "address": {"@type": "PostalAddress", "streetAddress": "R. Norvinda Píres, 42", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60150-280", "addressCountry": "BR"}},
       {"@type": "Place", "name": "Donkey Head Maraponga", "telephone": "+55-85-98194-3774", "address": {"@type": "PostalAddress", "streetAddress": "Av. Godofredo Maciel, 2127", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60710-001", "addressCountry": "BR"}}
@@ -97,7 +97,7 @@ function detalhe(array $c): string
     <div class="container nav">
       <a class="brand" href="#topo" aria-label="Donkey Head Cervejaria, início">
         <img src="assets/img/logo-donkey-head.png" alt="" width="34" height="48">
-        <span>Donkey Head</span>
+        <span>Donkey Head Cervejaria</span>
       </a>
       <button class="nav-toggle" aria-expanded="false" aria-controls="menu" aria-label="Abrir menu">
         <span></span><span></span><span></span>
@@ -276,8 +276,7 @@ function detalhe(array $c): string
             <p class="addr">R. Norvinda Píres, 42 · Aldeota<br>Fortaleza - CE, 60150-280</p>
             <div class="unit-actions">
               <a class="btn btn-whats btn-sm" href="https://wa.me/5585982124149" target="_blank" rel="noopener">WhatsApp (85) 98212-4149</a>
-              <a class="btn btn-ghost btn-sm" href="https://www.instagram.com/donkeyheadcervejaria/" target="_blank" rel="noopener">Instagram</a>
-              <a class="btn btn-ghost btn-sm" href="https://www.facebook.com/donkeyheadcervejaria/" target="_blank" rel="noopener">Facebook</a>
+              <a class="btn btn-ghost btn-sm btn-insta" href="https://www.instagram.com/donkeyheadcervejaria/" target="_blank" rel="noopener" aria-label="Instagram @donkeyheadcervejaria"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2Zm0 4.7a5.1 5.1 0 1 0 0 10.2 5.1 5.1 0 0 0 0-10.2Zm0 8.4a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6Zm5.3-9.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"/></svg>@donkeyheadcervejaria</a>
             </div>
             <iframe class="mapa" title="Mapa da unidade Aldeota" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3981.335261517803!2d-38.50336088524095!3d-3.7369241972812173!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x7c749b9f3259157%3A0xc8ca672d1f153fdf!2sDonkey+Head+Cervejaria!5e0!3m2!1spt-BR!2sbr!4v1539631173074"></iframe>
           </article>
@@ -286,8 +285,7 @@ function detalhe(array $c): string
             <p class="addr">Av. Godofredo Maciel, 2127 · Maraponga<br>Fortaleza - CE, 60710-001</p>
             <div class="unit-actions">
               <a class="btn btn-whats btn-sm" href="https://wa.me/5585981943774" target="_blank" rel="noopener">WhatsApp (85) 98194-3774</a>
-              <a class="btn btn-ghost btn-sm" href="https://www.instagram.com/donkeyheadmaraponga" target="_blank" rel="noopener">Instagram</a>
-              <a class="btn btn-ghost btn-sm" href="https://www.facebook.com/donkeyheadmaraponga" target="_blank" rel="noopener">Facebook</a>
+              <a class="btn btn-ghost btn-sm btn-insta" href="https://www.instagram.com/donkeyheadmaraponga" target="_blank" rel="noopener" aria-label="Instagram @donkeyheadmaraponga"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1 .4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2Zm0 4.7a5.1 5.1 0 1 0 0 10.2 5.1 5.1 0 0 0 0-10.2Zm0 8.4a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6Zm5.3-9.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"/></svg>@donkeyheadmaraponga</a>
             </div>
             <iframe class="mapa" title="Mapa da unidade Maraponga" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d11260.175553229092!2d-38.569613862983374!3d-3.79421723541069!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x22103327ec2d6e18!2sDonkey%20Head%20Cervejaria%20-%20Maraponga!5e0!3m2!1spt-BR!2sbr!4v1603997522189!5m2!1spt-BR!2sbr"></iframe>
           </article>

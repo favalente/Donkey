@@ -50,6 +50,8 @@ p { margin: 0 0 1em; }
 .nav { display: flex; align-items: center; justify-content: space-between; height: 68px; }
 .brand { display: flex; align-items: center; gap: .6em; color: var(--text); text-decoration: none; font-family: var(--display); font-size: 1.7rem; letter-spacing: .04em; }
 .brand img { height: 48px; width: auto; }
+@media (max-width: 420px) { .brand { font-size: 1.4rem; gap: .45em; } .brand img { height: 42px; } }
+.btn-insta .ico { flex: none; }
 .menu { display: flex; align-items: center; gap: 1.5rem; }
 .menu a:not(.btn) { color: var(--text); text-decoration: none; font-weight: 500; font-size: .95rem; }
 .menu a:not(.btn):hover { color: var(--amber); }
