@@ -48,6 +48,14 @@ header('Cache-Control: no-store');
     .precos { flex: none; display: flex; flex-direction: column; gap: .6vh; text-align: right; }
     .preco { font: 400 4.2vh/1 "Bebas Neue", Impact, sans-serif; color: var(--cream); }
     .preco small { font: 700 1.6vh/1 Inter, sans-serif; color: var(--amber); margin-right: .5vw; letter-spacing: .08em; vertical-align: middle; }
+    .compacto .nome { font-size: 4.2vh; }
+    .compacto .nome.longo { font-size: 3.6vh; }
+    .compacto .nome.muito-longo { font-size: 3vh; }
+    .compacto .estilo { font-size: 1.9vh; margin-top: .2vh; }
+    .compacto .preco { font-size: 3.5vh; }
+    .compacto .preco small { font-size: 1.4vh; }
+    .compacto .precos { gap: .3vh; }
+    .compacto main { gap: 1.1vh 1.6vw; }
     .vazio { grid-column: 1 / -1; display: grid; place-items: center; font: 400 6vh/1.2 "Bebas Neue", Impact, sans-serif; color: var(--muted); text-align: center; }
     footer { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 1.8vh; }
     .paginas { display: flex; gap: .6vw; }
@@ -74,8 +82,8 @@ header('Cache-Control: no-store');
 
   <script>
     var UNIDADE = <?= json_encode($unidade) ?>;
-    var POR_PAGINA = 12;          // 2 colunas x 6 linhas
-    var TROCA_PAGINA = 15000;     // 15 s por página quando há mais de 12 torneiras
+    var POR_PAGINA = 14;          // 2 colunas x 7 linhas
+    var TROCA_PAGINA = 15000;     // 15 s por página quando há mais de 14 torneiras
     var ATUALIZA = 60000;         // busca a tap list a cada 1 min
     var dados = <?= json_encode($inicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     var pagina = 0;
@@ -92,7 +100,9 @@ header('Cache-Control: no-store');
       var lista = taps.slice(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA);
       var main = document.getElementById('taps');
       // Linhas proporcionais à quantidade de torneiras (mínimo 4 para não ficar gigante)
-      main.style.gridTemplateRows = 'repeat(' + Math.max(4, Math.ceil(lista.length / 2)) + ', minmax(0, 1fr))';
+      var linhas = Math.max(4, Math.ceil(lista.length / 2));
+      main.style.gridTemplateRows = 'repeat(' + linhas + ', minmax(0, 1fr))';
+      document.body.classList.toggle('compacto', linhas > 6);
       main.innerHTML = lista.length ? lista.map(function (t, i) {
         var meta = [t.abv && '<b>' + esc(t.abv) + '</b>', t.ibu && esc(t.ibu)].filter(Boolean).join(' · ');
         return '<div class="tap" style="animation-delay:' + (i * 50) + 'ms">' +
