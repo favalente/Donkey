@@ -7,10 +7,11 @@ $taplists = [];
 $engatadas = [];
 foreach (DH_UNIDADES as $u => $_) {
     $taplists[$u] = dh_taplist($dados, $u);
-    foreach ($taplists[$u] as $c) {
-        if ($c['id']) {
-            $engatadas[$c['id']][] = $u;
-        }
+}
+// Selo "Engatada" e filtro do catálogo seguem só a tap list da Aldeota
+foreach ($taplists['aldeota'] as $c) {
+    if ($c['id']) {
+        $engatadas[$c['id']] = true;
     }
 }
 $temTaplist = (bool) array_filter($taplists);
@@ -205,7 +206,7 @@ function detalhe(array $c): string
         <?php if ($temTaplist): ?>
         <div class="filtros" role="group" aria-label="Filtrar cervejas">
           <button class="filtro ativo" data-filtro="todas" aria-pressed="true">Todas</button>
-          <button class="filtro" data-filtro="engatada" aria-pressed="false">Engatadas agora</button>
+          <button class="filtro" data-filtro="engatada" aria-pressed="false">Engatadas na Aldeota</button>
         </div>
         <?php endif; ?>
         <div class="beer-grid">
@@ -221,7 +222,7 @@ function detalhe(array $c): string
               </button>
               <div class="detalhe" id="cerveja-<?= e($c['id']) ?>" hidden>
                 <?= detalhe($c) ?>
-                <?php if ($onde): ?><p class="onde">Engatada agora em: <?= e(implode(' e ', array_map(fn($u) => DH_UNIDADES[$u], $onde))) ?></p><?php endif; ?>
+                <?php if ($onde): ?><p class="onde">Engatada agora na Aldeota</p><?php endif; ?>
               </div>
             </article>
           <?php endforeach; ?>
