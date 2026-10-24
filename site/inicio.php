@@ -63,7 +63,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=6">
+  <link rel="stylesheet" href="assets/css/style.css?v=7">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -141,11 +141,14 @@ function detalhe(array $c): string
           </figure>
         </div>
         <div class="prose">
-          <p>Três amigos apaixonados por cerveja resolvem fazê-la no quintal de casa. O resultado da primeira produção foi inesperado: uma cerveja excelente. Entregamos para os amigos e alguns especialistas e logo começaram os elogios, então surgiu a ideia: por que não comercializá-la?</p>
-          <p>Decidimos então fazer um teste mercadológico como cervejaria cigana, fizemos nossa cerveja em uma estrutura de outra cervejaria, a Patt Lou em Recife, a qual agradecemos ao cervejeiro Luiz imensamente por fazer parte da nossa história.</p>
-          <p>Após a boa aceitação do mercado, surgiu mais uma ideia: e se nós produzíssemos localmente, proporcionando uma cerveja extremamente fresca, sem intervenção de mau armazenamento ou transporte?</p>
-          <p>Após fazermos um estudo de mercado, percebemos a necessidade de um local que, além de boas cervejas, oferecesse também uma culinária à altura. Então surgiu o desejo de criar uma cervejaria com produção local aliada a uma boa cozinha.</p>
-          <p>Nossa cerveja sai do fermentador direto para a câmara fria, o que retarda consideravelmente o seu envelhecimento, garantindo uma maior qualidade. Nosso chef de cozinha, Júnior Sales, possui formação pela Le Cordon Bleu, em Paris, considerada uma das mais renomadas escolas de gastronomia do mundo.</p>
+          <p>Tudo começou com três amigos, uma paixão por cerveja e uma ideia meio maluca: fazer a própria cerveja no quintal de casa.</p>
+          <p>A primeira leva ficou boa. Boa até demais! Os amigos provaram, elogiaram e logo veio aquela pergunta: por que não vender essa cerveja?</p>
+          <p>Resolvemos testar a ideia produzindo nossas primeiras cervejas na estrutura de outra cervejaria, a Patt Lou, em Recife. Foi lá que encontramos o cervejeiro Luiz, que deu uma força danada nesse começo.</p>
+          <p>A aceitação foi tão boa que a brincadeira começou a ficar séria. Queríamos produzir nossa própria cerveja aqui, bem fresquinha, sem precisar viajar quilômetros até chegar ao copo.</p>
+          <p>Mas faltava uma coisa. Porque, pra gente, cerveja boa merece comida boa também.</p>
+          <p>Foi assim que nasceu a Donkey Head. Uma cervejaria com produção própria, cozinha caprichada e um lugar pra reunir os amigos.</p>
+          <p>De lá pra cá, muita coisa mudou. Mas a vontade de fazer cerveja boa e juntar gente em volta da mesa continua a mesma.</p>
+          <p class="assinatura">Mais cerveja, menos arenga! 🍺</p>
         </div>
       </div>
     </section>
@@ -236,9 +239,9 @@ function detalhe(array $c): string
     <section class="section" id="galeria">
       <div class="container">
         <div class="section-head">
-          <p class="eyebrow">Galeria</p>
-          <h2>Por dentro da Donkey</h2>
-          <p>Toque nas fotos para ampliá-las.</p>
+          <p class="eyebrow">Conheça a Donkey</p>
+          <h2>Chega mais, a casa é tua!</h2>
+          <p>Cerveja boa, comida caprichada, rock e muita história pra contar. Dá uma olhadinha, mas depois aparece pra conhecer de perto.</p>
         </div>
         <div class="galeria">
           <?php foreach ($galeria as $i => $f): ?>
