@@ -42,6 +42,8 @@ Endereços (tela cheia, TV na horizontal):
 
 A página busca a tap list a cada minuto, então as mudanças aparecem sozinhas. Mostra número da torneira, rótulo, nome, estilo, ABV, IBU e preços de 300 ml e 1 L. Se houver mais de 12 torneiras, alterna as páginas a cada 15 s. Se a internet cair, mantém a última lista na tela.
 
+**Imagem para vídeo (YouTube):** no painel, aba Tap List, o botão **Gerar imagem para a TV** abre `/tv/imagem.php?unidade=aldeota|maraponga`, que monta uma imagem 1920×1080 (PNG) com a tap list atual, pronta para baixar. Com mais de 14 cervejas, gera mais de uma imagem.
+
 **Aparelho:** o Roku não tem navegador de verdade. Use um Fire TV Stick ou um Chromecast com Google TV com o app **Fully Kiosk Browser**, configurado com o endereço acima como página inicial e para abrir ao ligar.
 
 ## Tap list automática pelo xMenu

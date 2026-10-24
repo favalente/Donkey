@@ -357,7 +357,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=4">
+  <link rel="stylesheet" href="admin.css?v=5">
 </head>
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
@@ -402,6 +402,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <?php endforeach; ?>
       </div>
       <?php if (dh_usa_xmenu($uSel)): $doXmenu = dh_xmenu_taplist($uSel, $dados['cervejas']); ?>
+        <p><a class="btn primario largo" href="../tv/imagem.php?unidade=<?= e($uSel) ?>" target="_blank">Gerar imagem para a TV</a></p>
         <p class="aviso">A tap list da <?= e(DH_UNIDADES[$uSel]) ?> vem <strong>automaticamente do xMenu</strong> (categoria "TAP LIST"). Para trocar uma cerveja, mude no xMenu: o site e a TV atualizam em até 1 minuto. Preços também vêm do xMenu.</p>
         <?php if ($doXmenu === null): ?>
           <p class="erro">Não foi possível ler o xMenu agora. Tente de novo em alguns minutos.</p>

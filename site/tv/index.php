@@ -38,7 +38,6 @@ header('Cache-Control: no-store');
       background: var(--card); border: .2vh solid var(--line); border-radius: 1.6vh; padding: 1vh 1.4vw 1vh 1vh;
       animation: entra .6s ease both;
     }
-    .num { flex: none; width: 6vh; height: 6vh; border-radius: 50%; display: grid; place-items: center; background: var(--amber); color: #1a120a; font: 400 4vh/1 "Bebas Neue", Impact, sans-serif; }
     .tap img { flex: none; height: 100%; max-height: 13vh; aspect-ratio: 1; object-fit: cover; border-radius: 1vh; }
     .info { flex: 1; min-width: 0; }
     .nome { font: 400 5vh/1 "Bebas Neue", Impact, sans-serif; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -97,7 +96,6 @@ header('Cache-Control: no-store');
       main.innerHTML = lista.length ? lista.map(function (t, i) {
         var meta = [t.abv && '<b>' + esc(t.abv) + '</b>', t.ibu && esc(t.ibu)].filter(Boolean).join(' · ');
         return '<div class="tap" style="animation-delay:' + (i * 50) + 'ms">' +
-          '<div class="num">' + t.n + '</div>' +
           '<img src="' + esc(t.img) + '" alt="">' +
           '<div class="info"><div class="nome' + (t.nome.length > 24 ? ' muito-longo' : t.nome.length > 18 ? ' longo' : '') + '">' + esc(t.nome) + '</div>' +
           '<div class="estilo">' + esc(t.estilo) + (meta ? ' · ' + meta : '') + '</div></div>' +

@@ -88,3 +88,4 @@ label small { font-weight: 400; color: var(--muted); }
 .btn.mini.perigo { margin-left: auto; color: var(--erro); }
 .btn.mini:disabled { opacity: .35; }
 .topo nav a { padding: 8px 10px; }
+.btn.largo { display: block; text-align: center; }
