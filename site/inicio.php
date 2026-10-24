@@ -257,7 +257,6 @@ function detalhe(array $c): string
         <div>
           <p class="eyebrow">Cardápio</p>
           <h2>Boa cerveja pede boa cozinha.</h2>
-          <p class="lead">Veja o nosso cardápio completo e faça o seu pedido online.</p>
         </div>
         <a class="btn btn-primary" href="<?= e($cardapio) ?>" target="_blank" rel="noopener">Ver cardápio</a>
       </div>
