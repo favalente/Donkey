@@ -132,7 +132,8 @@ function dh_categoria(array $c): int
     if (preg_match('/stout|porter|imperial|tripel|dubbel|quadrupel|strong|barley|wee heavy|doppelbock/u', $e)) {
         return 4;
     }
-    if (preg_match('/ipa|apa|pale ale/u', $e)) {
+    // American Blonde (ex.: Miolo de Pote) leva lúpulo americano: entra nas lupuladas
+    if (preg_match('/ipa|apa|pale ale|american blonde/u', $e)) {
         return 3;
     }
     if (preg_match('/lager|pils|helles|weiss|weizen|wheat|wit|sour|berliner|gose|golden|k[oö]lsch|fruit/u', $e)) {
