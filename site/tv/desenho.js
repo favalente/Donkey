@@ -127,11 +127,11 @@
         ctx.lineWidth = 2; ctx.strokeStyle = C.borda; retangulo(ctx, x, yc, wCard, hCard, 18); ctx.stroke();
 
         // Rótulo
-        var pad = 14, lado = hCard - pad * 2, img = imgs[t.img];
+        var pad = 14, lado = Math.min(hCard - pad * 2, 176), img = imgs[t.img];
         if (img) {
-          ctx.save(); retangulo(ctx, x + 14 + pad, yc + pad, lado, lado, 12); ctx.clip();
+          ctx.save(); retangulo(ctx, x + 14 + pad, yc + (hCard - lado) / 2, lado, lado, 12); ctx.clip();
           var s = Math.min(img.width, img.height);
-          ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, x + 14 + pad, yc + pad, lado, lado);
+          ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, x + 14 + pad, yc + (hCard - lado) / 2, lado, lado);
           ctx.restore();
         }
 
@@ -152,13 +152,20 @@
         ctx.fillText('300 ML', xDir, meio - tp * 0.5);
         ctx.textAlign = 'left';
 
-        // Nome, estilo e números
+        // Nome, estilo e números em três linhas, centralizadas na altura do cartão
         var xt = x + 14 + pad + lado + 26, larg = xDir - wPreco - 36 - xt;
-        var tn = caber(ctx, t.nome.toUpperCase(), '400', Math.round(Math.min(84, hCard * 0.38)), BEBAS, larg);
-        ctx.fillStyle = C.texto; ctx.fillText(t.nome.toUpperCase(), xt, meio - hCard * 0.04);
-        var linhaInfo = [t.estilo, t.abv, t.ibuNum ? t.ibuNum + ' IBU' : ''].filter(Boolean).join('  ·  ');
-        var ti = caber(ctx, linhaInfo, '700', Math.round(Math.min(30, hCard * 0.15)), INTER, larg);
-        ctx.fillStyle = cor; ctx.fillText(linhaInfo, xt, meio + tn * 0.18 + ti * 1.1);
+        var nome = t.nome.toUpperCase(), estilo = (t.estilo || '').toUpperCase();
+        var numeros = [t.abv, t.ibuNum ? t.ibuNum + ' IBU' : ''].filter(Boolean).join('  ·  ');
+        var tn = caber(ctx, nome, '400', Math.round(Math.min(78, hCard * 0.31)), BEBAS, larg);
+        var te = caber(ctx, estilo, '400', Math.round(Math.min(56, hCard * 0.23)), BEBAS, larg);
+        var tm = caber(ctx, numeros, '400', Math.round(Math.min(56, hCard * 0.23)), BEBAS, larg);
+        var esp = Math.round(hCard * 0.07), altura = tn + te + tm + esp * 2;
+        var yb = meio - altura / 2;
+        ctx.font = '400 ' + tn + 'px ' + BEBAS; ctx.fillStyle = C.texto; ctx.fillText(nome, xt, yb + tn * 0.86);
+        yb += tn + esp;
+        ctx.font = '400 ' + te + 'px ' + BEBAS; ctx.fillStyle = cor; ctx.fillText(estilo, xt, yb + te * 0.86);
+        yb += te + esp;
+        ctx.font = '400 ' + tm + 'px ' + BEBAS; ctx.fillStyle = '#3f3328'; ctx.fillText(numeros, xt, yb + tm * 0.86);
       });
       y += Math.ceil(b.taps.length / 2) * (hCard + GAP) - GAP + 14;
     });

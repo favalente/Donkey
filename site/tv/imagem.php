@@ -45,7 +45,7 @@ header('X-Robots-Tag: noindex');
     <div id="paginas"><p class="carregando">Gerando imagem…</p></div>
   </main>
 
-  <script src="desenho.js?v=2"></script>
+  <script src="desenho.js?v=4"></script>
   <script>
     var DADOS = <?= json_encode($dadosTv, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     var UNIDADE = <?= json_encode($unidade) ?>;

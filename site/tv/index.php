@@ -26,7 +26,7 @@ header('Cache-Control: no-store');
 </head>
 <body>
   <canvas id="tela" aria-label="Tap list da unidade <?= e($inicial['unidade']) ?>"></canvas>
-  <script src="desenho.js?v=2"></script>
+  <script src="desenho.js?v=4"></script>
   <script>
     var UNIDADE = <?= json_encode($unidade) ?>;
     var TROCA_TELA = 15000;   // 15 s por tela quando há mais de uma
