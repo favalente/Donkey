@@ -48,7 +48,7 @@ header('X-Robots-Tag: noindex');
   <script>
     var DADOS = <?= json_encode($dadosTv, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     var UNIDADE = <?= json_encode($unidade) ?>;
-    var W = 1920, H = 1080, POR_IMAGEM = 14; // 2 colunas x 7 linhas
+    var W = 1920, H = 1080, POR_IMAGEM = 15; // até 15 cervejas por imagem
     var C = { bg: '#16110d', card: '#241c16', linha: '#3d3128', texto: '#f4ece1', suave: '#bcab97', ambar: '#e9a23b', creme: '#f6e7c8' };
     var BEBAS = '"Bebas Neue", Impact, sans-serif', INTER = 'Inter, system-ui, sans-serif';
 
@@ -78,6 +78,14 @@ header('X-Robots-Tag: noindex');
       return t;
     }
 
+    // Cores de cada grupo, da cerveja mais leve para a mais forte (iguais às da tela da TV)
+    var GRUPO = {
+      1: { cor: '#e9c14a', fundo: 'rgba(233,193,74,' },
+      2: { cor: '#d9773a', fundo: 'rgba(217,119,58,' },
+      3: { cor: '#8fbf4a', fundo: 'rgba(143,191,74,' },
+      4: { cor: '#a27ad8', fundo: 'rgba(162,122,216,' }
+    };
+
     function desenhar(taps, imagens, logo, pagina, total) {
       var cv = document.createElement('canvas');
       cv.width = W; cv.height = H;
@@ -85,77 +93,87 @@ header('X-Robots-Tag: noindex');
 
       ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
       var g = ctx.createRadialGradient(W, 0, 0, W, 0, 1100);
-      g.addColorStop(0, 'rgba(233,162,59,0.18)'); g.addColorStop(1, 'rgba(233,162,59,0)');
+      g.addColorStop(0, 'rgba(233,162,59,0.14)'); g.addColorStop(1, 'rgba(233,162,59,0)');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
       // Cabeçalho
-      if (logo) { var lh = 130, lw = logo.width * lh / logo.height; ctx.drawImage(logo, 60, 34, lw, lh); }
+      var X0 = 38, X1 = W - 38;
+      if (logo) { var lh = 88, lw = logo.width * lh / logo.height; ctx.drawImage(logo, 44, 16, lw, lh); }
       ctx.textBaseline = 'alphabetic';
-      ctx.font = '400 116px ' + BEBAS; ctx.fillStyle = C.texto; ctx.fillText('TAP', 200, 132);
-      var wTap = ctx.measureText('TAP ').width;
-      ctx.fillStyle = C.ambar; ctx.fillText('LIST', 200 + wTap, 132);
-      ctx.font = '700 28px ' + INTER; ctx.fillStyle = C.suave;
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '6px';
-      ctx.fillText('DONKEY HEAD · ' + DADOS.unidade.toUpperCase(), 204, 172);
+      ctx.font = '400 84px ' + BEBAS; ctx.fillStyle = C.texto; ctx.fillText('CERVEJAS', 128, 92);
+      var wc = ctx.measureText('CERVEJAS ').width;
+      ctx.fillStyle = C.ambar; ctx.fillText('ENGATADAS', 128 + wc, 92);
+      ctx.font = '700 24px ' + INTER; ctx.fillStyle = C.suave; ctx.textAlign = 'right';
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '5px';
+      ctx.fillText('DONKEY HEAD · ' + DADOS.unidade.toUpperCase() + (total > 1 ? '  ' + pagina + '/' + total : ''), X1, 70);
       if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-      if (total > 1) {
-        ctx.font = '400 56px ' + BEBAS; ctx.fillStyle = C.creme; ctx.textAlign = 'right';
-        ctx.fillText(pagina + '/' + total, W - 60, 130); ctx.textAlign = 'left';
-      }
-      ctx.fillStyle = C.linha; ctx.fillRect(60, 198, W - 120, 3);
 
-      // Cervejas em 2 colunas
-      var topo = 226, base = 1012, gapX = 36, gapY = 16;
-      var linhas = Math.max(4, Math.ceil(taps.length / 2));
-      var cw = (W - 120 - gapX) / 2;
-      var ch = (base - topo - gapY * (linhas - 1)) / linhas;
+      // Linhas: altura conforme a quantidade (no máximo a de 9 linhas)
+      var topo = 172, base = 1028;
+      var grupos = 0;
+      for (var i = 1; i < taps.length; i++) if (taps[i].cat !== taps[i - 1].cat) grupos++;
+      var h = Math.floor((base - topo - grupos * 10) / Math.max(9, taps.length));
+      var xImg = X0 + 30, xNome = xImg + h + 22;
+      var xEstilo = xNome + (1300 - xNome) * 0.56;
+      var xAbv = 1476, xIbu = 1614, xPreco = X1 - 24;
+
+      // Títulos das colunas
+      ctx.font = '400 34px ' + BEBAS; ctx.fillStyle = C.suave;
+      ctx.textAlign = 'left'; ctx.fillText('CERVEJA', xNome, 150); ctx.fillText('ESTILO', xEstilo, 150);
+      ctx.textAlign = 'right'; ctx.fillText('ÁLCOOL', xAbv, 150); ctx.fillText('IBU', xIbu, 150); ctx.fillText('300 ML', xPreco, 150);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = C.linha; ctx.fillRect(X0, 160, X1 - X0, 3);
+
+      var y = topo;
       taps.forEach(function (t, i) {
-        var col = i % 2, lin = Math.floor(i / 2);
-        var x = 60 + col * (cw + gapX), y = topo + lin * (ch + gapY);
-        retangulo(ctx, x, y, cw, ch, 18);
-        ctx.fillStyle = C.card; ctx.fill();
-        ctx.lineWidth = 2; ctx.strokeStyle = C.linha; ctx.stroke();
+        if (i > 0 && t.cat !== taps[i - 1].cat) y += 10;
+        var gr = GRUPO[t.cat] || GRUPO[2];
+        var fundo = ctx.createLinearGradient(X0, 0, X1, 0);
+        fundo.addColorStop(0, gr.fundo + '0.22)'); fundo.addColorStop(1, gr.fundo + '0.07)');
+        ctx.fillStyle = fundo; ctx.fillRect(X0, y, X1 - X0, h);
+        ctx.fillStyle = gr.cor; ctx.fillRect(X0, y, 10, h);
+        ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fillRect(X0, y + h - 1, X1 - X0, 1);
 
-        // Rótulo
-        var pad = 12, lado = ch - pad * 2, img = imagens[i];
+        var img = imagens[i], lado = h - 8;
         if (img) {
-          ctx.save(); retangulo(ctx, x + pad, y + pad, lado, lado, 10); ctx.clip();
+          ctx.save(); retangulo(ctx, xImg, y + 4, lado, lado, 6); ctx.clip();
           var s = Math.min(img.width, img.height);
-          ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, x + pad, y + pad, lado, lado);
+          ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, xImg, y + 4, lado, lado);
           ctx.restore();
         }
 
-        // Preços à direita
-        var precos = t.precos || [];
-        var tamPreco = Math.min(54, ch * 0.36), xDir = x + cw - 26, largPrecos = 0;
-        ctx.textAlign = 'right';
-        precos.forEach(function (p, k) {
-          var yp = precos.length === 1 ? y + ch / 2 + tamPreco * 0.35 : y + ch / 2 + (k === 0 ? -tamPreco * 0.18 : tamPreco * 0.88);
-          ctx.font = '400 ' + tamPreco + 'px ' + BEBAS; ctx.fillStyle = C.creme;
-          ctx.fillText(p.valor, xDir, yp);
-          var wv = ctx.measureText(p.valor).width;
-          ctx.font = '700 ' + Math.round(tamPreco * 0.38) + 'px ' + INTER; ctx.fillStyle = C.ambar;
-          ctx.fillText(p.tam, xDir - wv - 12, yp - tamPreco * 0.12);
-          largPrecos = Math.max(largPrecos, wv + 12 + ctx.measureText(p.tam).width);
-        });
-        ctx.textAlign = 'left';
+        var meio = y + h / 2;
+        var tn = caber(ctx, t.nome.toUpperCase(), '400', Math.round(h * 0.66), BEBAS, xEstilo - xNome - 24);
+        ctx.fillStyle = C.texto; ctx.fillText(t.nome.toUpperCase(), xNome, meio + tn * 0.36);
+        var te = caber(ctx, (t.estilo || '').toUpperCase(), '400', Math.round(h * 0.5), BEBAS, xAbv - 190 - xEstilo);
+        ctx.fillStyle = gr.cor; ctx.fillText((t.estilo || '').toUpperCase(), xEstilo, meio + te * 0.36);
 
-        // Nome e estilo
-        var xt = x + pad + lado + 24, larg = xDir - largPrecos - 28 - xt;
-        var tn = caber(ctx, t.nome.toUpperCase(), '400', Math.min(66, ch * 0.42), BEBAS, larg);
-        ctx.fillStyle = C.texto; ctx.fillText(t.nome.toUpperCase(), xt, y + ch / 2 + tn * 0.08);
-        var meta = [t.estilo, t.abv, t.ibu].filter(Boolean).join(' · ');
-        caber(ctx, meta, '500', Math.min(28, ch * 0.2), INTER, larg);
-        ctx.fillStyle = C.suave; ctx.fillText(meta, xt, y + ch / 2 + tn * 0.08 + Math.min(40, ch * 0.3));
+        var tv = Math.round(h * 0.62);
+        ctx.font = '400 ' + tv + 'px ' + BEBAS; ctx.textAlign = 'right';
+        ctx.fillStyle = C.creme; ctx.fillText(t.abv || '', xAbv, meio + tv * 0.36);
+        ctx.fillStyle = '#ff8f6b'; ctx.fillText(t.ibuNum || '', xIbu, meio + tv * 0.36);
+        ctx.fillStyle = '#ffffff'; ctx.fillText(t.p300 || '', xPreco, meio + tv * 0.36);
+        ctx.textAlign = 'left';
+        y += h;
       });
       if (!taps.length) {
         ctx.font = '400 72px ' + BEBAS; ctx.fillStyle = C.suave; ctx.textAlign = 'center';
         ctx.fillText('TAP LIST EM ATUALIZAÇÃO', W / 2, H / 2); ctx.textAlign = 'left';
       }
 
-      ctx.font = '500 24px ' + INTER; ctx.fillStyle = C.suave;
-      ctx.fillText('Beba com moderação · Venda proibida para menores de 18 anos', 60, 1052);
-      ctx.textAlign = 'right'; ctx.fillText('donkeyheadcervejaria.com.br', W - 60, 1052); ctx.textAlign = 'left';
+      // Legenda dos grupos e aviso
+      var usados = {};
+      DADOS.taps.forEach(function (t) { usados[t.cat] = true; });
+      var xl = X0;
+      ctx.font = '700 22px ' + INTER;
+      Object.keys(DADOS.grupos).forEach(function (k) {
+        if (!usados[k]) return;
+        ctx.fillStyle = GRUPO[k].cor; ctx.fillRect(xl, 1046, 18, 18);
+        ctx.fillStyle = C.texto; ctx.fillText(DADOS.grupos[k], xl + 26, 1063);
+        xl += 26 + ctx.measureText(DADOS.grupos[k]).width + 34;
+      });
+      ctx.font = '500 20px ' + INTER; ctx.fillStyle = C.suave; ctx.textAlign = 'right';
+      ctx.fillText('Beba com moderação · Venda proibida para menores de 18 anos', X1, 1062); ctx.textAlign = 'left';
       return cv;
     }
 

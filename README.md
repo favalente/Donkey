@@ -40,9 +40,9 @@ Endereços (tela cheia, TV na horizontal):
 - Aldeota: `https://www.donkeyheadcervejaria.com.br/tv/?unidade=aldeota`
 - Maraponga: `https://www.donkeyheadcervejaria.com.br/tv/?unidade=maraponga`
 
-A página busca a tap list a cada minuto, então as mudanças aparecem sozinhas. Mostra rótulo, nome, estilo, ABV, IBU e preços de 300 ml e 1 L. Se houver mais de 14 torneiras, alterna as páginas a cada 15 s. Se a internet cair, mantém a última lista na tela.
+A página busca a tap list a cada minuto, então as mudanças aparecem sozinhas. Formato de tabela com letras grandes: rótulo, nome, estilo, álcool, IBU e preço de 300 ml, agrupadas da mais leve para a mais forte (cor por grupo; o grupo é automático pelo estilo ou escolhido no painel, em "Grupo na TV"). Se houver mais de 15 torneiras, alterna as páginas a cada 15 s. Se a internet cair, mantém a última lista na tela.
 
-**Imagem para vídeo (YouTube):** no painel, aba Tap List, o botão **Gerar imagem para a TV** abre `/tv/imagem.php?unidade=aldeota|maraponga`, que monta uma imagem 1920×1080 (PNG) com a tap list atual, pronta para baixar. Com mais de 14 cervejas, gera mais de uma imagem.
+**Imagem para vídeo (YouTube):** no painel, aba Tap List, o botão **Gerar imagem para a TV** abre `/tv/imagem.php?unidade=aldeota|maraponga`, que monta uma imagem 1920×1080 (PNG) com a tap list atual, pronta para baixar. Com mais de 15 cervejas, gera mais de uma imagem.
 
 **Aparelho:** o Roku não tem navegador de verdade. Use um Fire TV Stick ou um Chromecast com Google TV com o app **Fully Kiosk Browser**, configurado com o endereço acima como página inicial e para abrir ao ligar.
 

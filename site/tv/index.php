@@ -1,5 +1,6 @@
 <?php
 // Tela de TV com a tap list: www.donkeyheadcervejaria.com.br/tv/?unidade=aldeota
+// Formato de tabela com letras grandes, agrupada da cerveja mais leve para a mais forte.
 require __DIR__ . '/../inc/dados.php';
 
 $unidade = isset(DH_UNIDADES[$_GET['unidade'] ?? '']) ? $_GET['unidade'] : array_key_first(DH_UNIDADES);
@@ -17,73 +18,28 @@ header('Cache-Control: no-store');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root { --bg: #16110d; --card: #241c16; --line: #3d3128; --text: #f4ece1; --muted: #bcab97; --amber: #e9a23b; --cream: #f6e7c8; }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; overflow: hidden; cursor: none; }
-    body {
-      background: radial-gradient(ellipse 70% 60% at 100% 0%, rgba(233,162,59,.16), transparent 70%), var(--bg);
-      color: var(--text); font-family: Inter, system-ui, sans-serif;
-      display: flex; flex-direction: column; padding: 2.2vh 2.4vw 1.6vh;
-    }
-    header { display: flex; align-items: center; gap: 1.6vw; padding-bottom: 1.6vh; border-bottom: .3vh solid var(--line); }
-    header img { height: 9vh; width: auto; }
-    header h1 { margin: 0; font: 400 8vh/1 "Bebas Neue", Impact, sans-serif; letter-spacing: .03em; }
-    header h1 span { color: var(--amber); }
-    .unidade { font: 700 2.4vh/1 Inter, sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: .2em; margin-top: .6vh; }
-    .relogio { margin-left: auto; font: 400 7vh/1 "Bebas Neue", Impact, sans-serif; color: var(--cream); }
-    main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(0, 1fr); gap: 1.4vh 1.6vw; padding: 2vh 0; }
-    .tap {
-      display: flex; align-items: center; gap: 1.2vw; min-height: 0;
-      background: var(--card); border: .2vh solid var(--line); border-radius: 1.6vh; padding: 1vh 1.4vw 1vh 1vh;
-      animation: entra .6s ease both;
-    }
-    .tap img { flex: none; height: 100%; max-height: 13vh; aspect-ratio: 1; object-fit: cover; border-radius: 1vh; }
-    .info { flex: 1; min-width: 0; }
-    .nome { font: 400 5vh/1 "Bebas Neue", Impact, sans-serif; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .nome.longo { font-size: 4.1vh; }
-    .nome.muito-longo { font-size: 3.4vh; }
-    .estilo { color: var(--muted); font-size: 2.2vh; margin-top: .4vh; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .estilo b { color: var(--cream); font-weight: 700; }
-    .precos { flex: none; display: flex; flex-direction: column; gap: .6vh; text-align: right; }
-    .preco { font: 400 4.2vh/1 "Bebas Neue", Impact, sans-serif; color: var(--cream); }
-    .preco small { font: 700 1.6vh/1 Inter, sans-serif; color: var(--amber); margin-right: .5vw; letter-spacing: .08em; vertical-align: middle; }
-    .compacto .nome { font-size: 4.2vh; }
-    .compacto .nome.longo { font-size: 3.6vh; }
-    .compacto .nome.muito-longo { font-size: 3vh; }
-    .compacto .estilo { font-size: 1.9vh; margin-top: .2vh; }
-    .compacto .preco { font-size: 3.5vh; }
-    .compacto .preco small { font-size: 1.4vh; }
-    .compacto .precos { gap: .3vh; }
-    .compacto main { gap: 1.1vh 1.6vw; }
-    .vazio { grid-column: 1 / -1; display: grid; place-items: center; font: 400 6vh/1.2 "Bebas Neue", Impact, sans-serif; color: var(--muted); text-align: center; }
-    footer { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 1.8vh; }
-    .paginas { display: flex; gap: .6vw; }
-    .paginas i { width: 1.2vh; height: 1.2vh; border-radius: 50%; background: var(--line); }
-    .paginas i.on { background: var(--amber); }
-    .offline { color: #ff9b8a; }
-    @keyframes entra { from { opacity: 0; transform: translateY(1.5vh); } to { opacity: 1; transform: none; } }
-  </style>
+  <link rel="stylesheet" href="tv.css?v=2">
 </head>
 <body>
   <header>
     <img src="../assets/img/logo-donkey-head.png" alt="">
-    <div>
-      <h1>Tap <span>List</span></h1>
-      <div class="unidade">Donkey Head · <?= e($inicial['unidade']) ?></div>
-    </div>
-    <div class="relogio" id="relogio"></div>
+    <h1>Cervejas <span>engatadas</span></h1>
+    <div class="unidade">Donkey Head · <?= e($inicial['unidade']) ?></div>
   </header>
+  <div class="cab">
+    <span></span><span>Cerveja</span><span>Estilo</span><span class="num">Álcool</span><span class="num">IBU</span><span class="num">300 ml</span>
+  </div>
   <main id="taps"></main>
   <footer>
+    <div class="legenda" id="legenda"></div>
     <span id="status">Beba com moderação · Venda proibida para menores de 18 anos</span>
     <div class="paginas" id="paginas"></div>
   </footer>
 
   <script>
     var UNIDADE = <?= json_encode($unidade) ?>;
-    var POR_PAGINA = 14;          // 2 colunas x 7 linhas
-    var TROCA_PAGINA = 15000;     // 15 s por página quando há mais de 14 torneiras
+    var POR_PAGINA = 15;          // até 15 cervejas por tela
+    var TROCA_PAGINA = 15000;     // 15 s por tela quando há mais de 15 torneiras
     var ATUALIZA = 60000;         // busca a tap list a cada 1 min
     var dados = <?= json_encode($inicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     var pagina = 0;
@@ -99,23 +55,35 @@ header('Cache-Control: no-store');
       if (pagina >= total) pagina = 0;
       var lista = taps.slice(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA);
       var main = document.getElementById('taps');
-      // Linhas proporcionais à quantidade de torneiras (mínimo 4 para não ficar gigante)
-      var linhas = Math.max(4, Math.ceil(lista.length / 2));
-      main.style.gridTemplateRows = 'repeat(' + linhas + ', minmax(0, 1fr))';
-      document.body.classList.toggle('compacto', linhas > 6);
+      // Altura da linha conforme a quantidade (no máximo a de 9 linhas, para não ficar gigante)
+      var linhas = Math.max(9, lista.length);
+      var grupos = 0;
+      for (var i = 1; i < lista.length; i++) if (lista[i].cat !== lista[i - 1].cat) grupos++;
+      var h = (main.clientHeight - grupos * 10) / linhas;
+      document.documentElement.style.setProperty('--h', Math.floor(h) + 'px');
       main.innerHTML = lista.length ? lista.map(function (t, i) {
-        var meta = [t.abv && '<b>' + esc(t.abv) + '</b>', t.ibu && esc(t.ibu)].filter(Boolean).join(' · ');
-        return '<div class="tap" style="animation-delay:' + (i * 50) + 'ms">' +
+        var novoGrupo = i > 0 && t.cat !== lista[i - 1].cat;
+        return '<div class="linha g' + t.cat + (novoGrupo ? ' novo' : '') + '">' +
           '<img src="' + esc(t.img) + '" alt="">' +
-          '<div class="info"><div class="nome' + (t.nome.length > 24 ? ' muito-longo' : t.nome.length > 18 ? ' longo' : '') + '">' + esc(t.nome) + '</div>' +
-          '<div class="estilo">' + esc(t.estilo) + (meta ? ' · ' + meta : '') + '</div></div>' +
-          '<div class="precos">' +
-            (t.precos || []).map(function (p) { return '<div class="preco"><small>' + esc(p.tam) + '</small>' + esc(p.valor) + '</div>'; }).join('') +
-          '</div></div>';
-      }).join('') : '<div class="vazio">Tap list em atualização<br>Pergunte ao nosso barman!</div>';
+          '<span class="nome">' + esc(t.nome) + '</span>' +
+          '<span class="estilo">' + esc(t.estilo) + '</span>' +
+          '<span class="num abv">' + esc(t.abv) + '</span>' +
+          '<span class="num ibu">' + esc(t.ibuNum) + '</span>' +
+          '<span class="num preco">' + esc(t.p300) + '</span>' +
+          '</div>';
+      }).join('') : '<div class="vazio">Tap list em atualização · Pergunte ao nosso barman!</div>';
+      // Nome que não cabe diminui até caber
+      main.querySelectorAll('.nome, .estilo').forEach(function (el) {
+        var t = parseFloat(getComputedStyle(el).fontSize);
+        while (el.scrollWidth > el.clientWidth && t > 10) { t -= 1; el.style.fontSize = t + 'px'; }
+      });
       var dots = '';
-      for (var i = 0; total > 1 && i < total; i++) dots += '<i class="' + (i === pagina ? 'on' : '') + '"></i>';
+      for (var p = 0; total > 1 && p < total; p++) dots += '<i class="' + (p === pagina ? 'on' : '') + '"></i>';
       document.getElementById('paginas').innerHTML = dots;
+      var usados = {};
+      taps.forEach(function (t) { usados[t.cat] = true; });
+      document.getElementById('legenda').innerHTML = Object.keys(dados.grupos).filter(function (k) { return usados[k]; })
+        .map(function (k) { return '<span class="g' + k + '"><i></i>' + esc(dados.grupos[k]) + '</span>'; }).join('');
     }
 
     function atualizar() {
@@ -132,16 +100,10 @@ header('Cache-Control: no-store');
         });
     }
 
-    function relogio() {
-      var d = new Date();
-      document.getElementById('relogio').textContent =
-        ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
-    }
-
     assinatura = JSON.stringify(dados.taps);
     desenhar();
-    relogio();
-    setInterval(relogio, 10000);
+    window.addEventListener('resize', desenhar);
+    if (document.fonts) document.fonts.ready.then(desenhar);
     setInterval(atualizar, ATUALIZA);
     setInterval(function () {
       if ((dados.taps || []).length > POR_PAGINA) { pagina++; desenhar(); }

@@ -224,6 +224,7 @@ if (!$config) {
                     'nome' => $nome,
                     'estilo' => trim((string) ($_POST['estilo'] ?? '')),
                     'pais' => in_array($_POST['pais'] ?? '', DH_PAISES, true) ? $_POST['pais'] : '',
+                    'categoria' => isset(DH_CATEGORIAS[(int) ($_POST['categoria'] ?? 0)]) ? (int) $_POST['categoria'] : 0,
                     'abv' => $num('abv'),
                     'ibu' => $num('ibu'),
                     'nome_xmenu' => trim((string) ($_POST['nome_xmenu'] ?? '')),
@@ -510,6 +511,12 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
             </select>
           </label>
         </div>
+        <label>Grupo na TV <small>(ordem da tap list, da mais leve para a mais forte)</small>
+          <select name="categoria">
+            <option value="0">Automático pelo estilo (agora: <?= e(DH_CATEGORIAS[dh_categoria(['estilo' => $c['estilo'], 'nome' => $c['nome']])]) ?>)</option>
+            <?php foreach (DH_CATEGORIAS as $k => $rot): ?><option value="<?= $k ?>" <?= (int) ($c['categoria'] ?? 0) === $k ? 'selected' : '' ?>><?= $k ?>. <?= e($rot) ?></option><?php endforeach; ?>
+          </select>
+        </label>
         <div class="duas">
           <label>ABV (%) <input name="abv" value="<?= e(dh_num($c['abv'])) ?>" inputmode="decimal" maxlength="6"></label>
           <label>IBU <input name="ibu" value="<?= e(dh_num($c['ibu'])) ?>" inputmode="decimal" maxlength="6"></label>

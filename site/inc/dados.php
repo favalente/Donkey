@@ -10,6 +10,8 @@ const DH_ARQ_INICIAL = DH_RAIZ . '/dados-iniciais/cervejas.json';
 const DH_ARQ_GALERIA = DH_RAIZ . '/dados/galeria.json';
 const DH_ARQ_GALERIA_INICIAL = DH_RAIZ . '/dados-iniciais/galeria.json';
 const DH_UNIDADES = ['aldeota' => 'Aldeota', 'maraponga' => 'Maraponga'];
+// Grupos da tap list na TV, da cerveja mais leve para a mais forte
+const DH_CATEGORIAS = [1 => 'Leves e refrescantes', 2 => 'Maltadas e equilibradas', 3 => 'Lupuladas', 4 => 'Fortes e intensas'];
 const DH_PAISES = ['Alemanha', 'Bélgica', 'Brasil', 'EUA', 'Inglaterra', 'Irlanda', 'República Tcheca', 'Outro'];
 
 function dh_carregar(): array
@@ -116,7 +118,30 @@ function dh_usa_xmenu(string $unidade): bool
     return isset(DH_XMENU_LOJAS[$unidade]);
 }
 
-// Torneiras de uma unidade, no formato usado pela tela da TV
+// Grupo da cerveja na TV: o escolhido no painel ou, se for "automático", deduzido do estilo
+function dh_categoria(array $c): int
+{
+    $cat = (int) ($c['categoria'] ?? 0);
+    if (isset(DH_CATEGORIAS[$cat])) {
+        return $cat;
+    }
+    $e = mb_strtolower(($c['estilo'] ?? '') . ' ' . ($c['nome'] ?? ''), 'UTF-8');
+    if (preg_match('/session/u', $e)) {
+        return 2;
+    }
+    if (preg_match('/stout|porter|imperial|tripel|dubbel|quadrupel|strong|barley|wee heavy|doppelbock/u', $e)) {
+        return 4;
+    }
+    if (preg_match('/ipa|apa|pale ale/u', $e)) {
+        return 3;
+    }
+    if (preg_match('/lager|pils|helles|weiss|weizen|wheat|wit|sour|berliner|gose|golden|k[oö]lsch|fruit/u', $e)) {
+        return 1;
+    }
+    return 2;
+}
+
+// Torneiras de uma unidade, no formato usado pela tela da TV: agrupadas da mais leve para a mais forte
 function dh_tap_tv(string $unidade): array
 {
     if (!isset(DH_UNIDADES[$unidade])) {
@@ -124,17 +149,28 @@ function dh_tap_tv(string $unidade): array
     }
     $taps = [];
     foreach (dh_taplist(dh_carregar(), $unidade) as $n => $c) {
+        $p300 = null;
+        foreach ($c['precos'] as $p) {
+            if (stripos($p['tam'], '300') === 0) {
+                $p300 = $p['valor'];
+            }
+        }
         $taps[] = [
             'n' => $n + 1,
+            'cat' => dh_categoria($c),
             'nome' => $c['nome'],
             'estilo' => $c['estilo'],
             'abv' => $c['abv'] !== '' ? dh_num($c['abv']) . '%' : '',
             'ibu' => $c['ibu'] !== '' ? $c['ibu'] . ' IBU' : '',
+            'ibuNum' => (string) $c['ibu'],
+            'p300' => dh_preco($p300 ?? ($c['precos'][0]['valor'] ?? '')),
             'precos' => array_map(fn($p) => ['tam' => strtoupper($p['tam']), 'valor' => dh_preco($p['valor'])], array_slice($c['precos'], 0, 2)),
             'img' => '../' . $c['imagem'],
         ];
     }
-    return ['unidade' => DH_UNIDADES[$unidade], 'taps' => $taps];
+    // Ordena por grupo, mantendo a ordem do xMenu/painel dentro de cada grupo
+    usort($taps, fn($a, $b) => [$a['cat'], $a['n']] <=> [$b['cat'], $b['n']]);
+    return ['unidade' => DH_UNIDADES[$unidade], 'grupos' => DH_CATEGORIAS, 'taps' => $taps];
 }
 
 function dh_galeria(): array
