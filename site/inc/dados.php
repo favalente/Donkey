@@ -158,7 +158,8 @@ function dh_tap_tv(string $unidade): array
         $taps[] = [
             'n' => $n + 1,
             'cat' => dh_categoria($c),
-            'nome' => $c['nome'],
+            // Na TV vale o nome curto do xMenu, quando a cerveja tiver um
+            'nome' => trim($c['nome_xmenu'] ?? '') !== '' ? $c['nome_xmenu'] : $c['nome'],
             'estilo' => $c['estilo'],
             'abv' => $c['abv'] !== '' ? dh_num($c['abv']) . '%' : '',
             'ibu' => $c['ibu'] !== '' ? $c['ibu'] . ' IBU' : '',
