@@ -3,6 +3,8 @@
 // Os dados ficam em dados/cervejas.json (criado pelo admin). Enquanto ele não existe,
 // o site usa dados-iniciais/cervejas.json, que veio do site antigo.
 
+date_default_timezone_set('America/Fortaleza');
+
 const DH_RAIZ = __DIR__ . '/..';
 require_once __DIR__ . '/xmenu.php';
 const DH_ARQ_DADOS = DH_RAIZ . '/dados/cervejas.json';
@@ -212,3 +214,4 @@ function dh_gravar_jpeg($img, string $destino, int $max, int $qualidade = 82): v
     imagecopyresampled($nova, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
     imagejpeg($nova, $destino, $qualidade);
 }
+require_once __DIR__ . '/agenda.php';

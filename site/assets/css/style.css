@@ -211,3 +211,25 @@ p { margin: 0 0 1em; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .hero-video { display: none; }
 }
+
+/* Agenda de shows */
+.shows-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.show { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+.show-foto { position: relative; aspect-ratio: 4 / 3; background: #0e0b08; }
+.show-foto img { width: 100%; height: 100%; object-fit: cover; }
+.show-data { position: absolute; top: 12px; left: 12px; background: var(--amber); color: #1a120a; border-radius: 10px; padding: 6px 10px; text-align: center; font-weight: 700; font-size: .75rem; line-height: 1; letter-spacing: .06em; }
+.show-data strong { display: block; font-family: var(--display); font-size: 1.9rem; font-weight: 400; letter-spacing: 0; }
+.show-info { padding: 16px 18px 18px; }
+.show-quando { color: var(--muted); font-size: .88rem; font-weight: 600; margin: 0 0 .4em; }
+.show-quando span { color: var(--amber); }
+.show h3 { font-size: 1.9rem; margin: 0 0 .15em; }
+.show-tributo { color: var(--cream); margin: 0; }
+.show-insta { display: inline-block; margin-top: .5em; font-size: .88rem; text-decoration: none; }
+.agenda-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 24px; }
+.agenda-mes { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+.agenda-mes strong { font-family: var(--display); font-size: 2rem; font-weight: 400; letter-spacing: .02em; }
+.agenda-mes a { width: 44px; height: 44px; display: grid; place-items: center; border: 2px solid var(--line); border-radius: 50%; text-decoration: none; color: var(--text); font-size: 1.4rem; }
+.agenda-mes a:hover { border-color: var(--amber); color: var(--amber); }
+.agenda-vazia { color: var(--muted); padding: 40px 0; text-align: center; }
+.titulo-pagina { font-size: clamp(2.6rem, 6vw, 4rem); }
+a.filtro { text-decoration: none; color: var(--text); }

@@ -1,8 +1,25 @@
 <?php
-// Painel da Donkey Head: cadastro de cervejas e tap list de cada unidade.
+// Painel da Donkey Head: tap list, cervejas, galeria, agenda de shows e usuários.
 require __DIR__ . '/../inc/dados.php';
+require __DIR__ . '/modulo-agenda.php';
+require __DIR__ . '/modulo-usuarios.php';
 
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
+const DH_ARQ_USUARIOS = DH_RAIZ . '/dados/usuarios.json';
+const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman'];
+// O que cada função pode fazer no painel
+const DH_PERMISSOES = [
+    'taplist' => ['admin', 'barman'],
+    'cervejas' => ['admin', 'barman'],
+    'galeria' => ['admin', 'designer'],
+    'agenda' => ['admin', 'financeiro', 'designer'],
+    'bandas' => ['admin', 'financeiro', 'designer'],
+    'agenda_editar' => ['admin', 'financeiro'],
+    'valores' => ['admin', 'financeiro'],
+    'relatorio' => ['admin', 'financeiro'],
+    'usuarios' => ['admin'],
+    'importar' => ['admin'],
+];
 const DH_ARQ_FALHAS = DH_RAIZ . '/dados/login-falhas.json';
 const DH_DIR_UPLOAD = DH_RAIZ . '/uploads/cervejas';
 const DH_DIR_GALERIA = DH_RAIZ . '/uploads/galeria';
@@ -26,10 +43,44 @@ if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(16));
 }
 
-function config_admin(): ?array
+// Usuários do painel. Na primeira vez, a senha única antiga vira o usuário "admin".
+function dh_usuarios(): array
 {
-    $c = json_decode((string) @file_get_contents(DH_ARQ_ADMIN), true);
-    return is_array($c) && !empty($c['hash']) ? $c : null;
+    $u = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
+    if (is_array($u)) {
+        return $u;
+    }
+    $antigo = json_decode((string) @file_get_contents(DH_ARQ_ADMIN), true);
+    if (!empty($antigo['hash'])) {
+        $u = ['admin' => ['login' => 'admin', 'nome' => 'Administrador', 'papel' => 'admin', 'hash' => $antigo['hash']]];
+        gravar_json(DH_ARQ_USUARIOS, $u);
+        return $u;
+    }
+    return [];
+}
+
+function dh_usuarios_salvar(array $u): void
+{
+    ksort($u);
+    gravar_json(DH_ARQ_USUARIOS, $u);
+}
+
+function pode(string $permissao): bool
+{
+    global $usuario;
+    return $usuario && in_array($usuario['papel'], DH_PERMISSOES[$permissao] ?? [], true);
+}
+
+function exigir(string $permissao): void
+{
+    if (!pode($permissao)) {
+        throw new RuntimeException('Seu usuário não tem acesso a essa parte do painel.');
+    }
+}
+
+function login_valido(string $login): bool
+{
+    return (bool) preg_match('/^[a-z0-9._-]{3,30}$/', $login);
 }
 
 function gravar_json(string $arq, array $dados): void
@@ -141,41 +192,48 @@ function apagar_upload(string $caminho): void
     }
 }
 
-$acao = $_GET['acao'] ?? 'taplist';
-$config = config_admin();
+$usuarios = dh_usuarios();
+$usuario = isset($_SESSION['login'], $usuarios[$_SESSION['login']]) ? $usuarios[$_SESSION['login']] : null;
 $erro = null;
+// Tela inicial de cada função
+$inicio = $usuario ? (pode('taplist') ? 'taplist' : (pode('agenda') ? 'agenda' : 'galeria')) : 'login';
+$acao = $_GET['acao'] ?? $inicio;
 
-// Primeiro acesso: cria a senha do painel
-if (!$config) {
+// Primeiro acesso: cria o usuário administrador
+if (!$usuarios) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exigir_post();
+        $login = strtolower(trim((string) ($_POST['login'] ?? '')));
         $s = (string) ($_POST['senha'] ?? '');
-        if (strlen($s) < 8) {
+        if (!login_valido($login)) {
+            $erro = 'Usuário: use de 3 a 30 letras minúsculas, números, ponto ou traço.';
+        } elseif (strlen($s) < 8) {
             $erro = 'A senha precisa ter pelo menos 8 caracteres.';
         } elseif ($s !== ($_POST['senha2'] ?? '')) {
             $erro = 'As senhas não conferem.';
         } else {
-            gravar_json(DH_ARQ_ADMIN, ['hash' => password_hash($s, PASSWORD_DEFAULT)]);
+            dh_usuarios_salvar([$login => ['login' => $login, 'nome' => 'Administrador', 'papel' => 'admin', 'hash' => password_hash($s, PASSWORD_DEFAULT)]]);
             session_regenerate_id(true);
-            $_SESSION['logado'] = true;
-            ir('./', 'Senha criada! Bem-vindo ao painel.');
+            $_SESSION['login'] = $login;
+            ir('./', 'Usuário criado! Bem-vindo ao painel.');
         }
     }
     $tela = 'primeiro-acesso';
-} elseif (empty($_SESSION['logado'])) {
+} elseif (!$usuario) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exigir_post();
+        $login = strtolower(trim((string) ($_POST['login'] ?? '')));
         if (bloqueado()) {
             $erro = 'Muitas tentativas erradas. Aguarde ' . DH_BLOQUEIO_MIN . ' minutos.';
-        } elseif (password_verify((string) ($_POST['senha'] ?? ''), $config['hash'])) {
+        } elseif (isset($usuarios[$login]) && password_verify((string) ($_POST['senha'] ?? ''), $usuarios[$login]['hash'])) {
             registrar_falha(true);
             session_regenerate_id(true);
-            $_SESSION['logado'] = true;
+            $_SESSION['login'] = $login;
             ir('./');
         } else {
             registrar_falha();
             sleep(1);
-            $erro = 'Senha incorreta.';
+            $erro = 'Usuário ou senha incorretos.';
         }
     }
     $tela = 'login';
@@ -184,6 +242,7 @@ if (!$config) {
     $dados = dh_carregar();
     $porId = dh_por_id($dados);
 
+    $telaErro = null;
     try {
         switch ($acao) {
             case 'sair':
@@ -193,6 +252,7 @@ if (!$config) {
 
             case 'salvar-taplist':
                 exigir_post();
+                exigir('taplist');
                 $u = (string) ($_POST['unidade'] ?? '');
                 if (!isset(DH_UNIDADES[$u])) {
                     ir('./');
@@ -204,6 +264,7 @@ if (!$config) {
 
             case 'salvar-cerveja':
                 exigir_post();
+                exigir('cervejas');
                 $id = (string) ($_POST['id'] ?? '');
                 $nova = !isset($porId[$id]);
                 $nome = trim((string) ($_POST['nome'] ?? ''));
@@ -256,6 +317,7 @@ if (!$config) {
 
             case 'excluir-cerveja':
                 exigir_post();
+                exigir('cervejas');
                 $id = (string) ($_POST['id'] ?? '');
                 if (isset($porId[$id])) {
                     $dados['cervejas'] = array_values(array_filter($dados['cervejas'], fn($c) => $c['id'] !== $id));
@@ -271,14 +333,15 @@ if (!$config) {
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exigir_post();
                     $s = (string) ($_POST['senha'] ?? '');
-                    if (!password_verify((string) ($_POST['atual'] ?? ''), $config['hash'])) {
+                    if (!password_verify((string) ($_POST['atual'] ?? ''), $usuario['hash'])) {
                         $erro = 'Senha atual incorreta.';
                     } elseif (strlen($s) < 8) {
                         $erro = 'A nova senha precisa ter pelo menos 8 caracteres.';
                     } elseif ($s !== ($_POST['senha2'] ?? '')) {
                         $erro = 'As senhas não conferem.';
                     } else {
-                        gravar_json(DH_ARQ_ADMIN, ['hash' => password_hash($s, PASSWORD_DEFAULT)]);
+                        $usuarios[$usuario['login']]['hash'] = password_hash($s, PASSWORD_DEFAULT);
+                        dh_usuarios_salvar($usuarios);
                         ir('./', 'Senha alterada.');
                     }
                 }
@@ -286,6 +349,7 @@ if (!$config) {
 
             case 'galeria-enviar':
                 exigir_post();
+                exigir('galeria');
                 $arquivos = lista_uploads($_FILES['fotos'] ?? []);
                 if (!$arquivos) {
                     throw new RuntimeException('Escolha pelo menos uma foto.');
@@ -305,6 +369,7 @@ if (!$config) {
 
             case 'galeria-alterar':
                 exigir_post();
+                exigir('galeria');
                 $fotos = dh_galeria();
                 $id = (string) ($_POST['id'] ?? '');
                 $i = array_search($id, array_column($fotos, 'id'), true);
@@ -332,17 +397,26 @@ if (!$config) {
                 ir('./?acao=galeria#' . $id, $msg);
 
             case 'galeria':
+                exigir('galeria');
+                break;
             case 'editar':
             case 'cervejas':
+                exigir('cervejas');
+                break;
             case 'taplist':
+                exigir('taplist');
                 break;
 
             default:
-                $tela = 'taplist';
+                // Agenda, bandas, relatório, importação e usuários ficam em arquivos próprios
+                if (!agenda_acao($acao) && !usuarios_acao($acao)) {
+                    $tela = $inicio;
+                }
         }
     } catch (RuntimeException $ex) {
         $erro = $ex->getMessage();
-        $tela = $acao === 'salvar-cerveja' ? 'editar' : (strpos($acao, 'galeria') === 0 ? 'galeria' : 'cervejas');
+        $tela = $acao === 'salvar-cerveja' ? 'editar' : (strpos($acao, 'galeria') === 0 ? 'galeria' : (pode('cervejas') ? 'cervejas' : $inicio));
+        $tela = $telaErro ?? $tela;
     }
 }
 
@@ -358,7 +432,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=5">
+  <link rel="stylesheet" href="admin.css?v=6">
 </head>
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
@@ -366,25 +440,30 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
     <img src="../assets/img/logo-donkey-head.png" alt="Donkey Head" width="110">
     <h1>Painel Donkey Head</h1>
     <?php if ($tela === 'primeiro-acesso'): ?>
-      <p>Primeiro acesso: crie a senha do painel. Ela será usada pela equipe para atualizar as cervejas e a tap list.</p>
+      <p>Primeiro acesso: crie o usuário administrador do painel. Depois, em "Usuários", você cria os acessos da equipe.</p>
     <?php endif; ?>
     <?php if ($erro): ?><p class="erro"><?= e($erro) ?></p><?php endif; ?>
     <form method="post">
       <?= $csrf ?>
-      <label>Senha <input type="password" name="senha" required autofocus autocomplete="<?= $tela === 'login' ? 'current-password' : 'new-password' ?>"></label>
+      <label>Usuário <input name="login" required autofocus autocapitalize="none" autocomplete="username" value="<?= e($_POST['login'] ?? '') ?>"></label>
+      <label>Senha <input type="password" name="senha" required autocomplete="<?= $tela === 'login' ? 'current-password' : 'new-password' ?>"></label>
       <?php if ($tela === 'primeiro-acesso'): ?>
         <label>Repita a senha <input type="password" name="senha2" required autocomplete="new-password"></label>
       <?php endif; ?>
-      <button class="btn primario"><?= $tela === 'login' ? 'Entrar' : 'Criar senha' ?></button>
+      <button class="btn primario"><?= $tela === 'login' ? 'Entrar' : 'Criar usuário' ?></button>
     </form>
   </main>
 <?php else: ?>
   <header class="topo">
     <a class="marca" href="./"><img src="../assets/img/logo-donkey-head.png" alt="" width="28"> Painel</a>
     <nav>
-      <a href="./" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>">Tap List</a>
-      <a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>">Cervejas</a>
-      <a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>">Galeria</a>
+      <?php if (pode('taplist')): ?><a href="./?acao=taplist" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>">Tap List</a><?php endif; ?>
+      <?php if (pode('cervejas')): ?><a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>">Cervejas</a><?php endif; ?>
+      <?php if (pode('agenda')): ?><a href="./?acao=agenda" class="<?= in_array($tela, ['agenda', 'show'], true) ? 'ativo' : '' ?>">Agenda</a><?php endif; ?>
+      <?php if (pode('bandas')): ?><a href="./?acao=bandas" class="<?= in_array($tela, ['bandas', 'banda'], true) ? 'ativo' : '' ?>">Bandas</a><?php endif; ?>
+      <?php if (pode('relatorio')): ?><a href="./?acao=relatorio" class="<?= $tela === 'relatorio' ? 'ativo' : '' ?>">Financeiro</a><?php endif; ?>
+      <?php if (pode('galeria')): ?><a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>">Galeria</a><?php endif; ?>
+      <?php if (pode('usuarios')): ?><a href="./?acao=usuarios" class="<?= in_array($tela, ['usuarios', 'importar'], true) ? 'ativo' : '' ?>">Usuários</a><?php endif; ?>
       <a href="../" target="_blank">Site ↗</a>
     </nav>
   </header>
@@ -583,10 +662,10 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <label>Repita a nova senha <input type="password" name="senha2" required autocomplete="new-password"></label>
         <button class="btn primario">Trocar senha</button>
       </form>
-    <?php endif; ?>
+    <?php else: agenda_tela($tela) || usuarios_tela($tela); endif; ?>
 
     <footer class="rodape">
-      <a href="./?acao=trocar-senha">Trocar senha</a>
+      <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a></span>
       <form method="post" action="./?acao=sair"><?= $csrf ?><button class="link">Sair</button></form>
     </footer>
   </main>

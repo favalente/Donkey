@@ -15,6 +15,7 @@ foreach ($taplists['aldeota'] as $c) {
     }
 }
 $temTaplist = (bool) array_filter($taplists);
+$proximosShows = array_slice(dh_shows_publicos(dh_agenda(), date('Y-m-d')), 0, 6);
 // A tap list pode ter cadastrado cervejas novas vindas do xMenu: recarrega o catálogo
 $dados = dh_carregar();
 $catalogo = array_values(array_filter($dados['cervejas'], fn($c) => !empty($c['ativa'])));
@@ -64,7 +65,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=7">
+  <link rel="stylesheet" href="assets/css/style.css?v=8">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -104,6 +105,7 @@ function detalhe(array $c): string
         <span></span><span></span><span></span>
       </button>
       <nav id="menu" class="menu">
+        <a href="agenda/">Agenda</a>
         <a href="#historia">Nossa história</a>
         <?php if ($temTaplist): ?><a href="#taplist">Tap List</a><?php endif; ?>
         <a href="#cervejas">Cervejas</a>
@@ -131,6 +133,22 @@ function detalhe(array $c): string
         </div>
       </div>
     </section>
+
+    <?php if ($proximosShows): ?>
+    <section class="section section-alt" id="agenda">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Agenda</p>
+          <h2>Som ao vivo na Donkey</h2>
+          <p>Confira as próximas atrações nas nossas duas unidades.</p>
+        </div>
+        <div class="shows-grid">
+          <?php foreach ($proximosShows as $sh) echo dh_cartao_show($sh); ?>
+        </div>
+        <p class="centro"><a class="btn btn-ghost" href="agenda/">Ver a programação completa</a></p>
+      </div>
+    </section>
+    <?php endif; ?>
 
     <section class="section" id="historia">
       <div class="container split">

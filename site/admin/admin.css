@@ -89,3 +89,43 @@ label small { font-weight: 400; color: var(--muted); }
 .btn.mini:disabled { opacity: .35; }
 .topo nav a { padding: 8px 10px; }
 .btn.largo { display: block; text-align: center; }
+.secundario { background: transparent; color: var(--amber); border: 1px solid var(--amber); }
+.topo nav { flex-wrap: wrap; }
+.rodape span { color: var(--muted); }
+h2 { font-size: 1.25rem; margin: 1.6em 0 .6em; }
+h2 small { color: var(--muted); font-weight: 400; }
+code { display: block; margin-top: 4px; padding: 8px; border-radius: 8px; background: #120e0b; color: var(--amber); font-size: .78rem; overflow-wrap: anywhere; }
+.mes-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 12px; }
+.mes-nav strong { font-size: 1.1rem; }
+.shows .data-show { flex: none; width: 44px; text-align: center; color: var(--muted); font-size: .72rem; text-transform: uppercase; line-height: 1.1; }
+.shows .data-show strong { display: block; font-size: 1.4rem; color: var(--text); }
+.info > span + span { margin-top: 1px; }
+.tag.st-a_confirmar { background: rgba(255,255,255,.08); color: var(--muted); }
+.tag.st-confirmado { background: rgba(76,175,80,.18); color: #8fdc93; }
+.tag.st-pago { background: rgba(233,162,59,.2); color: var(--amber); }
+.tag.st-cancelado { background: rgba(229,83,61,.18); color: #ff9b8a; text-decoration: line-through; }
+.config-agenda { margin-top: 24px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.config-agenda summary { cursor: pointer; font-weight: 700; }
+.totais { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.total { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: .9rem; color: var(--muted); }
+.total strong { color: var(--text); font-size: 1rem; }
+.total b { color: var(--text); }
+.total.geral { border-color: var(--amber); }
+.tabela-rolagem { overflow-x: auto; }
+.tabela { width: 100%; border-collapse: collapse; font-size: .9rem; min-width: 560px; }
+.tabela th, .tabela td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.tabela th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+.tabela .num { text-align: right; white-space: nowrap; }
+.tabela small { color: var(--muted); }
+.tabela tr.cancelado td { opacity: .5; }
+.importacao fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 0 0 12px; }
+.importacao .original { display: block; color: var(--muted); font-size: .8rem; margin-top: -4px; }
+.importacao label { margin-bottom: 8px; }
+details.usuario summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 10px; cursor: pointer; border-radius: 12px; }
+details.usuario summary::-webkit-details-marker { display: none; }
+details.usuario[open] { background: var(--surface); border-radius: 12px; padding-bottom: 10px; }
+details.usuario form { padding: 0 10px; }
+.acessos { margin-top: 20px; font-size: .88rem; color: var(--muted); }
+.acessos dt { color: var(--text); font-weight: 700; margin-top: 8px; }
+.acessos dd { margin: 0; }
+.grade-fotos .botoes small { color: var(--muted); align-self: center; font-size: .75rem; }

@@ -63,3 +63,4 @@ jobs:
             dados/backup/**
             uploads/cervejas/*.jpg
             uploads/galeria/**/*.jpg
+            uploads/bandas/**

@@ -1,6 +1,13 @@
 DirectoryIndex index.php index.html
 Options -Indexes
 
+# Configurações do PHP não ficam visíveis
+<Files ".user.ini">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+</Files>
+
 # Força HTTPS e o endereço com www
 RewriteEngine On
 RewriteCond %{HTTPS} off [OR]

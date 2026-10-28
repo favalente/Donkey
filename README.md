@@ -10,6 +10,7 @@ Funciona na hospedagem Linux da Locaweb (PHP 7.4+), **sem banco de dados**: o pa
 site/                         tudo que vai para public_html
   index.php                   página do site
   admin/                      painel da equipe → www.donkeyheadcervejaria.com.br/admin/
+  agenda/                     agenda pública de shows e feed .ics
   inc/dados.php               leitura/gravação dos dados (bloqueado na web)
   dados-iniciais/cervejas.json  32 rótulos importados do site antigo (bloqueado na web)
   dados/                      criado pelo painel no servidor: cervejas, tap list, senha e backups diários
@@ -25,13 +26,22 @@ site/                         tudo que vai para public_html
 
 Endereço: `/admin/`
 
-- **Primeiro acesso:** a tela pede para criar a senha. Abra o `/admin/` **logo depois de publicar**, porque quem chegar primeiro define a senha.
+- **Usuários e funções:** cada pessoa tem login próprio. Funções: **Administrador** (tudo, inclusive usuários e importação), **Financeiro** (agenda e bandas com cachê/consumação, relatório), **Designer** (agenda, bandas e fotos, sem valores; galeria) e **Barman** (tap list e cervejas). A senha única antiga virou o usuário `admin`.
 - **Tap List:** escolha a cerveja de cada torneira, separado por unidade (Aldeota e Maraponga), e toque em Salvar. O site atualiza na hora.
 - **Cervejas:** cadastre, edite ou exclua rótulos. Dá para mandar a foto do rótulo direto do celular, porque ela é reduzida automaticamente. Para tirar um rótulo do catálogo sem apagá-lo, desmarque "Mostrar no catálogo".
 - **Galeria:** envie várias fotos de uma vez pelo celular, com legenda opcional (ex.: o nome do prato). As fotos novas entram no início, e as 12 primeiras aparecem direto no site. Dá para reordenar, editar a legenda e excluir. As fotos são reduzidas no próprio celular antes do envio.
 - Segurança: senha com hash, proteção CSRF e bloqueio de 15 minutos após 5 senhas erradas.
 - Se o painel disser que não consegue gravar, dê permissão de escrita (755 ou 775) às pastas `dados` e `uploads/cervejas` no Gerenciador de Arquivos da Locaweb.
-- Esqueceu a senha? Apague `dados/admin.json` pelo FTP e crie uma nova no `/admin/`.
+- Esqueceu a senha? O administrador redefine em "Usuários". Se for o próprio administrador, apague `dados/usuarios.json` e `dados/admin.json` pelo FTP e crie um novo no `/admin/`.
+
+## Agenda de shows
+
+- **Bandas** (`/admin/?acao=bandas`): nome, tributos (vários, um por linha), cachê e consumação padrão, Instagram, contato e fotos. A foto original é guardada sem perder qualidade (botão "Baixar todas as fotos" gera um .zip para o designer); o site usa cópias reduzidas.
+- **Agenda** (`/admin/?acao=agenda`): data, horário (padrão configurável), unidade, banda, tributo, cachê, consumação e situação (a confirmar, confirmado, pago, cancelado). Só **confirmado** e **pago** aparecem no site.
+- **Financeiro** (`/admin/?acao=relatorio`): totais do mês por unidade (cachês, consumação, pagos e a pagar) e planilha CSV.
+- **Site:** seção "Agenda" na página inicial (próximos 6 shows) e página `/agenda/` com a programação do mês e filtro por unidade. Cachê e consumação nunca aparecem para o público.
+- **Google Agenda:** `/agenda/ics.php` (pública) e o link da equipe (com valores), criado em Agenda → Configurações. Para importar o que já existe: Usuários → Importar Google Agenda (endereço secreto iCal ou arquivo .ics), com revisão antes de gravar.
+- Dados em `dados/agenda.json` (com backup diário) e fotos em `uploads/bandas/`. Limites de envio em `site/admin/.user.ini`.
 
 ## Tap list na TV
 

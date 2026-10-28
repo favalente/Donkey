@@ -5,3 +5,5 @@ site/uploads/cervejas/*
 !site/uploads/cervejas/.gitkeep
 site/uploads/galeria/*
 !site/uploads/galeria/.gitkeep
+site/uploads/bandas/*
+!site/uploads/bandas/.gitkeep
