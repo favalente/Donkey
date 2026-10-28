@@ -16,7 +16,11 @@ function dh_agenda(): array
     $a = json_decode((string) @file_get_contents(DH_ARQ_AGENDA), true);
     $a = is_array($a) ? $a : [];
     $a += ['bandas' => [], 'shows' => [], 'config' => []];
-    $a['config'] += ['hora_padrao' => '21:00', 'token_equipe' => ''];
+    $a['config'] += ['hora_padrao' => '20:30', 'token_equipe' => ''];
+    // O padrão antigo (21:00) vira 20:30, a não ser que alguém tenha escolhido o horário no painel
+    if ($a['config']['hora_padrao'] === '21:00' && empty($a['config']['hora_escolhida'])) {
+        $a['config']['hora_padrao'] = '20:30';
+    }
     return $a;
 }
 

@@ -309,7 +309,7 @@ function agenda_acao(string $acao): bool
                 throw new RuntimeException('Informe a data do show.');
             }
             if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $hora)) {
-                throw new RuntimeException('Informe o horário (ex.: 21:00).');
+                throw new RuntimeException('Informe o horário (ex.: 20:30).');
             }
             if (!isset(DH_UNIDADES[$unidade])) {
                 throw new RuntimeException('Escolha a unidade.');
@@ -499,6 +499,7 @@ function agenda_acao(string $acao): bool
             $hora = (string) ($_POST['hora_padrao'] ?? '');
             if (preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $hora)) {
                 $a['config']['hora_padrao'] = $hora;
+                $a['config']['hora_escolhida'] = true;
             }
             if (!empty($_POST['novo_token'])) {
                 $a['config']['token_equipe'] = bin2hex(random_bytes(16));
