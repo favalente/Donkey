@@ -26,12 +26,15 @@ function dh_agenda(): array
 }
 
 // Chave para reconhecer a mesma banda escrita de jeitos diferentes:
-// "Banda Sonorah" = "SONORAH" = "Banda - Sonorah"; "Di Sousa Band" = "Di Sousa"
+// "Banda Sonorah" = "SONORAH" = "Banda - Sonorah"; "Di Sousa Band" = "Di Sousa"; "Os Analógicos" = "Analógicos"
 function dh_chave_banda(string $nome): string
 {
     $k = dh_slug($nome);
     $k = preg_replace('/^(a-)?banda-/', '', $k);
-    return preg_replace('/-(e-)?banda$|-band$/', '', $k);
+    $k = preg_replace('/^(os|as|o|a)-/', '', $k);
+    $k = preg_replace('/-(e-)?banda$|-band$/', '', $k);
+    // "Red Blush" = "RedBlush", "Full Rock" = "Fullrock"
+    return str_replace('-', '', $k);
 }
 
 // Na primeira vez, cadastra as bandas das pastas do Google Drive (dados-iniciais/bandas-drive.json)
