@@ -262,7 +262,9 @@ function dh_ics_interpretar(array $ev, string $horaPadrao, string $unidadePadrao
     $tudo = $titulo . "\n" . $ev['descricao'] . "\n" . $ev['local'];
     $unidade = preg_match('/maraponga|\bmpg\b/iu', $tudo) ? 'maraponga' : (preg_match('/aldeota/iu', $tudo) ? 'aldeota' : $unidadePadrao);
     $status = '';
-    while (preg_match('/^\s*(pag[oa]s?|paho|cancelad[oa])\s*[-–:]\s*/iu', $titulo, $mp)) {
+    // "Ruazinha - Carlos Voice": área da casa, não faz parte do nome
+    $titulo = preg_replace('/^\s*rua(zinha)?\b\s*[-–:]?\s*/iu', '', $titulo);
+    while (preg_match('/^\s*(pag[oa]s?|paho|cancelad[oa])\b\s*[-–:]?\s*/iu', $titulo, $mp)) {
         $status = stripos($mp[1], 'cancel') === 0 ? 'cancelado' : 'pago';
         $titulo = substr($titulo, strlen($mp[0]));
     }
@@ -291,15 +293,15 @@ function dh_ics_interpretar(array $ev, string $horaPadrao, string $unidadePadrao
         $titulo = trim(str_replace($mi[0], '', $titulo));
     }
     // Tudo que vem depois de local/data/valores não é banda nem tributo
-    $meta = '/\b(donkey|data\s*:|cach[eê]|consuma|consumo\b|cons\s+\d|r\$|maraponga|aldeota|barril)|\b\d{1,2}\/\d{1,2}|\b[aà]s\s*(\d|-|$)|\b\d{1,2}[:h]\d{2}h?\b|\b(segunda|terça|terca|quarta|quinta|sexta|s[aá]bado|domingo)\b|\b\d{1,2}\s*(de\s+)?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zç]*\.?(\s|$)/iu';
+    $meta = '/\b(don[kl]ey|data\s*:|cach[eê]|consum|cons\b|r\$|maraponga|aldeota|barril|v[eé]spera|feriado|n[ao]\s+rua(zinha)?\b)|\b(dia\s+)?\d{1,2}\/(\d{1,2}|[a-zç]{3})|\b[aà]s\s*(\d|-|$)|\b\d{1,2}[:h]\d{2}h?\b|\b\d{1,2}h\b|\b(segunda|terça|terca|quarta|quinta|sext\w*|s[aá]bado|domingo|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b|\b\d{1,2}\s*(de\s+)?(jan|fev|feb|mar|abr|apr|mai|may|jun|jul|ago|aug|set|sep|out|oct|nov|dez|dec)[a-zç]*\.?(\s|$)/iu';
     $chave = '/\b(tribut\w*|cover|homenagem|especial|ac[uú]stico)\b/iu';
     $partes = [];
     foreach (dh_segmentos($titulo) as $seg) {
         if (preg_match($meta, $seg, $mm, PREG_OFFSET_CAPTURE)) {
-            $seg = trim(substr($seg, 0, $mm[0][1]), " ,.-–:");
+            $seg = trim(substr($seg, 0, $mm[0][1]), " ,.-–:(");
         }
         // sobra sem palavra de verdade ("as", "-") é descartada
-        if (mb_strlen(preg_replace('/[^\p{L}\d]/u', '', $seg)) >= 3) {
+        if (mb_strlen(preg_replace('/[^\p{L}\d]/u', '', $seg)) >= 3 && preg_match('/\p{L}/u', $seg)) {
             $partes[] = $seg;
         }
     }
@@ -324,6 +326,11 @@ function dh_ics_interpretar(array $ev, string $horaPadrao, string $unidadePadrao
                 $banda = trim(substr($p, 0, $mk[0][1]), " ([-–:");
                 $p = rtrim(substr($p, $mk[0][1]), ')');
             }
+            // "Tributo a Elvis Presley com Léo Cand e Banda"
+            if ($banda === '' && preg_match('/^(.+?)\s+com\s+(.+)$/iu', $p, $mcom)) {
+                $p = $mcom[1];
+                $banda = $mcom[2];
+            }
             $tributo[] = $p;
             $emTributo = true;
         } elseif ($banda === '' && !$emTributo) {
@@ -339,7 +346,31 @@ function dh_ics_interpretar(array $ev, string $horaPadrao, string $unidadePadrao
             $tributo[] = $mpar[2];
         }
     }
-    $tributo = trim(implode(', ', $tributo), " ,");
+    // "Tributo Guns, Bon Jovi e Kiss, Fets Domino": a banda vem no fim
+    if ($banda === '' && count($tributo) > 1) {
+        $ult = end($tributo);
+        if (preg_match('/^(banda|com)\s|\s(e\s+)?banda$|\sband$/iu', $ult) || isset($chavesBandas[dh_chave_banda($ult)])) {
+            array_pop($tributo);
+            $banda = preg_replace('/^com\s+/iu', '', $ult);
+        }
+    }
+    $tributo = trim(implode(', ', $tributo), " ,/");
+    // "Tributo Divas Miss Rock": sem vírgula, a banda conhecida está no fim
+    if ($banda === '' && $tributo !== '') {
+        $pal = preg_split('/\s+/u', $tributo);
+        for ($i = 1; $i < count($pal); $i++) {
+            $resto = implode(' ', array_slice($pal, $i));
+            if (strlen(dh_chave_banda($resto)) >= 4 && isset($chavesBandas[dh_chave_banda($resto)])) {
+                $banda = $resto;
+                $tributo = implode(' ', array_slice($pal, 0, $i));
+                break;
+            }
+        }
+    }
+    $tributo = preg_replace('/\btributo\s+(?=tributo\b)/iu', '', $tributo);
+    if (preg_match('/a (definir|decidir)/iu', $tributo)) {
+        $tributo = '';
+    }
     $temTributo = $tributo !== '';
     if ($banda === '' && $tributo !== '') {
         // Só o tributo foi escrito: usa como nome, para revisar
@@ -347,7 +378,9 @@ function dh_ics_interpretar(array $ev, string $horaPadrao, string $unidadePadrao
         $tributo = '';
     }
     $cache = dh_valor($mc[1] ?? '');
-    $reserva = preg_match('/reservad|n[uú]mero de pessoas|\bpessoas\b|corporativ|confraterniza|degusta|reuni[aã]o|influencer|anivers|pedir |\bnome:/iu', $tudo);
+    // "SEM MÚSICA", "Sem Analogicos": dia sem show
+    // Contas, fretes, pedidos de barril ("Velas 30L"), aulas e eventos também ficam de fora
+    $reserva = preg_match('/^\s*(sem|evento|aula|call|oficina)\s|boleto|\bpagar\b|frete|imposto|icms|\bpis\b|cofins|irpf|csll|mensalidade|aluguel|financiamento|\bnf\b|\b\d+\s*l\b|n[aã]o haver/iu', $titulo) || preg_match('/reservad|n[uú]mero de pessoas|\bpessoas\b|corporativ|confraterniza|degusta|reuni[aã]o|influencer|anivers|pedir |\bnome:/iu', $tudo);
     $conhecida = $banda !== '' && isset($chavesBandas[dh_chave_banda($banda)]);
     return [
         'data' => $ev['data'],
@@ -361,9 +394,144 @@ function dh_ics_interpretar(array $ev, string $horaPadrao, string $unidadePadrao
         'status' => $status,
         // Só vem marcado o que parece show
         'show' => !$reserva && ($cache !== '' || $temTributo || $conhecida || str_word_count(dh_slug($titulo), 0, '0123456789') <= 6),
+        // Com cachê ou tributo escrito: dá para confiar que é banda
+        'forte' => !$reserva && ($cache !== '' || preg_match($chave, $titulo) === 1),
         'original' => $ev['titulo'] . ($ev['descricao'] !== '' ? ' — ' . mb_substr(preg_replace('/\s+/', ' ', $ev['descricao']), 0, 160) : ''),
         'uid' => $ev['uid'],
     ];
+}
+
+// Chave para comparar tributos: "Tributo ao Rock Brasil" ~ "rockbrasil"
+function dh_chave_tributo(string $t): string
+{
+    $k = dh_slug($t);
+    $k = preg_replace('/^(tributos?|cover|homenagem)(-(a|ao|aos|as|o|os|de|da|do))?-/', '', $k);
+    return str_replace('-', '', $k);
+}
+
+// Tributos distintos, do uso mais recente para o mais antigo. Os que estão contidos num
+// texto mais completo somem ("Rock Brasil" fica dentro de "Tributo Rock Brasil (Legião, Barão)")
+function dh_tributos_completos(array $usos): array
+{
+    $porChave = [];
+    foreach (array_reverse($usos) as $t) {
+        $k = dh_chave_tributo($t);
+        if (!isset($porChave[$k]) || mb_strlen($t) > mb_strlen($porChave[$k])) {
+            $porChave[$k] = $t;
+        }
+    }
+    $lista = [];
+    foreach ($porChave as $k => $t) {
+        foreach (array_keys($porChave) as $outra) {
+            if ($outra !== $k && ($k === '' || strpos($outra, $k) !== false)) {
+                continue 2;
+            }
+        }
+        $lista[] = $t;
+    }
+    return $lista;
+}
+
+// O texto completo que contém o tributo escrito (ou ele mesmo)
+function dh_tributo_completo(string $t, array $completos): string
+{
+    $k = dh_chave_tributo($t);
+    foreach ($completos as $c) {
+        if ($k === '' || strpos(dh_chave_tributo($c), $k) !== false) {
+            return $c;
+        }
+    }
+    return $t;
+}
+
+// Erros de digitação viram a mesma banda ("Black Pepers" = "Black Peppers", "Gleidson" = "Gleydson"):
+// nomes longos que diferem em uma letra só. O nome do cadastro tem preferência; depois, o mais usado.
+function dh_bandas_unificar(array $linhas, array $chaves): array
+{
+    $cont = $nomes = [];
+    foreach ($linhas as $l) {
+        $k = dh_chave_banda($l['banda']);
+        $cont[$k] = ($cont[$k] ?? 0) + 1;
+        $nomes[$k] = $nomes[$k] ?? $l['banda'];
+    }
+    arsort($cont);
+    $novas = array_values(array_diff(array_keys($cont), array_keys($chaves)));
+    $canon = [];
+    foreach (array_merge(array_keys($chaves), $novas) as $k) {
+        if (isset($canon[$k]) || strlen($k) < 7) {
+            continue;
+        }
+        foreach ($novas as $o) {
+            if ($o !== $k && !isset($canon[$o]) && strlen($o) >= 7 && abs(strlen($o) - strlen($k)) <= 1 && levenshtein($k, $o) <= 1) {
+                $canon[$o] = $k;
+            }
+        }
+    }
+    foreach ($linhas as &$l) {
+        $k = $canon[dh_chave_banda($l['banda'])] ?? null;
+        if ($k !== null) {
+            $l['banda'] = $chaves[$k] ?? $nomes[$k];
+        }
+    }
+    unset($l);
+    return $linhas;
+}
+
+// O que a agenda inteira (inclusive shows antigos) diz de cada banda: nome, tributos
+// completos, o último tributo usado, e o último cachê e consumação (por unidade e geral)
+function dh_ics_historico(array $linhas, array $bandas): array
+{
+    usort($linhas, fn($x, $y) => [$x['data'], $x['hora']] <=> [$y['data'], $y['hora']]);
+    $h = [];
+    foreach ($linhas as $l) {
+        $k = dh_chave_banda($l['banda']);
+        if ($k === '') {
+            continue;
+        }
+        $h[$k] = $h[$k] ?? ['nomes' => [], 'usos' => [], 'cache' => [], 'consumacao' => [], 'instagram' => '', 'shows' => 0, 'ultimo' => '', 'eventos' => 0, 'forte' => false];
+        $b = &$h[$k];
+        $b['eventos']++;
+        $b['forte'] = $b['forte'] || !empty($l['forte']);
+        $b['nomes'][$l['banda']] = ($b['nomes'][$l['banda']] ?? 0) + 1;
+        if ($l['tributo'] !== '') {
+            $b['usos'][] = $l['tributo'];
+        }
+        foreach (['cache', 'consumacao'] as $c) {
+            if ($l[$c] !== '') {
+                $b[$c][$l['unidade']] = $l[$c];
+                $b[$c]['*'] = $l[$c];
+            }
+        }
+        if ($l['instagram'] !== '') {
+            $b['instagram'] = $l['instagram'];
+        }
+        if ($l['data'] < date('Y-m-d')) {
+            $b['shows']++;
+            $b['ultimo'] = $l['data'];
+        }
+        unset($b);
+    }
+    $cadastro = [];
+    foreach ($bandas as $b) {
+        $cadastro[dh_chave_banda($b['nome'])] = $b;
+    }
+    foreach ($h as $k => &$b) {
+        // Nome: o do cadastro; se for nova, a grafia mais usada (empate: a mais longa)
+        $nomes = array_keys($b['nomes']);
+        $caixaAlta = fn($n) => (int) ($n === mb_strtoupper($n));
+        usort($nomes, fn($x, $y) => [$b['nomes'][$y], $caixaAlta($x), mb_strlen($y)] <=> [$b['nomes'][$x], $caixaAlta($y), mb_strlen($x)]);
+        $b['nome'] = $cadastro[$k]['nome'] ?? $nomes[0];
+        $b['nova'] = !isset($cadastro[$k]);
+        // Só vira cadastro o que parece banda mesmo: já cadastrada, com cachê ou tributo, ou que se repete
+        $b['confiavel'] = !$b['nova'] || $b['forte'] || $b['eventos'] >= 3;
+        $usos = array_reverse($b['usos']);
+        $b['tributos'] = dh_tributos_completos(array_merge(array_reverse($cadastro[$k]['tributos'] ?? []), $b['usos']));
+        $base = $usos[0] ?? ($cadastro[$k]['tributos'][0] ?? '');
+        $b['tributo'] = $base !== '' ? dh_tributo_completo($base, $b['tributos']) : '';
+        unset($b['nomes'], $b['usos']);
+    }
+    unset($b);
+    return $h;
 }
 
 function agenda_acao(string $acao): bool
@@ -608,33 +776,84 @@ function agenda_acao(string $acao): bool
             } else {
                 $ics = dh_ics_baixar(trim((string) ($_POST['url'] ?? '')));
             }
-            $desde = (string) ($_POST['desde'] ?? '');
             $unidadePadrao = isset(DH_UNIDADES[$_POST['unidade'] ?? '']) ? $_POST['unidade'] : 'aldeota';
             $chaves = [];
             foreach ($a['bandas'] as $b) {
                 $chaves[dh_chave_banda($b['nome'])] = $b['nome'];
             }
+            // Lê a agenda inteira: os eventos antigos ensinam nome, tributo e valores das bandas
+            $eventos = dh_ics_eventos($ics);
+            // Duas leituras: a primeira aprende os nomes de banda, para a segunda achar a banda
+            // em títulos invertidos ("Tributo Guns e Kiss, Fets Domino")
+            $conhecidas = $chaves;
+            foreach ($eventos as $ev) {
+                $l = dh_ics_interpretar($ev, $a['config']['hora_padrao'], $unidadePadrao, $chaves);
+                if ($l['forte'] && $l['banda'] !== '' && !preg_match('/^(tribut|cover|homenagem)/iu', $l['banda'])) {
+                    $conhecidas[dh_chave_banda($l['banda'])] = $conhecidas[dh_chave_banda($l['banda'])] ?? $l['banda'];
+                }
+            }
+            $todas = [];
+            foreach ($eventos as $ev) {
+                $l = dh_ics_interpretar($ev, $a['config']['hora_padrao'], $unidadePadrao, $conhecidas);
+                // Reservas e outros compromissos nem aparecem na revisão
+                if ($l['show'] && dh_chave_banda($l['banda']) !== '') {
+                    $l['banda'] = $chaves[dh_chave_banda($l['banda'])] ?? $l['banda'];
+                    $todas[] = $l;
+                }
+            }
+            $todas = dh_bandas_unificar($todas, $chaves);
+            $hist = dh_ics_historico($todas, $a['bandas']);
+            // Na agenda entram só os shows de hoje em diante, completados pelo histórico
+            $hoje = date('Y-m-d');
             $linhas = [];
-            foreach (dh_ics_eventos($ics) as $ev) {
-                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $desde) && $ev['data'] < $desde) {
+            foreach ($todas as $l) {
+                if ($l['data'] < $hoje) {
                     continue;
                 }
-                $l = dh_ics_interpretar($ev, $a['config']['hora_padrao'], $unidadePadrao, $chaves);
-                // Usa o nome do cadastro quando a banda já existe ("SONORAH" -> "Banda Sonorah")
-                $l['banda'] = $chaves[dh_chave_banda($l['banda'])] ?? $l['banda'];
-                if ($l['status'] === '') {
-                    $l['status'] = $l['data'] < date('Y-m-d') ? 'pago' : 'confirmado';
+                $h = $hist[dh_chave_banda($l['banda'])];
+                $l['banda'] = $h['nome'];
+                $l['completado'] = [];
+                $completo = $l['tributo'] === '' ? $h['tributo'] : dh_tributo_completo($l['tributo'], $h['tributos']);
+                if ($completo !== $l['tributo']) {
+                    $l['tributo'] = $completo;
+                    $l['completado'][] = 'tributo';
                 }
-                // Reservas e outros compromissos nem aparecem na revisão
-                if ($l['show']) {
-                    $linhas[] = $l;
+                foreach (['cache' => 'cachê', 'consumacao' => 'consumação'] as $c => $rot) {
+                    $v = $h[$c][$l['unidade']] ?? ($h[$c]['*'] ?? '');
+                    if ($l[$c] === '' && $v !== '') {
+                        $l[$c] = $v;
+                        $l['completado'][] = $rot;
+                    }
+                }
+                if ($l['status'] === '') {
+                    $l['status'] = 'confirmado';
+                }
+                $linhas[] = $l;
+            }
+            usort($linhas, fn($x, $y) => [$x['data'], $x['hora']] <=> [$y['data'], $y['hora']]);
+            // Cadastro das bandas: só o que o histórico acrescenta (banda nova, tributo novo, valor que falta)
+            $porChave = [];
+            foreach ($a['bandas'] as $b) {
+                $porChave[dh_chave_banda($b['nome'])] = $b;
+            }
+            $bandas = [];
+            foreach ($hist as $k => $h) {
+                $atual = $porChave[$k] ?? ['tributos' => [], 'cache' => '', 'consumacao' => ''];
+                $novosTrib = array_values(array_diff($h['tributos'], $atual['tributos']));
+                $cache = $atual['cache'] === '' ? ($h['cache']['*'] ?? '') : '';
+                $consumacao = $atual['consumacao'] === '' ? ($h['consumacao']['*'] ?? '') : '';
+                if ($h['confiavel'] && ($h['nova'] || $novosTrib || $cache !== '' || $consumacao !== '')) {
+                    $bandas[] = ['nome' => $h['nome'], 'nova' => $h['nova'], 'tributos' => $h['tributos'], 'cache' => $cache, 'consumacao' => $consumacao,
+                        'instagram' => $h['instagram'], 'shows' => $h['shows'], 'ultimo' => $h['ultimo']];
                 }
             }
-            if (!$linhas) {
-                throw new RuntimeException('Nenhum show encontrado a partir dessa data (reservas e outros compromissos são ignorados).');
+            usort($bandas, fn($x, $y) => strcoll(dh_slug($x['nome']), dh_slug($y['nome'])));
+            if (!$linhas && !$bandas) {
+                throw new RuntimeException('Nada novo nessa agenda: nenhum show de hoje em diante e nenhuma banda para completar (reservas e outros compromissos são ignorados).');
             }
             $_SESSION['importacao'] = $linhas;
-            ir('./?acao=importar&revisar=1', count($linhas) . ' shows encontrados. Revise antes de importar.');
+            $_SESSION['importacao_bandas'] = $bandas;
+            ir('./?acao=importar&revisar=1', count($linhas) . ' shows de hoje em diante e ' . count($bandas) . ' bandas para cadastrar ou completar. Revise antes de importar.');
 
         case 'importar-confirmar':
             exigir_post();
@@ -645,7 +864,39 @@ function agenda_acao(string $acao): bool
             foreach ($a['bandas'] as $i => $b) {
                 $porNome[dh_chave_banda($b['nome'])] = $i;
             }
-            $novasBandas = $novosShows = $repetidos = 0;
+            $novasBandas = $novosShows = $repetidos = $completadas = 0;
+            // Primeiro o cadastro das bandas aprendido com o histórico
+            $bandasHist = json_decode((string) ($_POST['json_bandas'] ?? ''), true);
+            foreach (is_array($bandasHist) ? $bandasHist : [] as $hb) {
+                $nome = mb_substr(trim((string) ($hb['nome'] ?? '')), 0, 80);
+                $chave = dh_chave_banda($nome);
+                if (empty($hb['incluir']) || $chave === '') {
+                    continue;
+                }
+                if (!isset($porNome[$chave])) {
+                    $a['bandas'][] = ['id' => dh_id_novo('b'), 'nome' => $nome, 'tributos' => [], 'cache' => '', 'consumacao' => '',
+                        'instagram' => '', 'contato' => '', 'obs' => 'Importada do Google Agenda', 'fotos' => []];
+                    $porNome[$chave] = count($a['bandas']) - 1;
+                    $novasBandas++;
+                } else {
+                    $completadas++;
+                }
+                $b = &$a['bandas'][$porNome[$chave]];
+                $novos = dh_tributos_texto(mb_substr((string) ($hb['tributos'] ?? ''), 0, 2000));
+                // O texto completo substitui o resumido que já estava no cadastro
+                $b['tributos'] = dh_tributos_completos(array_merge(array_reverse($b['tributos']), array_reverse($novos)));
+                foreach (['cache', 'consumacao'] as $k) {
+                    $v = dh_valor($hb[$k] ?? '');
+                    if ($b[$k] === '' && $v !== '') {
+                        $b[$k] = $v;
+                    }
+                }
+                $insta = ltrim(trim((string) ($hb['instagram'] ?? '')), '@');
+                if ($b['instagram'] === '' && preg_match('/^[a-z0-9_.]{3,30}$/i', $insta)) {
+                    $b['instagram'] = $insta;
+                }
+                unset($b);
+            }
             // A revisão chega num campo só (JSON), para não esbarrar no limite de campos do PHP
             $recebidas = json_decode((string) ($_POST['json'] ?? ''), true);
             if (!is_array($recebidas)) {
@@ -673,8 +924,8 @@ function agenda_acao(string $acao): bool
                     $novasBandas++;
                 }
                 $b = &$a['bandas'][$porNome[$chave]];
-                if ($tributo !== '' && !in_array($tributo, $b['tributos'], true)) {
-                    $b['tributos'][] = $tributo;
+                if ($tributo !== '') {
+                    $b['tributos'] = dh_tributos_completos(array_merge(array_reverse($b['tributos']), [$tributo]));
                 }
                 $insta = ltrim(trim((string) ($l['instagram'] ?? '')), '@');
                 if ($b['instagram'] === '' && preg_match('/^[a-z0-9_.]{3,30}$/i', $insta)) {
@@ -700,8 +951,8 @@ function agenda_acao(string $acao): bool
                 $novosShows++;
             }
             dh_agenda_salvar($a);
-            unset($_SESSION['importacao']);
-            ir('./?acao=agenda', "Importação concluída: $novosShows shows e $novasBandas bandas novas" . ($repetidos ? " ($repetidos já existiam e foram ignorados)" : '') . '.');
+            unset($_SESSION['importacao'], $_SESSION['importacao_bandas']);
+            ir('./?acao=agenda', "Importação concluída: $novosShows shows, $novasBandas bandas novas e $completadas bandas completadas" . ($repetidos ? " ($repetidos shows já existiam e foram ignorados)" : '') . '.');
     }
     return false;
 }
@@ -1083,30 +1334,35 @@ function agenda_tela_relatorio(): void
 
 function agenda_tela_importar(): void
 {
-    global $csrf;
-    $linhas = !empty($_GET['revisar']) ? ($_SESSION['importacao'] ?? []) : [];
+    global $csrf, $usuario;
+    $revisar = !empty($_GET['revisar']) && isset($_SESSION['importacao']);
+    $linhas = $revisar ? $_SESSION['importacao'] : [];
+    $bandas = $revisar ? ($_SESSION['importacao_bandas'] ?? []) : [];
     ?>
       <p><a href="./?acao=usuarios">‹ Voltar</a></p>
       <h1>Importar do Google Agenda</h1>
-      <?php if (!$linhas): ?>
+      <?php if (!$revisar): ?>
         <p class="dica">No Google Agenda (no computador): passe o mouse na agenda dos shows → <strong>⋮ → Configurações e compartilhamento</strong> → role até <strong>"Integrar agenda"</strong> → copie o <strong>"Endereço secreto no formato iCal"</strong> e cole abaixo.</p>
+        <p class="dica">Só os shows <strong>de hoje em diante</strong> entram na agenda. Os eventos antigos servem para cadastrar as bandas e completar tributo, cachê e consumação: quando o evento traz só o nome da banda, vale o tributo completo escrito em outro evento dela.</p>
         <form method="post" action="./?acao=importar-ler" enctype="multipart/form-data" class="form-cerveja">
           <?= $csrf ?>
           <label>Endereço secreto no formato iCal <input name="url" type="url" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"></label>
           <label>…ou envie o arquivo .ics exportado <input type="file" name="arquivo" accept=".ics,text/calendar"></label>
-          <label>Unidade dos shows que não disserem a unidade no texto
-            <select name="unidade"><?php foreach (DH_UNIDADES as $u => $nomeU): ?><option value="<?= $u ?>" <?= $u === 'maraponga' ? 'selected' : '' ?>><?= e($nomeU) ?></option><?php endforeach; ?></select>
+          <label>De qual unidade é essa agenda? <small>(vale para os eventos que não dizem a unidade no texto)</small>
+            <select name="unidade"><?php foreach (DH_UNIDADES as $u => $nomeU): ?><option value="<?= $u ?>" <?= $u === ($usuario['unidade'] ?? '') ? 'selected' : '' ?>><?= e($nomeU) ?></option><?php endforeach; ?></select>
           </label>
-          <label>Importar eventos a partir de <input type="date" name="desde" value="2023-01-01"></label>
           <button class="btn primario">Ler eventos</button>
         </form>
       <?php else: ?>
-        <p class="dica">Confira banda, tributo, unidade, horário e valores de cada evento (o texto original fica embaixo). Reservas e outros compromissos já foram deixados de fora. Desmarque o que não quiser importar. Bandas com o mesmo nome são juntadas num só cadastro.</p>
         <form method="post" action="./?acao=importar-confirmar" class="importacao">
           <?= $csrf ?>
+          <h2>Shows de hoje em diante (<?= count($linhas) ?>)</h2>
+          <?php if (!$linhas): ?><p class="dica">Nenhum show futuro nessa agenda.</p><?php else: ?>
+            <p class="dica">Confira banda, tributo, unidade, horário e valores de cada show (o texto original fica embaixo). Reservas e outros compromissos já foram deixados de fora. Desmarque o que não quiser importar.</p>
+          <?php endif; ?>
           <?php foreach ($linhas as $n => $l): ?>
-            <fieldset>
-              <label class="check"><input type="checkbox" name="l[<?= $n ?>][incluir]" value="1" <?= !empty($l['show']) ? 'checked' : '' ?>> <strong><?= e(dh_data_curta($l['data'])) ?>/<?= e(substr($l['data'], 0, 4)) ?></strong></label>
+            <fieldset data-tipo="show">
+              <label class="check"><input type="checkbox" name="l[<?= $n ?>][incluir]" value="1" checked> <strong><?= e(dh_data_curta($l['data'])) ?>/<?= e(substr($l['data'], 0, 4)) ?></strong></label>
               <div class="duas">
                 <label>Banda <input name="l[<?= $n ?>][banda]" value="<?= e($l['banda']) ?>"></label>
                 <label>Tributo <input name="l[<?= $n ?>][tributo]" value="<?= e($l['tributo']) ?>"></label>
@@ -1122,26 +1378,51 @@ function agenda_tela_importar(): void
                 <label>Consumação <input name="l[<?= $n ?>][consumacao]" value="<?= e(dh_num($l['consumacao'])) ?>" inputmode="decimal"></label>
               </div>
               <input type="hidden" name="l[<?= $n ?>][instagram]" value="<?= e($l['instagram'] ?? '') ?>">
-              <small class="original"><?= e($l['original']) ?></small>
+              <small class="original"><?= e($l['original']) ?><?php if (!empty($l['completado'])): ?><br><strong>Completado pelo histórico: <?= e(implode(', ', $l['completado'])) ?></strong><?php endif; ?></small>
             </fieldset>
           <?php endforeach; ?>
+
+          <h2>Bandas aprendidas com o histórico (<?= count($bandas) ?>)</h2>
+          <?php if ($bandas): ?>
+            <p class="dica">Bandas novas e o que falta nas já cadastradas, tirado de todos os eventos da agenda (inclusive os antigos). Tributos: um por linha, já no texto mais completo. Cachê e consumação são os do show mais recente e só preenchem o que está vazio no cadastro.</p>
+            <details class="bandas-hist">
+              <summary>Ver e editar as <?= count($bandas) ?> bandas</summary>
+              <?php foreach ($bandas as $n => $b): ?>
+                <fieldset data-tipo="banda">
+                  <label class="check"><input type="checkbox" name="b[<?= $n ?>][incluir]" value="1" checked> <strong><?= $b['nova'] ? 'Nova' : 'Completar' ?></strong>
+                    <span class="original"><?= $b['shows'] ? e($b['shows'] . ($b['shows'] > 1 ? ' shows' : ' show') . ', o último em ' . dh_data_curta($b['ultimo']) . '/' . substr($b['ultimo'], 0, 4)) : 'só shows futuros' ?></span></label>
+                  <label>Banda <input name="b[<?= $n ?>][nome]" value="<?= e($b['nome']) ?>" <?= $b['nova'] ? '' : 'readonly' ?>></label>
+                  <label>Tributos <textarea name="b[<?= $n ?>][tributos]" rows="<?= max(1, count($b['tributos'])) ?>"><?= e(implode("\n", $b['tributos'])) ?></textarea></label>
+                  <div class="duas">
+                    <label>Cachê <input name="b[<?= $n ?>][cache]" value="<?= e(dh_num($b['cache'])) ?>" inputmode="decimal"></label>
+                    <label>Consumação <input name="b[<?= $n ?>][consumacao]" value="<?= e(dh_num($b['consumacao'])) ?>" inputmode="decimal"></label>
+                  </div>
+                  <input type="hidden" name="b[<?= $n ?>][instagram]" value="<?= e($b['instagram']) ?>">
+                </fieldset>
+              <?php endforeach; ?>
+            </details>
+          <?php else: ?>
+            <p class="dica">O cadastro das bandas já tem tudo o que essa agenda informa.</p>
+          <?php endif; ?>
           <input type="hidden" name="json" id="json-importacao">
-          <div class="barra-salvar"><button class="btn primario">Importar shows marcados</button></div>
+          <input type="hidden" name="json_bandas" id="json-bandas">
+          <div class="barra-salvar"><button class="btn primario">Importar</button></div>
         </form>
         <script>
           document.querySelector('.importacao').addEventListener('submit', function () {
-            var linhas = [];
+            var grupos = { show: [], banda: [] };
             this.querySelectorAll('fieldset').forEach(function (fs) {
               var l = {};
-              fs.querySelectorAll('input, select').forEach(function (c) {
+              fs.querySelectorAll('input, select, textarea').forEach(function (c) {
                 var m = c.name.match(/\]\[(\w+)\]$/);
                 if (!m) return;
                 l[m[1]] = c.type === 'checkbox' ? (c.checked ? '1' : '') : c.value;
                 c.disabled = true;
               });
-              linhas.push(l);
+              grupos[fs.dataset.tipo].push(l);
             });
-            document.getElementById('json-importacao').value = JSON.stringify(linhas);
+            document.getElementById('json-importacao').value = JSON.stringify(grupos.show);
+            document.getElementById('json-bandas').value = JSON.stringify(grupos.banda);
           });
         </script>
       <?php endif; ?>

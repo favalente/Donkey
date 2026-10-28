@@ -40,7 +40,7 @@ Endereço: `/admin/`
 - **Agenda** (`/admin/?acao=agenda`): data, horário (padrão configurável), unidade, banda, tributo, cachê, consumação e situação (a confirmar, confirmado, pago, cancelado). Só **confirmado** e **pago** aparecem no site.
 - **Financeiro** (`/admin/?acao=relatorio`): totais do mês por unidade (cachês, consumação, pagos e a pagar) e planilha CSV.
 - **Site:** seção "Agenda" na página inicial (próximos 6 shows) e página `/agenda/` com a programação do mês e filtro por unidade. Cachê e consumação nunca aparecem para o público.
-- **Google Agenda:** `/agenda/ics.php` (pública) e o link da equipe (com valores), criado em Agenda → Configurações. Para importar o que já existe: Usuários → Importar Google Agenda (endereço secreto iCal ou arquivo .ics), com revisão antes de gravar.
+- **Google Agenda:** `/agenda/ics.php` (pública) e o link da equipe (com valores), criado em Agenda → Configurações. Para importar o que já existe: Usuários → Importar Google Agenda (endereço secreto iCal ou arquivo .ics, uma agenda por vez, escolhendo a unidade dela), com revisão antes de gravar. Só os shows **de hoje em diante** entram na agenda. Os eventos antigos servem para cadastrar as bandas e completar tributos, cachê e consumação: quando o evento traz só o nome da banda, vale o tributo completo escrito em outro evento dela. Reservas, contas, fretes, pedidos de barril e dias "sem música" são ignorados, e erros de digitação no nome da banda ("Black Pepers" e "Black Peppers") viram um cadastro só.
 - Dados em `dados/agenda.json` (com backup diário) e fotos em `uploads/bandas/`. Limites de envio em `site/admin/.user.ini`.
 
 ## Tap list na TV

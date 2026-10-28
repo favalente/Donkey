@@ -129,3 +129,4 @@ details.usuario form { padding: 0 10px; }
 .acessos dt { color: var(--text); font-weight: 700; margin-top: 8px; }
 .acessos dd { margin: 0; }
 .grade-fotos .botoes small { color: var(--muted); align-self: center; font-size: .75rem; }
+.bandas-hist summary { cursor: pointer; font-weight: 600; margin: 4px 0 12px; }

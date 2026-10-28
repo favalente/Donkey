@@ -29,7 +29,9 @@ function dh_agenda(): array
 // "Banda Sonorah" = "SONORAH" = "Banda - Sonorah"; "Di Sousa Band" = "Di Sousa"; "Os Analógicos" = "Analógicos"
 function dh_chave_banda(string $nome): string
 {
-    $k = dh_slug($nome);
+    // "Michel Angelo & The Nightrain" = "Michel Angelo e Nightrain"
+    $k = dh_slug(str_replace('&', ' e ', $nome));
+    $k = preg_replace('/(^|-)the-/', '$1', $k);
     $k = preg_replace('/^(a-)?banda-/', '', $k);
     $k = preg_replace('/^(os|as|o|a)-/', '', $k);
     $k = preg_replace('/-(e-)?banda$|-band$/', '', $k);
