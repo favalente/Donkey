@@ -206,7 +206,7 @@ function detalhe(array $c): string
                 <span class="beer-nome"><?= e($c['nome']) ?></span>
                 <span class="beer-estilo"><?= e($c['estilo']) ?><?= $c['abv'] !== '' ? ' · ' . e(dh_num($c['abv'])) . '%' : '' ?></span>
                 <?php foreach ($onde as $u => $precos): ?>
-                  <span class="beer-preco" data-unidade="<?= $u ?>"><b><?= e(DH_UNIDADES[$u]) ?></b> <?= e(preco_cartao($precos)) ?></span>
+                  <span class="beer-preco" data-unidade="<?= $u ?>" hidden><?= e(preco_cartao($precos)) ?></span>
                 <?php endforeach; ?>
               </button>
               <div class="detalhe" id="cerveja-<?= e($c['id']) ?>" hidden>
@@ -325,6 +325,6 @@ function detalhe(array $c): string
     <button class="nav-foto prox" aria-label="Próxima foto">›</button>
   </dialog>
 
-  <script src="assets/js/main.js?v=4"></script>
+  <script src="assets/js/main.js?v=5"></script>
 </body>
 </html>

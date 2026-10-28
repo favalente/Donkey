@@ -59,13 +59,12 @@
       o.classList.toggle('ativo', sel);
       o.setAttribute('aria-pressed', String(sel));
     });
-    var grade = document.querySelector('.beer-grid');
-    if (grade) grade.classList.toggle('filtrada', qual !== 'todas');
     document.querySelectorAll('.beer').forEach(function (b) {
       var unidades = (b.getAttribute('data-unidades') || '').split(' ');
       b.hidden = qual !== 'todas' && unidades.indexOf(qual) < 0;
       b.querySelectorAll('.beer-preco').forEach(function (p) {
-        p.hidden = qual !== 'todas' && p.getAttribute('data-unidade') !== qual;
+        // Preço só nas abas de engatadas; em "Todas" o cartão fica limpo
+        p.hidden = p.getAttribute('data-unidade') !== qual;
       });
     });
   }
