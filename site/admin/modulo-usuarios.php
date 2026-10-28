@@ -35,6 +35,7 @@ function usuarios_acao(string $acao): bool
             $u = $usuarios[$login] ?? ['login' => $login];
             $u['nome'] = mb_substr(trim((string) ($_POST['nome'] ?? '')), 0, 60) ?: $login;
             $u['papel'] = $papel;
+            $u['unidade'] = isset(DH_UNIDADES[$_POST['unidade'] ?? '']) ? $_POST['unidade'] : '';
             if ($senha !== '') {
                 $u['hash'] = password_hash($senha, PASSWORD_DEFAULT);
             }
@@ -79,7 +80,7 @@ function usuarios_tela(string $tela): bool
           <li>
             <details class="usuario">
               <summary>
-                <span class="info"><strong><?= e($u['nome']) ?></strong><span><?= e($u['login']) ?> · <?= e(DH_PAPEIS[$u['papel']]) ?></span></span>
+                <span class="info"><strong><?= e($u['nome']) ?></strong><span><?= e($u['login']) ?> · <?= e(DH_PAPEIS[$u['papel']]) ?><?= !empty($u['unidade']) ? ' · ' . e(DH_UNIDADES[$u['unidade']]) : '' ?></span></span>
                 <span class="seta">›</span>
               </summary>
               <form method="post" action="./?acao=usuario-salvar" class="form-cerveja">
@@ -88,6 +89,9 @@ function usuarios_tela(string $tela): bool
                 <label>Nome <input name="nome" value="<?= e($u['nome']) ?>" maxlength="60"></label>
                 <label>Função
                   <select name="papel"><?php foreach (DH_PAPEIS as $k => $rot): ?><option value="<?= $k ?>" <?= $k === $u['papel'] ? 'selected' : '' ?>><?= e($rot) ?></option><?php endforeach; ?></select>
+                </label>
+                <label>Unidade padrão nos shows novos
+                  <select name="unidade"><option value="">—</option><?php foreach (DH_UNIDADES as $k => $rot): ?><option value="<?= $k ?>" <?= $k === ($u['unidade'] ?? '') ? 'selected' : '' ?>><?= e($rot) ?></option><?php endforeach; ?></select>
                 </label>
                 <label>Nova senha <small>(deixe em branco para manter)</small><input type="password" name="senha" autocomplete="new-password"></label>
                 <button class="btn primario">Salvar</button>
@@ -115,6 +119,9 @@ function usuarios_tela(string $tela): bool
             <option value="">—</option>
             <?php foreach (DH_PAPEIS as $k => $rot): ?><option value="<?= $k ?>"><?= e($rot) ?> · <?= e($acessos[$k]) ?></option><?php endforeach; ?>
           </select>
+        </label>
+        <label>Unidade padrão nos shows novos
+          <select name="unidade"><option value="">—</option><?php foreach (DH_UNIDADES as $k => $rot): ?><option value="<?= $k ?>"><?= e($rot) ?></option><?php endforeach; ?></select>
         </label>
         <label>Senha <small>(mínimo 8 caracteres; a pessoa pode trocar depois)</small><input type="password" name="senha" required autocomplete="new-password"></label>
         <button class="btn primario">Criar usuário</button>

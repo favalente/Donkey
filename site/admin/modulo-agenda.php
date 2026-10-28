@@ -215,7 +215,7 @@ function dh_ics_interpretar(array $ev, string $horaPadrao): array
 
 function agenda_acao(string $acao): bool
 {
-    global $telaErro, $csrf;
+    global $telaErro, $csrf, $usuario;
     switch ($acao) {
         case 'agenda':
         case 'show':
@@ -274,16 +274,21 @@ function agenda_acao(string $acao): bool
                 'cache' => dh_valor($_POST['cache'] ?? ''),
                 'consumacao' => dh_valor($_POST['consumacao'] ?? ''),
                 'status' => isset(DH_STATUS_SHOW[$_POST['status'] ?? '']) ? $_POST['status'] : 'a_confirmar',
+                'criado_por' => '',
+                'alterado_por' => $usuario['nome'],
+                'alterado_em' => date('Y-m-d H:i'),
                 'obs' => mb_substr(trim((string) ($_POST['obs'] ?? '')), 0, 500),
             ];
             $achou = false;
             foreach ($a['shows'] as $i => $s) {
                 if ($s['id'] === $show['id']) {
+                    $show['criado_por'] = $s['criado_por'] ?? '';
                     $a['shows'][$i] = $show;
                     $achou = true;
                 }
             }
             if (!$achou) {
+                $show['criado_por'] = $usuario['nome'];
                 $a['shows'][] = $show;
             }
             dh_agenda_salvar($a);
@@ -513,7 +518,8 @@ function agenda_acao(string $acao): bool
                 }
                 $a['shows'][] = ['id' => dh_id_novo('s'), 'data' => $data, 'hora' => $hora, 'unidade' => $unidade, 'banda_id' => $bandaId,
                     'tributo' => $tributo, 'cache' => $cache, 'consumacao' => $consumacao,
-                    'status' => isset(DH_STATUS_SHOW[$l['status'] ?? '']) ? $l['status'] : 'confirmado', 'obs' => ''];
+                    'status' => isset(DH_STATUS_SHOW[$l['status'] ?? '']) ? $l['status'] : 'confirmado', 'obs' => '',
+                    'criado_por' => $usuario['nome'] . ' (importado do Google Agenda)', 'alterado_por' => '', 'alterado_em' => ''];
                 $novosShows++;
             }
             dh_agenda_salvar($a);
@@ -590,7 +596,7 @@ function agenda_tela_lista(): void
                 <strong><?= e($b['nome'] ?? '—') ?></strong>
                 <span><?= e($s['tributo'] ?: 'Sem tributo definido') ?></span>
                 <span><?= e($s['hora']) ?> · <?= e(DH_UNIDADES[$s['unidade']]) ?><?php if (pode('valores')): ?> · Cachê <?= e(dh_moeda($s['cache'])) ?> · Consumação <?= e(dh_moeda($s['consumacao'])) ?><?php endif; ?></span>
-                <span class="tags"><?= agenda_status_tag($s['status']) ?><?php if ($b && !$b['fotos']): ?><em class="tag alerta">Banda sem foto</em><?php endif; ?></span>
+                <span class="tags"><?= agenda_status_tag($s['status']) ?><?php if (!empty($s['criado_por'])): ?><em class="tag cinza">por <?= e(explode(' (', $s['criado_por'])[0]) ?></em><?php endif; ?><?php if ($b && !$b['fotos']): ?><em class="tag alerta">Banda sem foto</em><?php endif; ?></span>
               </span>
               <span class="seta">›</span>
             </a>
@@ -619,7 +625,7 @@ function agenda_tela_lista(): void
 
 function agenda_tela_show(): void
 {
-    global $csrf, $erro;
+    global $csrf, $erro, $usuario;
     $a = dh_agenda();
     $id = (string) ($_GET['id'] ?? $_POST['id'] ?? '');
     $s = null;
@@ -628,7 +634,7 @@ function agenda_tela_show(): void
             $s = $x;
         }
     }
-    $s = $s ?? ['id' => '', 'data' => (string) ($_GET['data'] ?? ''), 'hora' => $a['config']['hora_padrao'], 'unidade' => 'aldeota', 'banda_id' => '',
+    $s = $s ?? ['id' => '', 'data' => (string) ($_GET['data'] ?? ''), 'hora' => $a['config']['hora_padrao'], 'unidade' => $usuario['unidade'] ?? '' ?: 'aldeota', 'banda_id' => '',
         'tributo' => '', 'cache' => '', 'consumacao' => '', 'status' => 'a_confirmar', 'obs' => ''];
     if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $s = array_merge($s, array_intersect_key($_POST, $s));
@@ -673,6 +679,9 @@ function agenda_tela_show(): void
         </label>
         <p class="dica">"A confirmar" e "Cancelado" não aparecem no site.</p>
         <label>Observações internas <textarea name="obs" rows="3" maxlength="500"><?= e($s['obs']) ?></textarea></label>
+        <?php if (!empty($s['criado_por']) || !empty($s['alterado_por'])): ?>
+          <p class="dica">Cadastrado por <?= e(($s['criado_por'] ?? '') ?: '—') ?><?php if (!empty($s['alterado_por'])): ?> · última alteração por <?= e($s['alterado_por']) ?> em <?= e(date('d/m/Y H:i', strtotime($s['alterado_em']))) ?><?php endif; ?></p>
+        <?php endif; ?>
         <div class="barra-salvar"><button class="btn primario">Salvar show</button></div>
       </form>
       <?php if ($s['id']): ?>
