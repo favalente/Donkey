@@ -171,43 +171,105 @@ function dh_ics_eventos(string $ics): array
     return $eventos;
 }
 
-// Tenta separar banda, tributo, unidade e valores de um evento do Google Agenda
+// "DI SOUSA BAND" -> "Di Sousa Band" (só palavras todas em maiúsculas; siglas conhecidas como RPM ficam)
+function dh_capitalizar(string $t): string
+{
+    $minusculas = ['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'ao', 'aos', 'as', 'os', 'com', 'em', 'no', 'na'];
+    $palavras = preg_split('/(\s+)/u', trim($t), -1, PREG_SPLIT_DELIM_CAPTURE);
+    $primeira = true;
+    foreach ($palavras as $i => $w) {
+        if (trim($w) === '') {
+            continue;
+        }
+        $letras = preg_replace('/[^\p{L}]/u', '', $w);
+        $siglas = ['RPM', 'DJ', 'MPB', 'U2', 'TNT', 'UFO', 'REM', 'KLB', 'AC', 'DC', 'CPM', 'LS', 'BB'];
+        if ($letras !== '' && mb_strtoupper($letras, 'UTF-8') === $letras && !in_array($letras, $siglas, true)) {
+            $w = mb_strtolower($w, 'UTF-8');
+            if ($primeira || !in_array($w, $minusculas, true)) {
+                $w = mb_convert_case($w, MB_CASE_TITLE, 'UTF-8');
+            }
+        }
+        $palavras[$i] = $w;
+        $primeira = false;
+    }
+    return implode('', $palavras);
+}
+
+// Separa por vírgula, sem quebrar o que está entre parênteses: "A, B (x, y), C" -> [A, B (x, y), C]
+function dh_partes_virgula(string $t): array
+{
+    $partes = [];
+    $atual = '';
+    $nivel = 0;
+    foreach (preg_split('//u', $t, -1, PREG_SPLIT_NO_EMPTY) as $c) {
+        if ($c === '(') {
+            $nivel++;
+        } elseif ($c === ')') {
+            $nivel = max(0, $nivel - 1);
+        }
+        if ($c === ',' && $nivel === 0) {
+            $partes[] = trim($atual);
+            $atual = '';
+        } else {
+            $atual .= $c;
+        }
+    }
+    $partes[] = trim($atual);
+    return array_values(array_filter($partes, fn($p) => $p !== ''));
+}
+
+// Separa banda, tributo, unidade, horário e valores de um evento do Google Agenda.
+// Padrão da casa: "BANDA, DONKEY HEAD MARAPONGA, 30/10/26 AS 20H30, TRIBUTO ... (...), CACHE R$450 CONSUMACAO R$160"
 function dh_ics_interpretar(array $ev, string $horaPadrao): array
 {
     $tudo = $ev['titulo'] . "\n" . $ev['descricao'] . "\n" . $ev['local'];
     $unidade = stripos($tudo, 'maraponga') !== false ? 'maraponga' : 'aldeota';
     preg_match('/cach[eê]\s*[:=\-]?\s*(?:R\$)?\s*([\d.,]+)/iu', $tudo, $mc);
     preg_match('/consuma[cç][aã]o\s*[:=\-]?\s*(?:R\$)?\s*([\d.,]+)/iu', $tudo, $mo);
-    $titulo = trim(preg_replace('/\b(aldeota|maraponga)\b/iu', '', $ev['titulo']), " -–|/()[]");
-    $banda = $titulo;
+    $hora = $ev['hora'];
+    if (preg_match('/\b(?:[aà]s|a partir das)\s*(\d{1,2})\s*(?:h|:)\s*(\d{2})?/iu', $tudo, $mh) || preg_match('/\b(\d{1,2})\s*h\s*(\d{2})?\b/iu', $ev['titulo'], $mh)) {
+        if ((int) $mh[1] < 24) {
+            $hora = sprintf('%02d:%02d', (int) $mh[1], (int) ($mh[2] ?? 0));
+        }
+    }
+    $banda = '';
     $tributo = '';
-    $partes = array_values(array_filter(array_map('trim', preg_split('/\s+[-–|]\s+|\s*\|\s*/u', $titulo))));
+    $partes = dh_partes_virgula($ev['titulo']);
     if (count($partes) > 1) {
-        foreach ($partes as $k => $p) {
-            if (preg_match('/tributo|cover|homenagem|especial/iu', $p)) {
+        foreach ($partes as $p) {
+            if (preg_match('/donkey|aldeota|maraponga|cach[eê]|consuma|\d{1,2}\/\d{1,2}|\b[aà]s\s*\d/iu', $p)) {
+                continue;
+            }
+            if ($tributo === '' && preg_match('/tribut|cover|homenagem|especial|ac[uú]stico|baile|festa/iu', $p)) {
                 $tributo = $p;
-                unset($partes[$k]);
-                break;
+            } elseif ($banda === '') {
+                $banda = $p;
             }
         }
-        if ($tributo === '') {
-            $tributo = array_pop($partes);
+    } else {
+        $titulo = trim(preg_replace('/\b(aldeota|maraponga)\b/iu', '', $ev['titulo']), " -–|/()[]");
+        $pp = array_values(array_filter(array_map('trim', preg_split('/\s+[-–|]\s+|\s*\|\s*/u', $titulo))));
+        $banda = $pp[0] ?? $titulo;
+        foreach (array_slice($pp, 1) as $p) {
+            if ($tributo === '' && preg_match('/tribut|cover|homenagem/iu', $p)) {
+                $tributo = $p;
+            }
         }
-        $banda = implode(' - ', $partes);
-    } elseif (preg_match('/^(.*?)\s*\((.*)\)$/u', $titulo, $m)) {
-        [$banda, $tributo] = [trim($m[1]), trim($m[2])];
+        if (preg_match('/^tributo/iu', $banda) && count($pp) > 1) {
+            [$banda, $tributo] = [$pp[1], $pp[0]];
+        }
     }
-    if (preg_match('/^tributo/iu', $banda) && $tributo !== '' && !preg_match('/^tributo/iu', $tributo)) {
-        [$banda, $tributo] = [$tributo, $banda];
-    }
+    $cache = dh_valor($mc[1] ?? '');
     return [
         'data' => $ev['data'],
-        'hora' => $ev['hora'] ?: $horaPadrao,
+        'hora' => $hora ?: $horaPadrao,
         'unidade' => $unidade,
-        'banda' => $banda,
-        'tributo' => $tributo,
-        'cache' => dh_valor($mc[1] ?? ''),
+        'banda' => dh_capitalizar($banda),
+        'tributo' => dh_capitalizar($tributo),
+        'cache' => $cache,
         'consumacao' => dh_valor($mo[1] ?? ''),
+        // Só vem marcado o que parece show (tem cachê ou tributo)
+        'show' => $cache !== '' || $tributo !== '',
         'original' => $ev['titulo'] . ($ev['descricao'] !== '' ? ' — ' . mb_substr(preg_replace('/\s+/', ' ', $ev['descricao']), 0, 160) : ''),
         'uid' => $ev['uid'],
     ];
@@ -918,12 +980,12 @@ function agenda_tela_importar(): void
           <button class="btn primario">Ler eventos</button>
         </form>
       <?php else: ?>
-        <p class="dica">Confira banda, tributo, unidade e valores de cada evento (o texto original fica embaixo). Desmarque o que não for show. Bandas com o mesmo nome são juntadas num só cadastro.</p>
+        <p class="dica">Confira banda, tributo, unidade, horário e valores de cada evento (o texto original fica embaixo). Já vêm marcados só os eventos que parecem show (com cachê ou tributo); marque ou desmarque o que precisar. Bandas com o mesmo nome são juntadas num só cadastro.</p>
         <form method="post" action="./?acao=importar-confirmar" class="importacao">
           <?= $csrf ?>
           <?php foreach ($linhas as $n => $l): ?>
             <fieldset>
-              <label class="check"><input type="checkbox" name="l[<?= $n ?>][incluir]" value="1" checked> <strong><?= e(dh_data_curta($l['data'])) ?>/<?= e(substr($l['data'], 0, 4)) ?></strong></label>
+              <label class="check"><input type="checkbox" name="l[<?= $n ?>][incluir]" value="1" <?= !empty($l['show']) ? 'checked' : '' ?>> <strong><?= e(dh_data_curta($l['data'])) ?>/<?= e(substr($l['data'], 0, 4)) ?></strong></label>
               <div class="duas">
                 <label>Banda <input name="l[<?= $n ?>][banda]" value="<?= e($l['banda']) ?>"></label>
                 <label>Tributo <input name="l[<?= $n ?>][tributo]" value="<?= e($l['tributo']) ?>"></label>
