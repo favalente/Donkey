@@ -538,7 +538,7 @@ function agenda_acao(string $acao): bool
             $a = dh_agenda();
             $porNome = [];
             foreach ($a['bandas'] as $i => $b) {
-                $porNome[dh_slug($b['nome'])] = $i;
+                $porNome[dh_chave_banda($b['nome'])] = $i;
             }
             $novasBandas = $novosShows = $repetidos = 0;
             foreach ((array) ($_POST['l'] ?? []) as $l) {
@@ -555,7 +555,7 @@ function agenda_acao(string $acao): bool
                 $tributo = mb_substr(trim((string) ($l['tributo'] ?? '')), 0, 120);
                 $cache = dh_valor($l['cache'] ?? '');
                 $consumacao = dh_valor($l['consumacao'] ?? '');
-                $chave = dh_slug($nome);
+                $chave = dh_chave_banda($nome);
                 if (!isset($porNome[$chave])) {
                     $a['bandas'][] = ['id' => dh_id_novo('b'), 'nome' => $nome, 'tributos' => [], 'cache' => $cache, 'consumacao' => $consumacao,
                         'instagram' => '', 'contato' => '', 'obs' => 'Importada do Google Agenda', 'fotos' => []];
@@ -845,6 +845,9 @@ function agenda_tela_banda(): void
       <h1><?= $b['id'] ? e($b['nome']) : 'Nova banda' ?></h1>
       <?php if ($shows): ?>
         <p class="aviso">Próximos shows: <?= e(implode(' · ', array_map(fn($s) => dh_data_curta($s['data']) . ' ' . $s['hora'] . ' (' . DH_UNIDADES[$s['unidade']] . ')', $shows))) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($b['drive'])): ?>
+        <p><?php foreach ($b['drive'] as $n => $pasta): ?><a class="btn secundario" href="https://drive.google.com/drive/folders/<?= e(rawurlencode($pasta)) ?>" target="_blank" rel="noopener">Abrir pasta no Google Drive<?= count($b['drive']) > 1 ? ' ' . ($n + 1) : '' ?> ↗</a> <?php endforeach; ?></p>
       <?php endif; ?>
       <form method="post" action="./?acao=banda-salvar" enctype="multipart/form-data" class="form-cerveja">
         <?= $csrf ?>

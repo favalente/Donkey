@@ -21,6 +21,47 @@ function dh_agenda(): array
     if ($a['config']['hora_padrao'] === '21:00' && empty($a['config']['hora_escolhida'])) {
         $a['config']['hora_padrao'] = '20:30';
     }
+    $a = dh_agenda_bandas_iniciais($a);
+    return $a;
+}
+
+// Chave para reconhecer a mesma banda escrita de jeitos diferentes:
+// "Banda Sonorah" = "SONORAH" = "Banda - Sonorah"; "Di Sousa Band" = "Di Sousa"
+function dh_chave_banda(string $nome): string
+{
+    $k = dh_slug($nome);
+    $k = preg_replace('/^(a-)?banda-/', '', $k);
+    return preg_replace('/-(e-)?banda$|-band$/', '', $k);
+}
+
+// Na primeira vez, cadastra as bandas das pastas do Google Drive (dados-iniciais/bandas-drive.json)
+function dh_agenda_bandas_iniciais(array $a): array
+{
+    $arq = DH_RAIZ . '/dados-iniciais/bandas-drive.json';
+    $lista = json_decode((string) @file_get_contents($arq), true);
+    if (!empty($a['config']['bandas_drive']) || !is_array($lista)) {
+        return $a;
+    }
+    $existentes = [];
+    foreach ($a['bandas'] as $i => $b) {
+        $existentes[dh_chave_banda($b['nome'])] = $i;
+    }
+    foreach ($lista as $n => $item) {
+        $k = dh_chave_banda($item['nome']);
+        if (isset($existentes[$k])) {
+            $a['bandas'][$existentes[$k]]['drive'] = $item['drive'];
+            continue;
+        }
+        $a['bandas'][] = ['id' => 'b' . date('ymdHis') . sprintf('%03d', $n), 'nome' => $item['nome'], 'tributos' => [], 'cache' => '', 'consumacao' => '',
+            'instagram' => '', 'contato' => '', 'obs' => '', 'fotos' => [], 'drive' => $item['drive']];
+        $existentes[$k] = count($a['bandas']) - 1;
+    }
+    $a['config']['bandas_drive'] = date('Y-m-d H:i');
+    try {
+        dh_agenda_salvar($a);
+    } catch (RuntimeException $e) {
+        // Sem permissão de gravar: tenta de novo na próxima vez
+    }
     return $a;
 }
 
