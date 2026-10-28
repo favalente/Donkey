@@ -233,3 +233,14 @@ p { margin: 0 0 1em; }
 .agenda-vazia { color: var(--muted); padding: 40px 0; text-align: center; }
 .titulo-pagina { font-size: clamp(2.6rem, 6vw, 4rem); }
 a.filtro { text-decoration: none; color: var(--text); }
+
+/* Agenda na página inicial: card compacto que abre a agenda completa */
+.agenda-cta { padding: 48px 0; }
+.agenda-card { width: calc(100% - 32px); max-width: calc(var(--max) - 32px); padding: 28px 24px; border: 1px solid var(--line); border-radius: 20px; background: linear-gradient(135deg, #2c1f12, #1c1510); color: var(--text); text-decoration: none; transition: border-color .2s; }
+.agenda-card:hover { border-color: var(--amber); }
+.agenda-card h2 { margin-bottom: .4em; }
+.agenda-card:hover .btn-ghost { border-color: var(--amber); color: var(--amber); }
+.agenda-proximos { list-style: none; margin: 0; padding: 0; color: var(--muted); }
+.agenda-proximos li { padding: 4px 0; }
+.agenda-proximos span { color: var(--amber); font-weight: 600; }
+.agenda-proximos strong { color: var(--text); font-weight: 600; }

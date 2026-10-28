@@ -15,7 +15,11 @@ foreach ($taplists['aldeota'] as $c) {
     }
 }
 $temTaplist = (bool) array_filter($taplists);
-$proximosShows = array_slice(dh_shows_publicos(dh_agenda(), date('Y-m-d')), 0, 6);
+// Agenda na página inicial: só o próximo show de cada unidade, num card que leva à agenda completa
+$proximosShows = [];
+foreach (dh_shows_publicos(dh_agenda(), date('Y-m-d')) as $sh) {
+    $proximosShows[$sh['unidade']] = $proximosShows[$sh['unidade']] ?? $sh;
+}
 // A tap list pode ter cadastrado cervejas novas vindas do xMenu: recarrega o catálogo
 $dados = dh_carregar();
 $catalogo = array_values(array_filter($dados['cervejas'], fn($c) => !empty($c['ativa'])));
@@ -133,22 +137,6 @@ function detalhe(array $c): string
         </div>
       </div>
     </section>
-
-    <?php if ($proximosShows): ?>
-    <section class="section section-alt" id="agenda">
-      <div class="container">
-        <div class="section-head">
-          <p class="eyebrow">Agenda</p>
-          <h2>Som ao vivo na Donkey</h2>
-          <p>Confira as próximas atrações nas nossas duas unidades.</p>
-        </div>
-        <div class="shows-grid">
-          <?php foreach ($proximosShows as $sh) echo dh_cartao_show($sh); ?>
-        </div>
-        <p class="centro"><a class="btn btn-ghost" href="agenda/">Ver a programação completa</a></p>
-      </div>
-    </section>
-    <?php endif; ?>
 
     <section class="section" id="historia">
       <div class="container split">
@@ -283,6 +271,23 @@ function detalhe(array $c): string
         <a class="btn btn-primary" href="<?= e($cardapio) ?>" target="_blank" rel="noopener">Ver cardápio</a>
       </div>
     </section>
+
+    <?php if ($proximosShows): ?>
+    <section class="section agenda-cta" id="agenda">
+      <a class="container cta agenda-card" href="agenda/">
+        <div>
+          <p class="eyebrow">Agenda</p>
+          <h2>Som ao vivo na Donkey</h2>
+          <ul class="agenda-proximos">
+            <?php foreach (DH_UNIDADES as $u => $nomeU): if (empty($proximosShows[$u])) continue; $sh = $proximosShows[$u]; ?>
+              <li><span><?= e($nomeU) ?></span> <?= e(dh_data_curta($sh['data'])) ?> · <strong><?= e($sh['banda']) ?></strong></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+        <span class="btn btn-ghost">Ver a agenda</span>
+      </a>
+    </section>
+    <?php endif; ?>
 
     <section class="section" id="contato">
       <div class="container">
