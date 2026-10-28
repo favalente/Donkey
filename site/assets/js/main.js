@@ -51,31 +51,29 @@
     modal.scrollTop = 0;
   });
 
-  // Abas da tap list
-  var tabs = document.querySelectorAll('.tab');
-  tabs.forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      tabs.forEach(function (t) {
-        var sel = t === tab;
-        t.setAttribute('aria-selected', String(sel));
-        document.getElementById(t.getAttribute('aria-controls')).hidden = !sel;
-      });
-    });
-  });
-
-  // Filtro "Engatadas agora"
+  // Filtro do catálogo: todas ou só as engatadas numa unidade (com o preço dela)
   var filtros = document.querySelectorAll('.filtro');
-  filtros.forEach(function (f) {
-    f.addEventListener('click', function () {
-      var so = f.getAttribute('data-filtro') === 'engatada';
-      filtros.forEach(function (o) {
-        o.classList.toggle('ativo', o === f);
-        o.setAttribute('aria-pressed', String(o === f));
-      });
-      document.querySelectorAll('.beer').forEach(function (b) {
-        b.hidden = so && b.getAttribute('data-engatada') !== '1';
+  function filtrar(qual) {
+    filtros.forEach(function (o) {
+      var sel = o.getAttribute('data-filtro') === qual;
+      o.classList.toggle('ativo', sel);
+      o.setAttribute('aria-pressed', String(sel));
+    });
+    var grade = document.querySelector('.beer-grid');
+    if (grade) grade.classList.toggle('filtrada', qual !== 'todas');
+    document.querySelectorAll('.beer').forEach(function (b) {
+      var unidades = (b.getAttribute('data-unidades') || '').split(' ');
+      b.hidden = qual !== 'todas' && unidades.indexOf(qual) < 0;
+      b.querySelectorAll('.beer-preco').forEach(function (p) {
+        p.hidden = qual !== 'todas' && p.getAttribute('data-unidade') !== qual;
       });
     });
+  }
+  filtros.forEach(function (f) {
+    f.addEventListener('click', function () { filtrar(f.getAttribute('data-filtro')); });
+  });
+  document.querySelectorAll('[data-ir-filtro]').forEach(function (a) {
+    a.addEventListener('click', function () { filtrar(a.getAttribute('data-ir-filtro')); });
   });
 
   // Galeria: mostra 12 fotos e expande; foto ampliada com navegação
@@ -115,7 +113,7 @@
   });
 
   // Animação ao rolar
-  var items = document.querySelectorAll('.section-head, .beer, .unit, .prose, .taps li');
+  var items = document.querySelectorAll('.section-head, .beer, .unit, .prose');
   if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {

@@ -244,3 +244,10 @@ a.filtro { text-decoration: none; color: var(--text); }
 .agenda-proximos li { padding: 4px 0; }
 .agenda-proximos span { color: var(--amber); font-weight: 600; }
 .agenda-proximos strong { color: var(--text); font-weight: 600; }
+
+/* Preço da tap list no cartão da cerveja */
+.beer-preco { color: var(--amber); font-size: .82rem; font-weight: 600; }
+.beer-preco b { color: var(--text); font-weight: 600; }
+.beer-preco[hidden] { display: none; }
+.filtro .contagem { opacity: .7; font-weight: 500; }
+.beer-grid.filtrada .beer-preco b { display: none; }

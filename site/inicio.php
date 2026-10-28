@@ -4,15 +4,8 @@ require __DIR__ . '/inc/dados.php';
 $dados = dh_carregar();
 $catalogo = array_values(array_filter($dados['cervejas'], fn($c) => !empty($c['ativa'])));
 $taplists = [];
-$engatadas = [];
 foreach (DH_UNIDADES as $u => $_) {
     $taplists[$u] = dh_taplist($dados, $u);
-}
-// Selo "Engatada" e filtro do catálogo seguem só a tap list da Aldeota
-foreach ($taplists['aldeota'] as $c) {
-    if ($c['id']) {
-        $engatadas[$c['id']] = true;
-    }
 }
 $temTaplist = (bool) array_filter($taplists);
 // Agenda na página inicial: só o próximo show de cada unidade, num card que leva à agenda completa
@@ -23,6 +16,23 @@ foreach (dh_shows_publicos(dh_agenda(), date('Y-m-d')) as $sh) {
 // A tap list pode ter cadastrado cervejas novas vindas do xMenu: recarrega o catálogo
 $dados = dh_carregar();
 $catalogo = array_values(array_filter($dados['cervejas'], fn($c) => !empty($c['ativa'])));
+
+// A tap list fica dentro de "Nossas cervejas": cada cerveja sabe em que unidade está engatada e por quanto.
+// Engatada sem cadastro no catálogo (ou escondida dele) entra também, com os dados do xMenu.
+$engatadas = [];
+$porId = array_column($catalogo, null, 'id');
+foreach ($taplists as $u => $lista) {
+    foreach ($lista as $c) {
+        $id = $c['id'] ?: 'xm-' . dh_slug($c['nome']);
+        $engatadas[$id][$u] = $c['precos'];
+        if (!isset($porId[$id])) {
+            $c['id'] = $id;
+            $porId[$id] = $c;
+            $catalogo[] = $c;
+        }
+    }
+}
+$contagem = array_map('count', $taplists);
 
 $galeria = dh_galeria();
 $cardapio = 'https://xmenu.com.br/pedidos/?loja=20476&camp=XMENU-TESTE';
@@ -38,12 +48,23 @@ function ficha(array $c): string
     return $itens ? '<dl class="ficha">' . implode('', $itens) . '</dl>' : '';
 }
 
+// No cartão vai só o preço do copo de 300 ml (os demais tamanhos ficam nos detalhes)
+function preco_cartao(array $precos): string
+{
+    foreach ($precos as $p) {
+        if (stripos($p['tam'], '300') === 0) {
+            return $p['tam'] . ' ' . dh_preco($p['valor']);
+        }
+    }
+    return $precos ? $precos[0]['tam'] . ' ' . dh_preco($precos[0]['valor']) : 'engatada';
+}
+
 function detalhe(array $c): string
 {
     $paras = array_filter(array_map('trim', preg_split('/\n\s*\n/', (string) ($c['descricao'] ?? ''))));
     $html = '<img src="' . e($c['imagem']) . '" alt="Rótulo da ' . e($c['nome']) . '" loading="lazy">';
     $html .= '<div class="detalhe-texto"><h3>' . e($c['nome']) . '</h3>';
-    $html .= '<p class="estilo">' . e($c['estilo']) . ($c['pais'] ? ' · ' . e($c['pais']) : '') . '</p>';
+    $html .= '<p class="estilo">' . e($c['estilo']) . (!empty($c['pais']) ? ' · ' . e($c['pais']) : '') . '</p>';
     $html .= ficha($c);
     foreach ($paras as $p) {
         $html .= '<p>' . nl2br(e($p)) . '</p>';
@@ -111,7 +132,6 @@ function detalhe(array $c): string
       <nav id="menu" class="menu">
         <a href="agenda/">Agenda</a>
         <a href="#historia">Nossa história</a>
-        <?php if ($temTaplist): ?><a href="#taplist">Tap List</a><?php endif; ?>
         <a href="#cervejas">Cervejas</a>
         <a href="#galeria">Galeria</a>
         <a href="#contato">Contato</a>
@@ -131,7 +151,7 @@ function detalhe(array $c): string
           <h1><img src="assets/img/mais-cerveja-menos-arenga.png" alt="Mais cerveja, menos arenga!" width="1003" height="324"></h1>
           <p class="lead">Cerveja artesanal feita aqui, gastronomia de verdade e muito rock. Aqui, a vida acontece fora da tela.</p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="<?= $temTaplist ? '#taplist' : '#cervejas' ?>"><?= $temTaplist ? 'O que está engatado' : 'Nossas cervejas' ?></a>
+            <a class="btn btn-primary" href="#cervejas"<?= $temTaplist ? ' data-ir-filtro="aldeota"' : '' ?>><?= $temTaplist ? 'O que está engatado' : 'Nossas cervejas' ?></a>
             <a class="btn btn-ghost" href="#contato">Onde estamos</a>
           </div>
         </div>
@@ -160,64 +180,24 @@ function detalhe(array $c): string
       </div>
     </section>
 
-    <?php if ($temTaplist): ?>
-    <section class="section section-feature" id="taplist">
-      <div class="container">
-        <div class="section-head">
-          <p class="eyebrow">Tap List</p>
-          <h2>Engatadas agora</h2>
-          <p>Confira o que temos engatado neste momento em cada unidade.</p>
-        </div>
-        <div class="tabs" role="tablist">
-          <?php $primeira = true; foreach (DH_UNIDADES as $u => $nomeU): ?>
-            <button class="tab" role="tab" id="tab-<?= $u ?>" aria-controls="tap-<?= $u ?>" aria-selected="<?= $primeira ? 'true' : 'false' ?>"><?= e($nomeU) ?> <span class="contagem"><?= count($taplists[$u]) ?></span></button>
-          <?php $primeira = false; endforeach; ?>
-        </div>
-        <?php $primeira = true; foreach (DH_UNIDADES as $u => $nomeU): ?>
-          <div class="taps" role="tabpanel" id="tap-<?= $u ?>" aria-labelledby="tab-<?= $u ?>" <?= $primeira ? '' : 'hidden' ?>>
-            <?php if (!$taplists[$u]): ?>
-              <p class="vazio">Tap list da unidade <?= e($nomeU) ?> em atualização. Pergunte ao nosso barman!</p>
-            <?php endif; ?>
-            <ol>
-              <?php foreach ($taplists[$u] as $n => $c): ?>
-                <li>
-                  <button class="tap"<?= $c['id'] ? ' data-cerveja="' . e($c['id']) . '"' : ' disabled' ?>>
-                    <span class="tap-num"><?= $n + 1 ?></span>
-                    <img src="<?= e($c['imagem']) ?>" alt="" loading="lazy" width="64" height="64">
-                    <span class="tap-info">
-                      <strong><?= e($c['nome']) ?></strong>
-                      <span><?= e($c['estilo']) ?></span>
-                      <?php if ($c['precos']): ?>
-                        <span class="tap-preco"><?php foreach ($c['precos'] as $p): ?><span><?= e($p['tam']) ?> <?= e(dh_preco($p['valor'])) ?></span><?php endforeach; ?></span>
-                      <?php endif; ?>
-                    </span>
-                    <span class="tap-abv"><?= $c['abv'] !== '' ? e(dh_num($c['abv'])) . '%' : '' ?><?php if ($c['ibu'] !== ''): ?><small><?= e($c['ibu']) ?> IBU</small><?php endif; ?></span>
-                  </button>
-                </li>
-              <?php endforeach; ?>
-            </ol>
-          </div>
-        <?php $primeira = false; endforeach; ?>
-      </div>
-    </section>
-    <?php endif; ?>
-
     <section class="section section-alt" id="cervejas">
       <div class="container">
         <div class="section-head">
-          <p class="eyebrow">Nossos rótulos</p>
+          <p class="eyebrow">Confira todos os rótulos que já produzimos</p>
           <h2>Nossas cervejas</h2>
-          <p>Toque no rótulo para ver os detalhes da cerveja.</p>
+          <p>Veja o que está engatado em cada unidade e toque no rótulo para ver os detalhes da cerveja.</p>
         </div>
         <?php if ($temTaplist): ?>
         <div class="filtros" role="group" aria-label="Filtrar cervejas">
           <button class="filtro ativo" data-filtro="todas" aria-pressed="true">Todas</button>
-          <button class="filtro" data-filtro="engatada" aria-pressed="false">Engatadas na Aldeota</button>
+          <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
+            <button class="filtro" data-filtro="<?= $u ?>" aria-pressed="false">Engatadas na <?= e($nomeU) ?> <span class="contagem"><?= $contagem[$u] ?></span></button>
+          <?php endforeach; ?>
         </div>
         <?php endif; ?>
         <div class="beer-grid">
           <?php foreach ($catalogo as $c): $onde = $engatadas[$c['id']] ?? []; ?>
-            <article class="beer" data-engatada="<?= $onde ? '1' : '0' ?>">
+            <article class="beer" data-unidades="<?= e(implode(' ', array_keys($onde))) ?>">
               <button class="beer-btn" data-cerveja="<?= e($c['id']) ?>">
                 <span class="beer-img">
                   <img src="<?= e($c['imagem']) ?>" alt="Rótulo da <?= e($c['nome']) ?>" loading="lazy" width="640" height="640">
@@ -225,10 +205,13 @@ function detalhe(array $c): string
                 </span>
                 <span class="beer-nome"><?= e($c['nome']) ?></span>
                 <span class="beer-estilo"><?= e($c['estilo']) ?><?= $c['abv'] !== '' ? ' · ' . e(dh_num($c['abv'])) . '%' : '' ?></span>
+                <?php foreach ($onde as $u => $precos): ?>
+                  <span class="beer-preco" data-unidade="<?= $u ?>"><b><?= e(DH_UNIDADES[$u]) ?></b> <?= e(preco_cartao($precos)) ?></span>
+                <?php endforeach; ?>
               </button>
               <div class="detalhe" id="cerveja-<?= e($c['id']) ?>" hidden>
                 <?= detalhe($c) ?>
-                <?php if ($onde): ?><p class="onde">Engatada agora na Aldeota</p><?php endif; ?>
+                <?php foreach ($onde as $u => $precos): ?><p class="onde">Engatada agora na <?= e(DH_UNIDADES[$u]) ?><?= $precos ? ': ' . e(implode(' · ', array_map(fn($p) => $p['tam'] . ' ' . dh_preco($p['valor']), $precos))) : '' ?></p><?php endforeach; ?>
               </div>
             </article>
           <?php endforeach; ?>
@@ -342,6 +325,6 @@ function detalhe(array $c): string
     <button class="nav-foto prox" aria-label="Próxima foto">›</button>
   </dialog>
 
-  <script src="assets/js/main.js?v=3"></script>
+  <script src="assets/js/main.js?v=4"></script>
 </body>
 </html>

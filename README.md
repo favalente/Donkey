@@ -94,6 +94,6 @@ Depois abra http://localhost:8000 e http://localhost:8000/admin/.
 
 - Visual novo e responsivo, sem Bootstrap/jQuery, e com aviso de 18+.
 - O vídeo do topo era um GIF de 91 MB e virou um MP4 de menos de 1 MB. A galeria e os rótulos também foram otimizados (de 108 MB para cerca de 11 MB no total).
-- Nova seção **Tap List** por unidade e o selo "Engatada" nos rótulos.
+- A tap list fica dentro de **Nossas cervejas**: filtros "Engatadas na Aldeota" e "Engatadas na Maraponga", selo "Engatada" e o preço de 300 ml de cada unidade no cartão da cerveja (os outros tamanhos aparecem nos detalhes). Cerveja engatada que não está no catálogo aparece com os dados do xMenu.
 - Textos mantidos. Foram corrigidos só trechos duplicados por engano no HTML antigo (em Rye Se Lascar, West Coast Chocolate Stout e Pele Encarnada) e alguns erros de digitação.
 - As fichas mostram só ABV e IBU (SRM e EBC foram removidos).
