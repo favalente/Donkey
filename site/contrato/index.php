@@ -328,7 +328,7 @@ $f = $k['campos'] ?? [];
 
       <article class="papel">
         <header class="timbre"><img src="../assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="56"><span><?= e(DH_EMPRESA['razao']) ?><br>CNPJ <?= e(DH_EMPRESA['cnpj']) ?></span></header>
-        <?= $k['documento'] ?>
+        <?= dh_contrato_exibir($k['documento']) ?>
         <div class="assinam">
           <?php foreach (['contratada' => 'CONTRATADA', 'contratante' => 'CONTRATANTE'] as $parte => $rot): $a = $k['assinaturas'][$parte] ?? null; ?>
             <div><p class="traco"><?= $a ? 'Assinado eletronicamente por ' . e($a['nome']) . '<br>em ' . e(date('d/m/Y H:i', strtotime($a['em']))) : '&nbsp;' ?></p><p><strong><?= $rot ?></strong></p></div>

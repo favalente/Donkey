@@ -587,6 +587,14 @@ function dh_contrato_relatorio(array $k): string
     return $h;
 }
 
+// Texto do contrato para mostrar (página, PDF, e-mail). Só muda a aparência: o texto guardado e o
+// código de integridade continuam os mesmos. Contratos gerados antes de as Observações ficarem
+// em vermelho e negrito ganham o mesmo destaque aqui.
+function dh_contrato_exibir(string $documento): string
+{
+    return str_replace('<p><strong>Observações:</strong> ', '<p class="observacoes" style="color:#c62828;font-weight:bold">Observações: ', $documento);
+}
+
 // Congela o texto do contrato: a partir daqui ele não muda mais
 function dh_contrato_congelar(array &$k, array $config): void
 {
@@ -638,7 +646,7 @@ function dh_contrato_enviar_copia(array $k, array $para): array
         . '<p><a href="' . e($link) . '">Abrir o contrato assinado</a> (a página também confere a autenticidade).</p>';
     $falhas = [];
     foreach (array_unique(array_filter($para)) as $email) {
-        if (!dh_email($email, 'Contrato assinado nº ' . $k['numero'] . ' · Donkey Head Cervejaria', $texto . ($anexos ? '' : '<hr>' . $k['documento'] . dh_contrato_relatorio($k)), $erro, $anexos)) {
+        if (!dh_email($email, 'Contrato assinado nº ' . $k['numero'] . ' · Donkey Head Cervejaria', $texto . ($anexos ? '' : '<hr>' . dh_contrato_exibir($k['documento']) . dh_contrato_relatorio($k)), $erro, $anexos)) {
             $falhas[$email] = $erro;
         }
     }
@@ -884,7 +892,7 @@ table.assinam td { width: 50%; padding: 0 14px; text-align: center; vertical-ali
 CSS;
     $html = '<!doctype html><html><head><meta charset="utf-8"><style>' . $css . '</style></head><body>'
         . '<div class="timbre"><img src="' . e(realpath(DH_RAIZ . '/assets/img/logo-donkey-head.png')) . '">' . e(DH_EMPRESA['razao']) . ' · CNPJ ' . e(DH_EMPRESA['cnpj']) . '</div>'
-        . $k['documento']
+        . dh_contrato_exibir($k['documento'])
         . '<table class="assinam"><tr>' . $assinam . '</tr></table>'
         . '<div class="rodape-doc">' . e(DH_EMPRESA['razao']) . ' · CNPJ ' . e(DH_EMPRESA['cnpj']) . ' · ' . e(DH_EMPRESA['endereco']) . ' · ' . e(DH_EMPRESA['telefone'])
         . '<br>Contrato nº ' . e($k['numero']) . ' · Código de integridade: <span class="hash">' . e($k['hash']) . '</span></div>'
