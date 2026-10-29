@@ -1196,7 +1196,7 @@ function agenda_tela_lista(): void
                 <strong><?= e($b['nome'] ?? '—') ?></strong>
                 <span><?= e($s['tributo'] ?: 'Sem tributo definido') ?></span>
                 <span><?= e($s['hora']) ?> · <?= e(DH_UNIDADES[$s['unidade']]) ?><?php if (pode('valores')): ?> · Cachê <?= e(dh_moeda($s['cache'])) ?> · Consumação <?= e(dh_moeda($s['consumacao'])) ?><?php endif; ?></span>
-                <span class="tags"><?= agenda_status_tag($s['status']) ?><?php if (!empty($s['criado_por'])): ?><em class="tag cinza">por <?= e(explode(' (', $s['criado_por'])[0]) ?></em><?php endif; ?><?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta">Sem pasta</em><?php elseif ($b && !$b['fotos']): ?><em class="tag alerta">Banda sem foto</em><?php endif; ?></span>
+                <span class="tags"><?= agenda_status_tag($s['status']) ?><?php if (!empty($s['criado_por'])): ?><em class="tag cinza">por <?= e(explode(' (', $s['criado_por'])[0]) ?></em><?php endif; ?><?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta">Sem pasta</em><?php endif; ?><?php if ($b && !$b['fotos']): ?><em class="tag alerta">Banda sem foto</em><?php endif; ?></span>
               </span>
               <span class="seta">›</span>
             </a>
@@ -1456,7 +1456,7 @@ function agenda_tela_bandas(): void
         <a href="#" data-pasta="todas" class="ativo">Todas <small><?= count($a['bandas']) ?></small></a>
         <a href="#" data-pasta="sem">Sem pasta <small><?= $semPasta ?></small></a>
       </div>
-      <p class="dica">"Sem pasta": banda sem pasta no Google Drive e sem fotos enviadas, ou seja, ainda sem arte.</p>
+      <p class="dica">"Sem pasta": banda que ainda não tem pasta de arte no Google Drive.</p>
       <ul class="lista">
         <?php foreach ($a['bandas'] as $b): $p = $proximo[$b['id']] ?? null; ?>
           <li data-busca="<?= e(mb_strtolower($b['nome'] . ' ' . implode(' ', $b['tributos']))) ?>" data-sem-pasta="<?= dh_banda_sem_pasta($b) ? '1' : '' ?>">
@@ -1467,7 +1467,7 @@ function agenda_tela_bandas(): void
                 <span><?= e(implode(' · ', $b['tributos']) ?: 'Sem tributo cadastrado') ?></span>
                 <?php if ($b['instagram'] !== ''): ?><span>@<?= e($b['instagram']) ?></span><?php endif; ?>
                 <span class="tags">
-                  <?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta">Sem pasta</em><?php else: ?><em class="tag cinza"><?= count($b['fotos']) ?> foto<?= count($b['fotos']) === 1 ? '' : 's' ?></em><?php endif; ?>
+                  <?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta">Sem pasta</em><?php endif; ?><em class="tag cinza"><?= count($b['fotos']) ?> foto<?= count($b['fotos']) === 1 ? '' : 's' ?></em>
                   <?php if ($p): ?><em class="tag">Próximo: <?= e(dh_data_curta($p['data'])) ?> · <?= e(DH_UNIDADES[$p['unidade']]) ?></em><?php endif; ?>
                 </span>
               </span>
@@ -1511,7 +1511,7 @@ function agenda_tela_banda(): void
       <?php if ($shows): ?>
         <p class="aviso">Próximos shows: <?= e(implode(' · ', array_map(fn($s) => dh_data_curta($s['data']) . ' ' . $s['hora'] . ' (' . DH_UNIDADES[$s['unidade']] . ')', $shows))) ?></p>
       <?php endif; ?>
-      <?php if ($b['id'] && dh_banda_sem_pasta($b)): ?><p class="aviso"><em class="tag alerta grande">Sem pasta</em> Esta banda ainda não tem pasta no Google Drive nem fotos. Envie o link da banda para ela mandar as fotos.</p><?php endif; ?>
+      <?php if ($b['id'] && dh_banda_sem_pasta($b)): ?><p class="aviso"><em class="tag alerta grande">Sem pasta</em> Esta banda ainda não tem pasta de arte no Google Drive.</p><?php endif; ?>
       <?php if (!empty($b['drive'])): ?>
         <p><?php foreach ($b['drive'] as $n => $pasta): ?><a class="btn secundario" href="https://drive.google.com/drive/folders/<?= e(rawurlencode($pasta)) ?>" target="_blank" rel="noopener">Abrir pasta no Google Drive<?= count($b['drive']) > 1 ? ' ' . ($n + 1) : '' ?> ↗</a> <?php endforeach; ?></p>
       <?php endif; ?>
@@ -1631,7 +1631,7 @@ function agenda_tela_banda_ver(array $b): void
           <?php foreach ($b['drive'] ?? [] as $n => $pasta): ?>
             <a class="btn secundario largo" href="https://drive.google.com/drive/folders/<?= e(rawurlencode($pasta)) ?>" target="_blank" rel="noopener">Abrir pasta no Google Drive<?= count($b['drive']) > 1 ? ' ' . ($n + 1) : '' ?> ↗</a>
           <?php endforeach; ?>
-          <?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta grande">Sem pasta</em> Ainda não tem pasta no Google Drive nem fotos.<?php endif; ?>
+          <?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta grande">Sem pasta</em> Ainda não tem pasta de arte no Google Drive.<?php endif; ?>
         </dd>
       </dl>
     <?php
