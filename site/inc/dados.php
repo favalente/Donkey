@@ -30,6 +30,20 @@ function dh_carregar(): array
     if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['cervejas_novas_2026'])) {
         $dados = dh_cervejas_novas_2026($dados);
     }
+    if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['jegue_brown_ibu_20'])) {
+        // IBU da Jegue Brown é 20, como no rótulo
+        foreach ($dados['cervejas'] as $i => $c) {
+            if (dh_slug((string) $c['nome']) === 'jegue-brown') {
+                $dados['cervejas'][$i]['ibu'] = '20';
+            }
+        }
+        $dados['migracoes']['jegue_brown_ibu_20'] = date('c');
+        try {
+            dh_salvar($dados);
+        } catch (RuntimeException $e) {
+            // tenta de novo na próxima leitura
+        }
+    }
     if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['preco_1l_aldeota_2026'])) {
         // "Preço 1 litro" vazio recebe o preço da Aldeota da planilha de produtos (base do chope delivery)
         foreach ($dados['cervejas'] as $i => $c) {
@@ -64,7 +78,7 @@ function dh_cervejas_novas_2026(array $dados): array
         ['id' => 'maracutaia', 'nome' => 'Maracutaia', 'estilo' => 'Catharina Sour (com maracujá e pitaia)', 'pais' => 'Brasil', 'categoria' => 1, 'abv' => '4.5', 'ibu' => '4',
             'nome_xmenu' => 'MARACUTAIA', 'imagem' => 'assets/img/cervejas/maracutaia.jpg',
             'descricao' => "Tão boa que se fosse licitação você não conseguiria pagar por ela. Ela tá tão linda que já ganhou um cargo comissionado 😍\n\nUma Sour Ale com adição de maracujá e pitaia, adições estas feitas na maturação para dar maior sensação de fruta bem fresca, um verdadeiro suquinho 🤤\n\nTrouxemos pra você uma cerveja refrescante com acidez média e limpa, a alta carbonatação completa o conjunto perfeito para o nosso clima.\n\nEm uma explicação simplificada poderíamos dizer que a Catharina Sour é como se fosse o estilo alemão Berliner Weiss um pouco mais forte e com adições de frutas frescas na maturação."],
-        ['id' => 'jegue-brown', 'nome' => 'Jegue Brown', 'estilo' => 'English Brown Ale', 'pais' => 'Inglaterra', 'categoria' => 2, 'abv' => '4.5', 'ibu' => '23',
+        ['id' => 'jegue-brown', 'nome' => 'Jegue Brown', 'estilo' => 'English Brown Ale', 'pais' => 'Inglaterra', 'categoria' => 2, 'abv' => '4.5', 'ibu' => '20',
             'nome_xmenu' => 'JEGUE BROWN', 'imagem' => 'assets/img/cervejas/jegue-brown.jpg',
             'descricao' => "Uma English Brown Ale que prioriza o sabor do malte, trazendo notas principais de caramelo, pão tostado e quem sabe um pouco de café e rapadura, o amargor é baixo. Com 4,5% de teor alcoólico, ela é leve, fácil de beber (mesmo sendo escura). Ela lembra o aconchego de uma mesa de café do sertão."],
         ['id' => 'azedinha', 'nome' => 'Azedinha', 'estilo' => 'Sour de Melancia', 'pais' => 'Alemanha', 'categoria' => 1, 'abv' => '3.5', 'ibu' => '5',
