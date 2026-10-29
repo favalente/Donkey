@@ -71,3 +71,11 @@ p, li { font-size: .95rem; text-align: justify; }
 .resumo { margin-top: 16px; }
 .resumo td:last-child { text-align: right; white-space: nowrap; }
 @media (max-width: 560px) { .pedido .duas { grid-template-columns: 1fr; gap: 0; } .linha-chope { grid-template-columns: 1.6fr 1fr; } }
+.rotulo-pedido { font-weight: 700; margin: 6px 0 8px; }
+.opcoes-local { display: grid; gap: 10px; margin-bottom: 14px; }
+.opcoes-local .check { align-items: flex-start; padding: 12px; border: 2px solid var(--linha); border-radius: 10px; margin: 0; }
+.opcoes-local .check small { display: block; font-weight: 400; color: var(--suave); }
+[hidden] { display: none !important; }
+.pedido input[type=radio] { display: inline-block; width: 24px; height: 24px; margin: 0; padding: 0; flex: none; accent-color: var(--ambar); }
+.opcoes-local .check { flex-wrap: wrap; align-items: center; }
+.opcoes-local .check small { flex-basis: 100%; padding-left: 34px; }

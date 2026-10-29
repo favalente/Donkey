@@ -15,7 +15,7 @@ $opcoes = function (string $sel) use ($cervejas): string {
 };
 $itens = (array) ($_POST['itens'] ?? [['cerveja' => '', 'litros' => '']]);
 $comodato = array_values(array_filter((array) ($_POST['comodato'] ?? []), fn($x) => ($x['cerveja'] ?? '') !== '' || ($x['litros'] ?? '') !== ''));
-$frete = $f['frete'] !== '' && (float) $f['frete'] > 0 ? (float) $f['frete'] : 0;
+$local = (string) ($_POST['local'] ?? '');
 ?>
 <form method="post" class="papel pedido" id="pedido">
   <?= $csrf ?><input type="hidden" name="op" value="preencher">
@@ -51,7 +51,7 @@ $frete = $f['frete'] !== '' && (float) $f['frete'] > 0 ? (float) $f['frete'] : 0
     </div>
   </div>
 
-  <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr><td>Frete de ida e volta</td><td><?= $frete ? e(dh_moeda($frete)) : 'Incluso' ?></td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
+  <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
 
   <h2>2. Equipamentos em comodato</h2>
   <p class="legal">Já incluídos no pedido, com o valor de reposição em caso de dano ou perda.</p>
@@ -70,13 +70,19 @@ $frete = $f['frete'] !== '' && (float) $f['frete'] > 0 ? (float) $f['frete'] : 0
     <label>Data de recebimento do equipamento <input type="date" name="entrega_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('entrega_data') ?>"></label>
     <label>Data de devolução do equipamento <input type="date" name="devolucao_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('devolucao_data') ?>"></label>
   </div>
+  <p class="rotulo-pedido">A entrega é em Fortaleza?</p>
+  <div class="opcoes-local">
+    <label class="check"><input type="radio" name="local" value="fortaleza" required <?= $local === 'fortaleza' ? 'checked' : '' ?>> Sim, em Fortaleza <small>(frete de <?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?>, instalação e retirada)</small></label>
+    <label class="check"><input type="radio" name="local" value="outra" <?= $local === 'outra' ? 'checked' : '' ?>> Não, em outra cidade <small>(frete sob consulta)</small></label>
+  </div>
+  <label id="campo-cidade" <?= $local === 'outra' ? '' : 'hidden' ?>>Cidade da entrega <input name="cidade" value="<?= $v('cidade') ?>" placeholder="Ex.: Guaramiranga/CE"></label>
   <label>E-mail <small>(para a cópia do contrato e o código de assinatura)</small><input type="email" name="email" required autocapitalize="none" autocomplete="email" value="<?= $v('email') ?>"></label>
   <p class="legal">Forma de pagamento: <?= e(DH_PAGAMENTOS[$f['pagamento']] ?? '') ?><?= trim($f['observacoes']) !== '' ? ' · ' . e($f['observacoes']) : '' ?></p>
-  <button class="btn grande">Continuar para o contrato</button>
+  <button class="btn grande" id="bt-pedido">Continuar para o contrato</button>
 </form>
 <script>
   (function () {
-    var form = document.getElementById('pedido'), frete = <?= json_encode($frete) ?>;
+    var form = document.getElementById('pedido'), freteFortaleza = <?= json_encode(DH_FRETE_FORTALEZA) ?>;
     function brl(n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
     function total() {
       var s = 0;
@@ -84,8 +90,12 @@ $frete = $f['frete'] !== '' && (float) $f['frete'] > 0 ? (float) $f['frete'] : 0
         var op = l.querySelector('select').selectedOptions[0];
         s += (op && op.dataset.preco ? parseFloat(op.dataset.preco) : 0) * (parseFloat((l.querySelector('input').value || '').replace(',', '.')) || 0);
       });
+      var local = (form.querySelector('[name=local]:checked') || {}).value;
       document.getElementById('t-chope').textContent = brl(s);
-      document.getElementById('t-total').textContent = brl(s + frete);
+      document.getElementById('t-frete').textContent = local === 'fortaleza' ? brl(freteFortaleza) : (local === 'outra' ? 'Sob consulta' : 'Fortaleza: ' + brl(freteFortaleza));
+      document.getElementById('t-total').textContent = local === 'outra' ? brl(s) + ' + frete' : brl(s + (local === 'fortaleza' ? freteFortaleza : 0));
+      document.getElementById('campo-cidade').hidden = local !== 'outra';
+      document.getElementById('bt-pedido').textContent = local === 'outra' ? 'Enviar pedido para calcular o frete' : 'Continuar para o contrato';
     }
     document.querySelectorAll('[data-mais]').forEach(function (b) {
       b.addEventListener('click', function () {

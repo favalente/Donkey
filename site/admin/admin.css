@@ -310,3 +310,6 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .botoes-link form { margin: 0; }
 .linha-item .em-comodato { grid-column: 1 / -1; margin-top: -4px; font-size: .95rem; }
 .novo-contrato small { font-weight: 500; opacity: .8; }
+.tag.ct-consulta, .tag.ct-preenchimento { background: rgba(233,162,59,.2); color: var(--amber); }
+.resumo-pedido { margin: 0 0 16px; padding-left: 1.1em; }
+.resumo-pedido li { margin-bottom: 4px; }

@@ -29,6 +29,7 @@ if ($k && ($pend['id'] ?? '') !== $k['id']) {
 }
 $podeAssinar = $k && $k['status'] === 'enviado' && empty($k['assinaturas']['contratante']);
 $preencher = $k && $k['status'] === 'preenchimento';
+$consulta = $k && $k['status'] === 'consulta';
 $cervejas = $preencher ? dh_cervejas_evento() : [];
 
 // Pedido de chope: o cliente preenche os dados do cabeçalho, escolhe rótulos e litragem e o contrato é gerado
@@ -47,6 +48,10 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         $f['contratante_endereco'] = $f['entrega_endereco'];
         $f['entrega_data'] = (string) ($_POST['entrega_data'] ?? '');
         $f['devolucao_data'] = (string) ($_POST['devolucao_data'] ?? '');
+        // Fortaleza: frete fixo; outra cidade: a Donkey calcula e libera o contrato depois
+        $foraDeFortaleza = ($_POST['local'] ?? '') === 'outra';
+        $f['cidade'] = $foraDeFortaleza ? $txt('cidade', 80) : 'Fortaleza/CE';
+        $f['frete'] = $foraDeFortaleza ? '' : number_format(DH_FRETE_FORTALEZA, 2, '.', '');
         $porId = array_column($cervejas, null, 'id');
         $f['itens'] = [];
         foreach (['itens' => false, 'comodato' => true] as $campo => $emComodato) {
@@ -89,6 +94,12 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         if (!array_filter($f['itens'], fn($it) => !$it['comodato'])) {
             throw new RuntimeException('Escolha ao menos um rótulo de chope e a litragem.');
         }
+        if (!in_array($_POST['local'] ?? '', ['fortaleza', 'outra'], true)) {
+            throw new RuntimeException('Responda se a entrega é em Fortaleza.');
+        }
+        if ($foraDeFortaleza && mb_strlen($f['cidade']) < 3) {
+            throw new RuntimeException('Informe a cidade da entrega.');
+        }
         $c = dh_contratos();
         $i = dh_contrato_por_token($c, $token);
         if ($c['contratos'][$i]['status'] !== 'preenchimento') {
@@ -99,6 +110,17 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         }
         $k = $c['contratos'][$i];
         $k['campos'] = $f;
+        if ($foraDeFortaleza) {
+            $k['status'] = 'consulta';
+            $c['contratos'][$i] = $k;
+            dh_contratos_salvar($c);
+            dh_email(DH_EMPRESA['email'], 'Pedido de chope fora de Fortaleza: defina o frete',
+                '<p>' . e($f['contratante_nome']) . ' fez um pedido de chope com entrega em <b>' . e($f['cidade']) . '</b> (' . e(dh_data_br($f['entrega_data'])) . ', chope ' . e(dh_moeda(dh_comodato_total($f))) . ').</p>'
+                . '<p>Abra o pedido no painel (Contratos), informe o valor do frete e libere para o cliente assinar.</p>');
+            $_SESSION['contrato_aviso'] = 'Pedido recebido! Como a entrega é em ' . $f['cidade'] . ', vamos calcular o frete e avisar você por e-mail e WhatsApp. Depois é só voltar neste mesmo link para conferir e assinar o contrato.';
+            header('Location: ./?t=' . $token, true, 303);
+            exit;
+        }
         $k['numero'] = dh_contrato_numero($c);
         dh_contrato_congelar($k, $c['config']);
         $c['contratos'][$i] = $k;
@@ -201,12 +223,12 @@ $f = $k['campos'] ?? [];
   <meta name="referrer" content="no-referrer">
   <title><?= $k ? 'Contrato nº ' . e($k['numero']) . ' · ' : '' ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=2">
+  <link rel="stylesheet" href="contrato.css?v=4">
 </head>
 <body>
   <div class="barra no-print">
     <img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong>
-    <?php if ($k && !$preencher): ?><button type="button" class="btn" onclick="window.print()">⬇ Baixar PDF / Imprimir</button><?php endif; ?>
+    <?php if ($k && !$preencher && !$consulta): ?><button type="button" class="btn" onclick="window.print()">⬇ Baixar PDF / Imprimir</button><?php endif; ?>
   </div>
   <main>
     <?php if (!$k): ?>
@@ -216,6 +238,12 @@ $f = $k['campos'] ?? [];
       <?php if ($erro): ?><p class="msg erro no-print"><?= e($erro) ?></p><?php endif; ?>
       <?php if ($preencher): ?>
         <?php include __DIR__ . '/pedido-form.php'; ?>
+      <?php elseif ($consulta): ?>
+        <div class="papel">
+          <h1>Pedido recebido</h1>
+          <p>Olá, <?= e($f['contratante_nome']) ?>! A entrega é em <strong><?= e($f['cidade']) ?></strong>, então a Donkey Head Cervejaria vai calcular o frete. Você recebe o aviso por e-mail (<?= e($f['contratante_email']) ?>) e é só voltar neste mesmo link para conferir e assinar o contrato.</p>
+          <p class="legal">Chope: <?= e(dh_moeda(dh_comodato_total($f))) ?> + frete sob consulta.</p>
+        </div>
       <?php else: ?>
       <?php if ($k['status'] === 'cancelado'): ?><p class="msg erro">Este contrato foi cancelado pela Donkey Head Cervejaria e não vale mais.</p><?php endif; ?>
       <?php if ($podeAssinar): ?><p class="msg no-print">Leia o contrato abaixo. A assinatura fica no final da página.</p><?php endif; ?>

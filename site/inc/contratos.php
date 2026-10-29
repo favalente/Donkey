@@ -9,7 +9,9 @@ const DH_CONTRATO_TIPOS = [
     'evento' => 'Evento corporativo no pub',
     'comodato' => 'Venda de chope com comodato de equipamentos',
 ];
-const DH_CONTRATO_STATUS = ['rascunho' => 'Rascunho', 'preenchimento' => 'Aguardando o cliente preencher', 'enviado' => 'Aguardando assinatura', 'assinado' => 'Assinado', 'cancelado' => 'Cancelado'];
+// Frete de instalação e retirada em Fortaleza; outras cidades, sob consulta (a Donkey define no painel)
+const DH_FRETE_FORTALEZA = 40;
+const DH_CONTRATO_STATUS = ['rascunho' => 'Rascunho', 'preenchimento' => 'Aguardando o cliente preencher', 'consulta' => 'Aguardando valor do frete', 'enviado' => 'Aguardando assinatura', 'assinado' => 'Assinado', 'cancelado' => 'Cancelado'];
 const DH_EMPRESA = [
     'razao' => 'DONKEY HEAD BREWPUB CERVEJARIA LTDA',
     'cnpj' => '27.454.745/0001-87',
@@ -362,7 +364,8 @@ HTML;
 function dh_contrato_comodato(array $f, callable $linha): string
 {
     $h = '<h2>SEÇÃO II – CONDIÇÕES COMERCIAIS</h2><table class="quadro">';
-    $h .= $linha('Endereço de entrega:', $f['entrega_endereco'])
+    $cidade = trim($f['cidade'] ?? '');
+    $h .= $linha('Endereço de entrega:', $f['entrega_endereco'] . ($cidade !== '' && mb_stripos($f['entrega_endereco'], $cidade) === false ? ' – ' . $cidade : ''))
         . $linha('Entrega dos equipamentos:', trim(dh_data_br($f['entrega_data']) . ' ' . ($f['entrega_hora'] !== '' ? 'às ' . $f['entrega_hora'] : '')))
         . $linha('Devolução (coleta) dos equipamentos:', trim(dh_data_br($f['devolucao_data']) . ' ' . ($f['devolucao_hora'] !== '' ? 'às ' . $f['devolucao_hora'] : '')))
         . $linha('Forma de pagamento:', DH_PAGAMENTOS[$f['pagamento']] ?? '');
@@ -374,7 +377,7 @@ function dh_contrato_comodato(array $f, callable $linha): string
             . e(dh_moeda((float) $it['litros'] * (float) $it['valor_litro'])) . '</td></tr>';
     }
     $frete = $f['frete'] !== '' && (float) $f['frete'] > 0;
-    $h .= '<tr><td colspan="3">Frete de ida e volta</td><td>' . ($frete ? e(dh_moeda($f['frete'])) : 'Incluso') . '</td></tr>';
+    $h .= '<tr><td colspan="3">Frete (instalação e retirada)</td><td>' . ($frete ? e(dh_moeda($f['frete'])) : 'Incluso') . '</td></tr>';
     $h .= '<tr class="total"><td colspan="3">VALOR TOTAL</td><td>' . e(dh_moeda(dh_comodato_total($f))) . '</td></tr></table>';
     if ($emComodato) {
         $h .= '<h3>Chope em comodato (não incluído no valor total)</h3><table class="itens"><tr><th>Item</th><th>Quantidade</th><th>Valor do litro, se consumido</th></tr>';
@@ -523,7 +526,7 @@ function dh_contrato_campos_padrao(string $tipo): array
             'convidados' => '', 'max_participantes' => '', 'adicionais' => [], 'total' => '', 'responsavel_nome' => '', 'responsavel_telefone' => '', 'responsavel_email' => '',
             'cardapio' => DH_ANEXO_EVENTO];
     }
-    return $base + ['entrega_endereco' => '', 'entrega_data' => '', 'entrega_hora' => '', 'devolucao_data' => '', 'devolucao_hora' => '', 'frete' => '', 'observacoes' => '',
+    return $base + ['entrega_endereco' => '', 'cidade' => '', 'entrega_data' => '', 'entrega_hora' => '', 'devolucao_data' => '', 'devolucao_hora' => '', 'frete' => '', 'observacoes' => '',
         'itens' => [['descricao' => 'DH Premium Lager', 'litros' => '50', 'valor_litro' => '13']],
         'equipamentos' => array_map(fn($eq) => ['descricao' => $eq[0], 'valor' => (string) $eq[1], 'quantidade' => 1], DH_EQUIPAMENTOS)];
 }

@@ -107,12 +107,38 @@ function contratos_acao(string $acao): bool
                 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'assinaturas' => [], 'campos' => dh_contrato_campos_padrao('comodato')];
             $k['campos']['itens'] = [];
             $k['campos']['pagamento'] = isset(DH_PAGAMENTOS[$_POST['pagamento'] ?? '']) ? $_POST['pagamento'] : 'pix';
-            $k['campos']['frete'] = dh_valor($_POST['frete'] ?? '');
             $k['campos']['observacoes'] = mb_substr(trim((string) ($_POST['observacoes'] ?? '')), 0, 2000);
             $k['referencia'] = mb_substr(trim((string) ($_POST['referencia'] ?? '')), 0, 80);
             $c['contratos'][] = $k;
             dh_contratos_salvar($c);
             ir('./?acao=contrato&id=' . $k['id'], 'Pedido criado. Envie o link para o cliente preencher e assinar.');
+
+        case 'contrato-frete':
+            exigir_post();
+            exigir('contratos');
+            $c = dh_contratos();
+            $i = dh_contrato_indice($c, (string) ($_POST['id'] ?? ''));
+            if ($i === null || $c['contratos'][$i]['status'] !== 'consulta') {
+                throw new RuntimeException('Este pedido não está aguardando frete.');
+            }
+            $frete = dh_valor($_POST['frete'] ?? '');
+            if ($frete === '') {
+                throw new RuntimeException('Informe o valor do frete (use 0 se for grátis).');
+            }
+            if (empty($c['config']['representante_cpf'])) {
+                throw new RuntimeException('Antes, preencha o nome e o CPF de quem assina pela Donkey em Contratos → Configurações.');
+            }
+            $k = $c['contratos'][$i];
+            $k['campos']['frete'] = $frete;
+            $k['numero'] = dh_contrato_numero($c);
+            dh_contrato_congelar($k, $c['config']);
+            $c['contratos'][$i] = $k;
+            dh_contratos_salvar($c);
+            $f = $k['campos'];
+            dh_email($f['contratante_email'], 'Frete calculado: contrato nº ' . $k['numero'] . ' pronto para assinar · Donkey Head Cervejaria',
+                '<p>Olá, ' . e($f['contratante_nome']) . '!</p><p>O frete para ' . e($f['cidade']) . ' ficou em <b>' . e(dh_moeda($frete)) . '</b> (instalação e retirada). Total do pedido: <b>' . e(dh_moeda(dh_comodato_total($f))) . '</b>.</p>'
+                . '<p><a href="' . e(dh_url_site() . 'contrato/?t=' . $k['token']) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:bold">Conferir e assinar o contrato</a></p>');
+            ir('./?acao=contrato&id=' . $k['id'], 'Frete definido e contrato nº ' . $k['numero'] . ' liberado. O cliente recebeu o aviso por e-mail; mande também pelo WhatsApp.');
 
         case 'contrato-assinar':
             exigir_post();
@@ -161,7 +187,7 @@ function contratos_acao(string $acao): bool
             if ($i === null || $c['contratos'][$i]['status'] === 'assinado') {
                 throw new RuntimeException('Contrato assinado não pode ser cancelado por aqui.');
             }
-            if (in_array($c['contratos'][$i]['status'], ['rascunho', 'preenchimento'], true)) {
+            if (in_array($c['contratos'][$i]['status'], ['rascunho', 'preenchimento', 'consulta'], true)) {
                 array_splice($c['contratos'], $i, 1);
                 dh_contratos_salvar($c);
                 ir('./?acao=contratos', 'Excluído.');
@@ -322,7 +348,7 @@ function contratos_tela_contrato(): void
         ?>
           <p class="dica">O cliente abre o link, escolhe os rótulos e a litragem, preenche os dados dele e já assina. Você recebe um e-mail quando ele terminar; depois é só assinar pela Donkey aqui.</p>
           <?php if (!empty($k['referencia'])): ?><p>Referência: <strong><?= e($k['referencia']) ?></strong></p><?php endif; ?>
-          <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= $k['campos']['frete'] !== '' ? e(dh_moeda($k['campos']['frete'])) : 'incluso' ?></strong></p>
+          <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?> em Fortaleza</strong>; outras cidades, você define quando o cliente enviar.</p>
           <h2>Enviar ao cliente</h2>
           <input class="link-banda" value="<?= e($link) ?>" readonly onclick="this.select()">
           <p class="botoes-link">
@@ -330,6 +356,26 @@ function contratos_tela_contrato(): void
             <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($link) ?>').then(function(){ alert('Link copiado!'); })">Copiar link</button>
           </p>
           <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('Excluir este pedido? O link deixa de funcionar.');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo">Excluir pedido</button></form>
+        <?php
+        return;
+    }
+    if ($k['status'] === 'consulta') {
+        $f = $k['campos'];
+        ?>
+          <p class="aviso">O cliente preencheu o pedido com entrega em <strong><?= e($f['cidade']) ?></strong>. Informe o valor do frete para liberar o contrato para assinatura.</p>
+          <ul class="resumo-pedido">
+            <li><strong><?= e($f['contratante_nome']) ?></strong> · <?= e($f['contratante_telefone']) ?> · <?= e($f['contratante_email']) ?></li>
+            <li>Entrega: <?= e($f['entrega_endereco']) ?> – <?= e($f['cidade']) ?> · <?= e(dh_data_br($f['entrega_data'])) ?> a <?= e(dh_data_br($f['devolucao_data'])) ?></li>
+            <?php foreach ($f['itens'] as $it): ?><li><?= e($it['descricao']) ?>: <?= e(dh_litros($it['litros'])) ?> L<?= !empty($it['comodato']) ? ' (em comodato)' : ' · ' . e(dh_moeda((float) $it['litros'] * (float) $it['valor_litro'])) ?></li><?php endforeach; ?>
+            <li>Chope: <strong><?= e(dh_moeda(dh_comodato_total($f))) ?></strong> + frete</li>
+          </ul>
+          <form method="post" action="./?acao=contrato-frete" class="form-cerveja">
+            <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>">
+            <label>Valor do frete para <?= e($f['cidade']) ?> (R$) <small>(instalação e retirada)</small><input name="frete" required inputmode="decimal" placeholder="Ex.: 150,00"></label>
+            <button class="btn primario largo">Definir frete e liberar para assinatura</button>
+          </form>
+          <p class="botoes-link"><a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($f['contratante_telefone'])) ?>">Falar com o cliente no WhatsApp</a></p>
+          <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('Excluir este pedido?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo">Excluir pedido</button></form>
         <?php
         return;
     }
@@ -517,7 +563,7 @@ function contratos_form(array $k): void
     <?php
 }
 
-// Novo pedido de chope: a Donkey só define pagamento e frete; o cliente preenche o resto pelo link
+// Novo pedido de chope: a Donkey só define pagamento e observações; o cliente preenche o resto pelo link
 function contratos_form_pedido(): void
 {
     global $csrf;
@@ -536,7 +582,7 @@ function contratos_form_pedido(): void
         <label>Referência <small>(só para você achar na lista, ex.: nome do cliente ou do evento)</small><input name="referencia" maxlength="80"></label>
         <p class="rotulo">Forma de pagamento</p>
         <span class="escolhas"><?php foreach (DH_PAGAMENTOS as $p => $rot): ?><label class="escolha"><input type="radio" name="pagamento" value="<?= $p ?>" <?= $p === 'pix' ? 'checked' : '' ?>><span><?= e($rot) ?></span></label><?php endforeach; ?></span>
-        <label>Frete de ida e volta (R$) <small>(em branco = incluso)</small><input name="frete" inputmode="decimal"></label>
+        <p class="dica">Frete: em Fortaleza entra sozinho (<?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?>, instalação e retirada). Se o cliente for de outra cidade, o pedido volta para você definir o frete antes de ele assinar.</p>
         <label>Observações para o contrato <small>(opcional)</small><textarea name="observacoes" rows="3"></textarea></label>
         <div class="barra-salvar"><button class="btn primario">Criar pedido e gerar o link</button></div>
       </form>
