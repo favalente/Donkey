@@ -1026,7 +1026,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
               <?php foreach ($porDia[$dia] ?? [] as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
                 <button type="button" class="cal-show u-<?= e($s['unidade']) ?> st-<?= e($s['status']) ?>" data-show="<?= e($s['id']) ?>"
                   data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? '', 'status' => $s['status'],
-                    'banda_id' => $s['banda_id'], 'instagram' => $b['instagram'] ?? '', 'tributos_banda' => implode(' / ', $b['tributos'] ?? []), 'fotos' => count($b['fotos'] ?? []), 'drive' => $b['drive'][0] ?? '']
+                    'banda_id' => $s['banda_id'], 'instagram' => $b['instagram'] ?? '', 'tributos_banda' => implode(' / ', $b['tributos'] ?? []), 'sem_pasta' => dh_banda_sem_pasta($b), 'fotos' => count($b['fotos'] ?? []), 'drive' => $b['drive'][0] ?? '']
                     + (pode('valores') ? ['pix' => $b['pix'] ?? '', 'pix_nome' => $b['pix_nome'] ?? '', 'cache' => dh_moeda($s['cache'])] : []), JSON_UNESCAPED_UNICODE)) ?>"><?php if ($s['status'] === 'pago'): ?><span class="flag-pago" title="Pago">✓</span><?php endif; ?><?= e($b['nome'] ?? '—') ?></button>
               <?php endforeach; ?>
             </div>
@@ -1039,6 +1039,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
         <h3 class="cal-menu-banda"></h3>
         <p class="cal-menu-tributo"></p>
         <p class="cal-menu-situacao"></p>
+        <p class="cal-menu-sem-pasta" hidden><em class="tag alerta grande">Sem pasta</em> ainda sem arte</p>
         <?php if (pode('valores')): ?>
           <div class="cal-menu-pix">
             <p class="pix-valor"></p>
@@ -1113,6 +1114,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
                 caixaPix.querySelector('[data-op=copiar-pix]').hidden = !i.pix;
                 caixaPix.dataset.pix = i.pix || '';
               }
+              menu.querySelector('.cal-menu-sem-pasta').hidden = !i.sem_pasta;
               menu.querySelector('.cal-menu-situacao').className = 'cal-menu-situacao sit-' + i.status;
               menu.querySelector('.cal-menu-situacao').textContent = i.status === 'pago' ? '✓ Pago' : (i.status === 'cancelado' ? 'Cancelado' : '');
               menu.showModal();
@@ -1165,7 +1167,7 @@ function agenda_tela_lista(): void
                 <strong><?= e($b['nome'] ?? '—') ?></strong>
                 <span><?= e($s['tributo'] ?: 'Sem tributo definido') ?></span>
                 <span><?= e($s['hora']) ?> · <?= e(DH_UNIDADES[$s['unidade']]) ?><?php if (pode('valores')): ?> · Cachê <?= e(dh_moeda($s['cache'])) ?> · Consumação <?= e(dh_moeda($s['consumacao'])) ?><?php endif; ?></span>
-                <span class="tags"><?= agenda_status_tag($s['status']) ?><?php if (!empty($s['criado_por'])): ?><em class="tag cinza">por <?= e(explode(' (', $s['criado_por'])[0]) ?></em><?php endif; ?><?php if ($b && !$b['fotos']): ?><em class="tag alerta">Banda sem foto</em><?php endif; ?></span>
+                <span class="tags"><?= agenda_status_tag($s['status']) ?><?php if (!empty($s['criado_por'])): ?><em class="tag cinza">por <?= e(explode(' (', $s['criado_por'])[0]) ?></em><?php endif; ?><?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta">Sem pasta</em><?php elseif ($b && !$b['fotos']): ?><em class="tag alerta">Banda sem foto</em><?php endif; ?></span>
               </span>
               <span class="seta">›</span>
             </a>
@@ -1391,9 +1393,15 @@ function agenda_tela_bandas(): void
         <?php if (pode('agenda_editar')): ?><a class="btn primario" href="./?acao=banda">+ Nova banda</a><?php endif; ?>
       </div>
       <input type="search" id="busca" placeholder="Buscar por banda ou tributo…" class="busca">
+      <?php $semPasta = count(array_filter($a['bandas'], 'dh_banda_sem_pasta')); ?>
+      <div class="abas filtro-pasta">
+        <a href="#" data-pasta="todas" class="ativo">Todas <small><?= count($a['bandas']) ?></small></a>
+        <a href="#" data-pasta="sem">Sem pasta <small><?= $semPasta ?></small></a>
+      </div>
+      <p class="dica">"Sem pasta": banda sem pasta no Google Drive e sem fotos enviadas, ou seja, ainda sem arte.</p>
       <ul class="lista">
         <?php foreach ($a['bandas'] as $b): $p = $proximo[$b['id']] ?? null; ?>
-          <li data-busca="<?= e(mb_strtolower($b['nome'] . ' ' . implode(' ', $b['tributos']))) ?>">
+          <li data-busca="<?= e(mb_strtolower($b['nome'] . ' ' . implode(' ', $b['tributos']))) ?>" data-sem-pasta="<?= dh_banda_sem_pasta($b) ? '1' : '' ?>">
             <a href="./?acao=banda&id=<?= e($b['id']) ?>">
               <img src="../<?= e($b['fotos'][0]['mini'] ?? 'assets/img/rotulo-padrao.png') ?>" alt="" width="56" height="56" loading="lazy">
               <span class="info">
@@ -1401,7 +1409,7 @@ function agenda_tela_bandas(): void
                 <span><?= e(implode(' · ', $b['tributos']) ?: 'Sem tributo cadastrado') ?></span>
                 <?php if ($b['instagram'] !== ''): ?><span>@<?= e($b['instagram']) ?></span><?php endif; ?>
                 <span class="tags">
-                  <em class="tag cinza"><?= count($b['fotos']) ?> foto<?= count($b['fotos']) === 1 ? '' : 's' ?></em>
+                  <?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta">Sem pasta</em><?php else: ?><em class="tag cinza"><?= count($b['fotos']) ?> foto<?= count($b['fotos']) === 1 ? '' : 's' ?></em><?php endif; ?>
                   <?php if ($p): ?><em class="tag">Próximo: <?= e(dh_data_curta($p['data'])) ?> · <?= e(DH_UNIDADES[$p['unidade']]) ?></em><?php endif; ?>
                 </span>
               </span>
@@ -1445,6 +1453,7 @@ function agenda_tela_banda(): void
       <?php if ($shows): ?>
         <p class="aviso">Próximos shows: <?= e(implode(' · ', array_map(fn($s) => dh_data_curta($s['data']) . ' ' . $s['hora'] . ' (' . DH_UNIDADES[$s['unidade']] . ')', $shows))) ?></p>
       <?php endif; ?>
+      <?php if ($b['id'] && dh_banda_sem_pasta($b)): ?><p class="aviso"><em class="tag alerta grande">Sem pasta</em> Esta banda ainda não tem pasta no Google Drive nem fotos. Envie o link da banda para ela mandar as fotos.</p><?php endif; ?>
       <?php if (!empty($b['drive'])): ?>
         <p><?php foreach ($b['drive'] as $n => $pasta): ?><a class="btn secundario" href="https://drive.google.com/drive/folders/<?= e(rawurlencode($pasta)) ?>" target="_blank" rel="noopener">Abrir pasta no Google Drive<?= count($b['drive']) > 1 ? ' ' . ($n + 1) : '' ?> ↗</a> <?php endforeach; ?></p>
       <?php endif; ?>
@@ -1564,7 +1573,7 @@ function agenda_tela_banda_ver(array $b): void
           <?php foreach ($b['drive'] ?? [] as $n => $pasta): ?>
             <a class="btn secundario largo" href="https://drive.google.com/drive/folders/<?= e(rawurlencode($pasta)) ?>" target="_blank" rel="noopener">Abrir pasta no Google Drive<?= count($b['drive']) > 1 ? ' ' . ($n + 1) : '' ?> ↗</a>
           <?php endforeach; ?>
-          <?php if (!$b['fotos'] && empty($b['drive'])): ?>Nenhuma foto ainda.<?php endif; ?>
+          <?php if (dh_banda_sem_pasta($b)): ?><em class="tag alerta grande">Sem pasta</em> Ainda não tem pasta no Google Drive nem fotos.<?php endif; ?>
         </dd>
       </dl>
     <?php

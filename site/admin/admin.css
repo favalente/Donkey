@@ -276,3 +276,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
   .cal-dia { padding: 2px; }
   .cal-show { font-size: .62rem; padding: 2px 3px; letter-spacing: -.01em; }
 }
+.tag.alerta.grande { font-size: .9rem; padding: 4px 12px; }
+.cal-menu-sem-pasta { margin: 4px 0 0; }
+.cal-menu-sem-pasta[hidden] { display: none; }
+.filtro-pasta { margin-top: 4px; }

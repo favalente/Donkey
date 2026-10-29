@@ -251,6 +251,12 @@ function dh_id_novo(string $prefixo): string
 }
 
 // Foto principal da banda (versão reduzida para o site) ou o logo da casa
+// Banda sem pasta no Google Drive e sem fotos enviadas: ainda não tem arte
+function dh_banda_sem_pasta(?array $b): bool
+{
+    return $b !== null && empty($b['drive']) && empty($b['fotos']);
+}
+
 function dh_banda_foto(?array $b): string
 {
     return $b['fotos'][0]['media'] ?? 'assets/img/rotulo-padrao.png';

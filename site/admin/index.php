@@ -502,7 +502,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=18">
+  <link rel="stylesheet" href="admin.css?v=19">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
 </head>
 <body>
@@ -743,11 +743,20 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
     </footer>
   </main>
   <script>
-    var busca = document.getElementById('busca');
-    if (busca) busca.addEventListener('input', function () {
+    var busca = document.getElementById('busca'), soSemPasta = false;
+    function filtrarLista() {
       var q = busca.value.toLowerCase().trim();
       document.querySelectorAll('.lista li').forEach(function (li) {
-        li.hidden = q && li.getAttribute('data-busca').indexOf(q) === -1;
+        li.hidden = (q && li.getAttribute('data-busca').indexOf(q) === -1) || (soSemPasta && li.getAttribute('data-sem-pasta') !== '1');
+      });
+    }
+    if (busca) busca.addEventListener('input', filtrarLista);
+    document.querySelectorAll('[data-pasta]').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        soSemPasta = a.getAttribute('data-pasta') === 'sem';
+        document.querySelectorAll('[data-pasta]').forEach(function (o) { o.classList.toggle('ativo', o === a); });
+        filtrarLista();
       });
     });
     var arq = document.getElementById('arquivo');
