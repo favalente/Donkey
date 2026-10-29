@@ -185,6 +185,20 @@ function contratos_acao(string $acao): bool
             dh_clientes_salvar($todos);
             ir('./?acao=clientes', $todos[$doc]['nome'] . ' não recebe mais novidades.');
 
+        case 'cliente-excluir':
+            // Tira o cliente da base (os contratos dele continuam guardados)
+            exigir_post();
+            exigir('contratos');
+            $todos = dh_clientes();
+            $doc = dh_so_digitos((string) ($_POST['doc'] ?? ''));
+            if (!isset($todos[$doc])) {
+                throw new RuntimeException('Cliente não encontrado.');
+            }
+            $nome = $todos[$doc]['nome'];
+            unset($todos[$doc]);
+            dh_clientes_salvar($todos);
+            ir('./?acao=clientes', $nome . ' saiu da base de clientes.');
+
         case 'contrato-salvar':
             exigir_post();
             exigir('contratos');
@@ -1046,6 +1060,7 @@ function contratos_tela_clientes(): void
                 <?php if ($cl['email'] !== ''): ?><a class="btn secundario" href="mailto:<?= e($cl['email']) ?>">E-mail</a><?php endif; ?>
                 <a class="btn secundario" href="./?acao=clientes&editar=<?= e($doc) ?>">Editar</a>
                 <form method="post" action="./?acao=contrato-pedido"><?= $csrf ?><input type="hidden" name="cliente" value="<?= e($doc) ?>"><input type="hidden" name="pagamento" value="pix"><button class="btn primario">+ Pedido de chope</button></form>
+                <form method="post" action="./?acao=cliente-excluir" onsubmit="return confirm('Excluir <?= e(addslashes($cl['nome'])) ?> da base de clientes? Os contratos continuam guardados em Contratos.');"><?= $csrf ?><input type="hidden" name="doc" value="<?= e($doc) ?>"><button class="btn perigo">🗑 Excluir</button></form>
                 <?php if (!empty($cl['novidades'])): ?>
                   <form method="post" action="./?acao=cliente-novidades" onsubmit="return confirm('O cliente pediu para não receber mais novidades?');"><?= $csrf ?><input type="hidden" name="doc" value="<?= e($doc) ?>"><button class="btn mini">Parar novidades</button></form>
                 <?php endif; ?>
