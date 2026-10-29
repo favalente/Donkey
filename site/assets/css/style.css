@@ -320,3 +320,29 @@ a.filtro { text-decoration: none; color: var(--text); }
 @media (max-width: 720px) { .historia-modal { width: 100%; max-width: 100%; height: 100dvh; margin: 0; border-radius: 0; border: 0; } }
 /* Subtítulo logo abaixo do título da seção */
 .section-head h2 + .subtitulo { margin: -.2em 0 1em; }
+/* Chope delivery: card na página inicial e página da tabela de preços */
+.delivery-cta { padding-top: 0; }
+.delivery-card-texto { margin: 0; color: var(--muted); }
+.delivery-subtitulo { margin: 8px 0 16px; }
+.delivery-aviso { padding: 16px; border: 1px solid var(--amber); border-radius: 14px; }
+.delivery-tabela { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-bottom: 32px; }
+.delivery-rotulo { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(135deg, #2c1f12, #1c1510); }
+.delivery-rotulo img { width: 84px; height: 84px; border-radius: 12px; object-fit: cover; flex: none; }
+.delivery-info { min-width: 0; }
+.delivery-info h3 { margin: 0 0 2px; font-size: 1.15rem; }
+.delivery-info p { margin: 0 0 6px; }
+.delivery-estilo { color: var(--amber); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; }
+.delivery-litro { font-size: 1.1rem; }
+.delivery-litro strong { color: var(--amber); font-size: 1.35rem; }
+.delivery-barris { color: var(--muted); font-size: .92rem; line-height: 1.6; }
+.delivery-barris strong { color: var(--text); }
+.delivery-extras { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 32px; }
+.delivery-extras section { padding: 18px; border: 1px solid var(--line); border-radius: 16px; }
+.delivery-extras h2, .delivery-passos h2 { font-size: 1.5rem; margin: 0 0 10px; }
+.delivery-extras ul { margin: 0; padding-left: 18px; color: var(--muted); }
+.delivery-extras li { margin-bottom: 6px; }
+.delivery-extras strong { color: var(--text); }
+.delivery-passos { margin-bottom: 28px; }
+.delivery-passos ol { margin: 0; padding-left: 22px; color: var(--muted); }
+.delivery-passos li { margin-bottom: 8px; }
+.delivery-legal { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 14px; }

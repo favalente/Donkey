@@ -64,6 +64,10 @@ Contrato assinado tem **✉️ Reenviar cópia** (para contato@ e a lista de có
 
 Validade: assinatura eletrônica entre as partes (MP 2.200-2/2001, art. 10, § 2º; Lei 14.063/2020). Os e-mails saem de contato@donkeyheadcervejaria.com.br pelo **SMTP autenticado da Locaweb** (email-ssl.com.br, porta 587, TLS): a senha da caixa é cadastrada em Contratos → Configurações e fica só em `dados/email.json` (sem senha, o sistema tenta o `mail()` do PHP). A mesma tela tem **Enviar e-mail de teste** e o histórico dos últimos envios, com o erro quando algum falha. Dados em `dados/contratos.json`, com cópia diária em `dados/backup/`.
 
+### Chope delivery (site)
+
+A página inicial tem o card **Chope Delivery** ("Leve o nosso chope para o seu evento!"), que abre `/chope/`: tabela de preços com os rótulos que têm **valor do litro para evento** em Cervejas (preço do litro e exemplos de barril de 30 e 50 L), o que está incluso (equipamentos em comodato, instalação e retirada), frete, copos personalizados, como funciona e o botão de pedido pelo WhatsApp.
+
 ### Relatórios de vendas de chope
 
 Painel → **📊 Relatórios** (administrador e financeiro), no padrão do painel do Reverti: período no topo (últimos 12/6/3 meses, este ano, ano passado, todo o histórico ou datas), cartões de faturamento, pedidos, litros, ticket médio, valor médio do litro, clientes, empresas e chope consignado (com comparação com o mesmo período do ano anterior), **💡 Onde melhorar** (leituras automáticas dos números), faturamento por mês, época do ano, tamanho do pedido, dia da semana, rótulos, antecedência, bairros/cidades, ranking de clientes (top 5/10/20) e clientes sem comprar há 6/12/24 meses, com botão de WhatsApp.
