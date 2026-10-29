@@ -522,7 +522,8 @@ function dh_contrato_comodato(array $f, callable $linha): string
     }
     $h .= '</table>';
     if (trim($f['observacoes']) !== '') {
-        $h .= '<p><strong>Observações:</strong> ' . nl2br(e($f['observacoes'])) . '</p>';
+        // Em vermelho e negrito (estilo no próprio HTML, para valer também no e-mail e no PDF)
+        $h .= '<p class="observacoes" style="color:#c62828;font-weight:bold">Observações: ' . nl2br(e($f['observacoes'])) . '</p>';
     }
     $h .= <<<'HTML'
 <h2>SEÇÃO III – CLÁUSULAS</h2>

@@ -114,7 +114,7 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
   <h2>4. Pagamento</h2>
   <p>Forma de pagamento: <strong><?= e(DH_PAGAMENTOS[$f['pagamento']] ?? '') ?></strong> · Valor a pagar: <strong id="t-pagar">R$ 0,00</strong></p>
   <?php if ($instrucoes !== ''): ?><p class="dados-pagamento"><?= nl2br(e($instrucoes)) ?></p><?php endif; ?>
-  <?php if (trim($f['observacoes']) !== ''): ?><p class="legal"><?= e($f['observacoes']) ?></p><?php endif; ?>
+  <?php if (trim($f['observacoes']) !== ''): ?><p class="observacoes" style="color:#c62828;font-weight:bold">Observações: <?= nl2br(e($f['observacoes'])) ?></p><?php endif; ?>
   <?php if ($comprovante): ?>
     <p class="comprovante-ok">✓ Comprovante recebido: <a href="./?t=<?= e($token) ?>&amp;comprovante=1" target="_blank"><?= e($comprovante['nome']) ?></a></p>
     <label>Trocar o comprovante <small>(opcional)</small><input type="file" name="comprovante" accept="image/*,application/pdf"></label>
