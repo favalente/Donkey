@@ -30,6 +30,7 @@ Endereço: `/admin/`
 - **Tap List:** escolha a cerveja de cada torneira, separado por unidade (Aldeota e Maraponga), e toque em Salvar. O site atualiza na hora.
 - **Cervejas:** cadastre, edite ou exclua rótulos. Dá para mandar a foto do rótulo direto do celular, porque ela é reduzida automaticamente. Para tirar um rótulo do catálogo sem apagá-lo, desmarque "Mostrar no catálogo".
 - **Galeria:** envie várias fotos de uma vez pelo celular, com legenda opcional (ex.: o nome do prato). As fotos novas entram no início, e as 12 primeiras aparecem direto no site. Dá para reordenar, editar a legenda e excluir. As fotos são reduzidas no próprio celular antes do envio.
+- **Aparência:** tema claro (fundo creme, texto escuro, letras grandes) para leitura fácil de dia. No rodapé, **🌙 Modo escuro** troca o tema, e a escolha fica lembrada em cada aparelho. O site público continua escuro.
 - Segurança: senha com hash, proteção CSRF e bloqueio de 15 minutos após 5 senhas erradas. "Manter conectado neste aparelho" (marcado por padrão) deixa o painel aberto por 180 dias; "Sair" ou trocar a senha desconecta.
 - Se o painel disser que não consegue gravar, dê permissão de escrita (755 ou 775) às pastas `dados` e `uploads/cervejas` no Gerenciador de Arquivos da Locaweb.
 - Esqueceu a senha? O administrador redefine em "Usuários". Se for o próprio administrador, apague `dados/usuarios.json` e `dados/admin.json` pelo FTP e crie um novo no `/admin/`.

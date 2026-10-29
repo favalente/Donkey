@@ -505,7 +505,11 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=28">
+  <link rel="stylesheet" href="admin.css?v=30">
+  <script>
+    // Tema escolhido neste aparelho (claro é o padrão)
+    try { if (localStorage.getItem('dh-tema') === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}
+  </script>
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
 </head>
 <body>
@@ -745,10 +749,22 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
     <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela); endif; ?>
 
     <footer class="rodape">
-      <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a></span>
+      <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a> · <button type="button" class="botao-tema" id="botao-tema"></button></span>
       <form method="post" action="./?acao=sair" onsubmit="return confirm('Sair do painel neste aparelho?');"><?= $csrf ?><button class="link">Sair</button></form>
     </footer>
   </main>
+  <script>
+    (function () {
+      var b = document.getElementById('botao-tema'), h = document.documentElement;
+      function rotulo() { b.textContent = h.dataset.tema === 'escuro' ? '☀️ Modo claro' : '🌙 Modo escuro'; }
+      b.addEventListener('click', function () {
+        if (h.dataset.tema === 'escuro') delete h.dataset.tema; else h.dataset.tema = 'escuro';
+        try { localStorage.setItem('dh-tema', h.dataset.tema || 'claro'); } catch (e) {}
+        rotulo();
+      });
+      rotulo();
+    })();
+  </script>
   <script>
     var busca = document.getElementById('busca'), soSemPasta = false;
     function filtrarLista() {
