@@ -78,7 +78,7 @@ function detalhe(array $c): string
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Donkey Head Cervejaria · Mais cerveja, menos arenga!</title>
-  <meta name="description" content="Cervejaria Donkey Head: produção local de cerveja artesanal em Fortaleza, garantindo uma cerveja extremamente fresca. Unidades Aldeota e Maraponga.">
+  <meta name="description" content="Donkey Head Cervejaria: produção local de cerveja artesanal em Fortaleza, garantindo uma cerveja extremamente fresca. Unidades Aldeota e Maraponga.">
   <meta name="theme-color" content="#16110d">
   <link rel="canonical" href="https://www.donkeyheadcervejaria.com.br/">
   <meta property="og:type" content="website">
@@ -100,8 +100,8 @@ function detalhe(array $c): string
     "email": "contato@donkeyheadcervejaria.com.br",
     "sameAs": ["https://www.instagram.com/donkeyheadcervejaria/", "https://www.instagram.com/donkeyheadmaraponga/"],
     "location": [
-      {"@type": "Place", "name": "Donkey Head Aldeota", "telephone": "+55-85-98212-4149", "address": {"@type": "PostalAddress", "streetAddress": "R. Norvinda Píres, 42", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60150-280", "addressCountry": "BR"}},
-      {"@type": "Place", "name": "Donkey Head Maraponga", "telephone": "+55-85-98194-3774", "address": {"@type": "PostalAddress", "streetAddress": "Av. Godofredo Maciel, 2127", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60710-001", "addressCountry": "BR"}}
+      {"@type": "Place", "name": "Donkey Head Cervejaria Aldeota", "telephone": "+55-85-98212-4149", "address": {"@type": "PostalAddress", "streetAddress": "R. Norvinda Píres, 42", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60150-280", "addressCountry": "BR"}},
+      {"@type": "Place", "name": "Donkey Head Cervejaria Maraponga", "telephone": "+55-85-98194-3774", "address": {"@type": "PostalAddress", "streetAddress": "Av. Godofredo Maciel, 2127", "addressLocality": "Fortaleza", "addressRegion": "CE", "postalCode": "60710-001", "addressCountry": "BR"}}
     ]
   }
   </script>
@@ -165,7 +165,7 @@ function detalhe(array $c): string
           <span class="historia-card-texto">
             <span class="eyebrow">Nossa história</span>
             <span class="historia-card-titulo">Começou no quintal de casa.</span>
-            <span class="historia-card-resumo">Três amigos apaixonados por cerveja resolvem fazê-la no quintal de casa. O resultado da primeira produção foi inesperado: uma cerveja excelente.</span>
+            <span class="historia-card-resumo">Três amigos apaixonados por cerveja resolvem fazê-la no quintal de casa. Deu tão certo que virou a Donkey Head Cervejaria.</span>
             <span class="btn btn-primary">Conheça a nossa história</span>
           </span>
         </button>
@@ -185,7 +185,7 @@ function detalhe(array $c): string
           <p>Três amigos apaixonados por cerveja resolvem fazê-la no quintal de casa. O resultado da primeira produção foi inesperado: uma cerveja excelente. Entregamos para os amigos e alguns especialistas e logo começaram os elogios, então surgiu a ideia: por que não comercializá-la?</p>
           <p>Decidimos então fazer um teste mercadológico como cervejaria cigana, fizemos nossa cerveja em uma estrutura de outra cervejaria, a Patt Lou em Recife, a qual agradecemos ao cervejeiro Luiz imensamente por fazer parte da nossa história.</p>
           <figure class="foto-jornal">
-            <img src="assets/img/historia-pattlou.jpg" alt="Fermentador com o adesivo da Donkey Head, os sócios ao lado dele e a brassagem com saco de malte na Patt Lou" width="1200" height="915" loading="lazy">
+            <img src="assets/img/historia-pattlou.jpg" alt="Fermentador com o adesivo da Donkey Head Cervejaria, os sócios ao lado dele e a brassagem com saco de malte na Patt Lou" width="1200" height="915" loading="lazy">
             <figcaption>Nossa primeira brassagem na Patt Lou, em Recife, com o nosso fermentador.</figcaption>
           </figure>
           <p>Após a boa aceitação do mercado, surgiu mais uma ideia: e se nós produzíssemos localmente, proporcionando uma cerveja extremamente fresca, sem intervenção de mau armazenamento ou transporte?</p>
@@ -246,7 +246,7 @@ function detalhe(array $c): string
     <section class="section" id="galeria">
       <div class="container">
         <div class="section-head">
-          <p class="eyebrow">Conheça a Donkey</p>
+          <p class="eyebrow">Conheça a Donkey Head Cervejaria</p>
           <h2>Chega mais, a casa é tua!</h2>
           <p>Cerveja boa, comida caprichada, rock e muita história pra contar. Dá uma olhadinha, mas depois aparece pra conhecer de perto.</p>
         </div>

@@ -498,7 +498,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Painel · Donkey Head</title>
+  <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
   <link rel="stylesheet" href="admin.css?v=16">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
@@ -506,8 +506,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
   <main class="login">
-    <img src="../assets/img/logo-donkey-head.png" alt="Donkey Head" width="110">
-    <h1>Painel Donkey Head</h1>
+    <img src="../assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="110">
+    <h1>Painel Donkey Head Cervejaria</h1>
     <?php if ($tela === 'primeiro-acesso'): ?>
       <p>Primeiro acesso: crie o usuário administrador do painel. Depois, em "Usuários", você cria os acessos da equipe.</p>
     <?php endif; ?>

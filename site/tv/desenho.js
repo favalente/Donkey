@@ -82,7 +82,7 @@
     ctx.textAlign = 'right';
     ctx.font = '700 26px ' + INTER; ctx.fillStyle = C.suave;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '5px';
-    ctx.fillText('DONKEY HEAD · ' + dados.unidade.toUpperCase(), X1, 62);
+    ctx.fillText('DONKEY HEAD CERVEJARIA · ' + dados.unidade.toUpperCase(), X1, 62);
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
     if (total > 1) { ctx.font = '400 44px ' + BEBAS; ctx.fillStyle = C.ambar; ctx.fillText(n + '/' + total, X1, 108); }
     ctx.textAlign = 'left';

@@ -136,11 +136,11 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (!$b): ?>
         <p class="eyebrow">Link da banda</p>
         <h1 class="titulo-pagina">Link inválido</h1>
-        <p>Esse link não existe ou foi trocado. Peça um link novo para a equipe da Donkey Head.</p>
+        <p>Esse link não existe ou foi trocado. Peça um link novo para a equipe da Donkey Head Cervejaria.</p>
       <?php else: ?>
         <p class="eyebrow">Área da banda</p>
         <h1 class="titulo-pagina"><?= e($b['nome']) ?></h1>
-        <p>Envie as fotos da banda e confira o Instagram: é o que aparece na agenda de shows da Donkey Head. Mande fotos em boa qualidade, a original é guardada para o nosso designer. Informe também a chave Pix para o pagamento do cachê (só a nossa equipe financeira vê).</p>
+        <p>Envie as fotos da banda e confira o Instagram: é o que aparece na agenda de shows da Donkey Head Cervejaria. Mande fotos em boa qualidade, a original é guardada para o nosso designer. Informe também a chave Pix para o pagamento do cachê (só a nossa equipe financeira vê).</p>
         <?php if ($aviso): ?><p class="msg ok"><?= e($aviso) ?></p><?php endif; ?>
         <?php if ($erro): ?><p class="msg erro"><?= e($erro) ?></p><?php endif; ?>
 

@@ -13,7 +13,7 @@ header('Cache-Control: no-store');
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Tap List · <?= e($inicial['unidade']) ?> · Donkey Head</title>
+  <title>Tap List · <?= e($inicial['unidade']) ?> · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

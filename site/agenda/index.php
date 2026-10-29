@@ -46,7 +46,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
       'startDate' => $s['data'] . 'T' . $s['hora'] . ':00-03:00',
       'image' => 'https://www.donkeyheadcervejaria.com.br/' . $s['foto'],
       'performer' => ['@type' => 'MusicGroup', 'name' => $s['banda']],
-      'location' => ['@type' => 'Place', 'name' => 'Donkey Head ' . DH_UNIDADES[$s['unidade']],
+      'location' => ['@type' => 'Place', 'name' => 'Donkey Head Cervejaria ' . DH_UNIDADES[$s['unidade']],
           'address' => $s['unidade'] === 'maraponga' ? 'Av. Godofredo Maciel, 2127, Maraponga, Fortaleza - CE' : 'R. Norvinda Píres, 42, Aldeota, Fortaleza - CE'],
   ], $shows), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
   </script>
@@ -66,7 +66,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">Agenda</p>
-        <h1 class="titulo-pagina">Som ao vivo na Donkey</h1>
+        <h1 class="titulo-pagina">Som ao vivo na Donkey Head Cervejaria</h1>
         <p>Programação de shows nas unidades Aldeota e Maraponga. Sujeita a alterações: confira também o nosso Instagram.</p>
       </div>
       <div class="agenda-filtros">

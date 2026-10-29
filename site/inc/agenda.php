@@ -306,7 +306,7 @@ function dh_agenda_ics(array $a, bool $equipe): string
 {
     $bandas = dh_bandas_por_id($a);
     $linhas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Donkey Head//Agenda//PT-BR', 'CALSCALE:GREGORIAN',
-        'X-WR-CALNAME:' . ($equipe ? 'Donkey Head · Shows (equipe)' : 'Donkey Head · Shows'), 'X-WR-TIMEZONE:America/Fortaleza'];
+        'X-WR-CALNAME:' . ($equipe ? 'Donkey Head Cervejaria · Shows (equipe)' : 'Donkey Head Cervejaria · Shows'), 'X-WR-TIMEZONE:America/Fortaleza'];
     foreach ($a['shows'] as $s) {
         if (!$equipe && !in_array($s['status'], DH_STATUS_PUBLICOS, true)) {
             continue;
@@ -330,7 +330,7 @@ function dh_agenda_ics(array $a, bool $equipe): string
         $linhas[] = 'DTEND;TZID=America/Fortaleza:' . date('Ymd\THis', $ini + 3 * 3600);
         $linhas[] = 'SUMMARY:' . dh_ics_txt($titulo);
         $linhas[] = 'DESCRIPTION:' . dh_ics_txt(trim($desc));
-        $linhas[] = 'LOCATION:' . dh_ics_txt('Donkey Head ' . DH_UNIDADES[$s['unidade']]);
+        $linhas[] = 'LOCATION:' . dh_ics_txt('Donkey Head Cervejaria ' . DH_UNIDADES[$s['unidade']]);
         $linhas[] = 'END:VEVENT';
     }
     $linhas[] = 'END:VCALENDAR';
