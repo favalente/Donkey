@@ -95,3 +95,7 @@ p, li { font-size: .95rem; text-align: justify; }
 [hidden] { display: none !important; }
 .tirar-linha { align-self: end; margin-bottom: 14px; height: 52px; border: 2px solid var(--linha); border-radius: 10px; background: #fff; color: #b3261e; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0; }
 .tirar-linha:hover, .tirar-linha:focus { border-color: #b3261e; background: #fdecea; }
+/* Códigos longos (SHA-256, e-mails) quebram a linha em vez de estourar a tela no celular */
+.quadro { table-layout: fixed; }
+.quadro td, .quadro th, .itens td, .itens th { overflow-wrap: anywhere; word-break: normal; }
+.papel { overflow-wrap: anywhere; }

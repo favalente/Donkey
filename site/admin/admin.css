@@ -360,3 +360,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .card-botoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .card-botoes form { margin: 0; }
 .card-botoes .btn { padding: 10px 14px; font-size: .95rem; }
+/* Histórico de e-mails enviados (Contratos → Configurações) */
+.log-email { list-style: none; margin: 0 0 12px; padding: 0; }
+.log-email li { padding: 10px 12px; border-left: 4px solid var(--ok); background: var(--surface); border-radius: 8px; margin-bottom: 8px; font-size: .9rem; overflow-wrap: anywhere; }
+.log-email li span { color: var(--muted); }
+.log-email li.falha-envio { border-left-color: var(--erro); }
+.log-email .erro-envio { color: var(--vermelho-txt); font-weight: 600; }
+h1, h2, h3 { overflow-wrap: anywhere; }

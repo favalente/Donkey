@@ -92,6 +92,16 @@ function contratos_acao(string $acao): bool
             dh_contratos_salvar($c);
             ir('./?acao=contratos-cupons', 'Cupom ' . $codigo . ($antigo ? ' atualizado.' : ' criado.'));
 
+        case 'contratos-email-teste':
+            exigir_post();
+            exigir('contratos');
+            $telaErro = 'contratos-config';
+            $para = trim((string) ($_POST['para'] ?? ''));
+            if (!dh_email($para, 'Teste de envio · Donkey Head Cervejaria', '<p>Este é um e-mail de teste do painel da Donkey Head Cervejaria. Se chegou, os códigos de assinatura e as cópias dos contratos também vão chegar.</p>', $erroEmail)) {
+                throw new RuntimeException('O e-mail não saiu: ' . $erroEmail);
+            }
+            ir('./?acao=contratos-config', 'E-mail de teste enviado para ' . $para . '. Confira a caixa de entrada (e o spam).');
+
         case 'cupom-ativo':
         case 'cupom-apagar':
             exigir_post();
@@ -421,7 +431,12 @@ function contratos_acao(string $acao): bool
             $c['config']['emails_copia'] = $copia;
             $c['config']['pagamento_instrucoes'] = $instrucoes;
             dh_contratos_salvar($c);
-            ir('./?acao=contratos', 'Configurações dos contratos salvas.');
+            // Senha do e-mail: só troca se digitou uma nova (em branco mantém a atual)
+            $senhaEmail = (string) ($_POST['senha_email'] ?? '');
+            if ($senhaEmail !== '' || !empty($_POST['apagar_senha_email'])) {
+                dh_email_config_salvar(['senha' => $senhaEmail !== '' ? $senhaEmail : '', 'alterado_em' => date('Y-m-d H:i:s'), 'alterado_por' => $usuario['nome']]);
+            }
+            ir('./?acao=contratos-config', 'Configurações dos contratos salvas.');
     }
     return false;
 }
@@ -548,9 +563,16 @@ function contratos_tela_config(): void
         <label>Dados para pagamento <small>(aparecem no pedido do cliente, ex.: chave Pix e nome de quem recebe)</small>
           <textarea name="pagamento_instrucoes" rows="3" maxlength="500" placeholder="Pix (CNPJ): 00.000.000/0000-00 · Nome de quem recebe"><?= e($_POST ? (string) ($_POST['pagamento_instrucoes'] ?? '') : ($c['config']['pagamento_instrucoes'] ?? '')) ?></textarea></label>
         <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato assinado e os avisos de pedido preenchido e de cliente que assinou.</p>
+        <h2>E-mail de envio</h2>
+        <?php $ce = dh_email_config(); ?>
+        <p class="dica">Os códigos de assinatura e as cópias saem pelo servidor de e-mail da Locaweb, entrando na conta <?= e(DH_EMPRESA['email']) ?>. Para isso o sistema precisa da senha dessa caixa de e-mail (fica guardada só no servidor).</p>
+        <p><?= !empty($ce['senha']) ? '✅ Senha cadastrada' . (!empty($ce['alterado_em']) ? ' em ' . e(date('d/m/Y H:i', strtotime($ce['alterado_em']))) . (!empty($ce['alterado_por']) ? ' por ' . e($ce['alterado_por']) : '') : '') . '.' : '⚠ Senha ainda não cadastrada: os e-mails podem não chegar.' ?></p>
+        <label><?= !empty($ce['senha']) ? 'Trocar a senha do e-mail' : 'Senha do e-mail' ?> <small>(<?= !empty($ce['senha']) ? 'em branco mantém a atual' : 'a mesma do Webmail' ?>)</small><input type="password" name="senha_email" autocomplete="new-password"></label>
+        <?php if (!empty($ce['senha'])): ?><label class="check"><input type="checkbox" name="apagar_senha_email" value="1"> Apagar a senha cadastrada</label><?php endif; ?>
         <div class="barra-salvar"><button class="btn primario">Salvar</button></div>
       </form>
     <?php
+    contratos_email_teste();
 }
 
 function contratos_tela_cupons(): void
@@ -595,6 +617,30 @@ function contratos_tela_cupons(): void
         <label>Quantas vezes pode ser usado <small>(opcional; vazio = sem limite)</small><input name="limite" inputmode="numeric" value="<?= e($p['limite'] ?? '') ?>"></label>
         <div class="barra-salvar"><button class="btn primario">Salvar cupom</button></div>
       </form>
+    <?php
+}
+
+function contratos_email_teste(): void
+{
+    global $csrf, $usuario;
+    $log = array_slice(dh_email_log(), 0, 15);
+    ?>
+      <h2>Testar o envio</h2>
+      <form method="post" action="./?acao=contratos-email-teste" class="form-cerveja">
+        <?= $csrf ?>
+        <label>Mandar um e-mail de teste para <input type="email" name="para" required autocapitalize="none" value="<?= e($_POST['para'] ?? DH_EMPRESA['email']) ?>"></label>
+        <button class="btn secundario largo">✉️ Enviar e-mail de teste</button>
+      </form>
+      <?php if ($log): ?>
+        <h2>Últimos e-mails enviados</h2>
+        <ul class="log-email">
+          <?php foreach ($log as $l): ?>
+            <li class="<?= $l['ok'] ? 'ok-envio' : 'falha-envio' ?>"><strong><?= $l['ok'] ? '✓' : '✗' ?> <?= e(date('d/m H:i', strtotime($l['em']))) ?> · <?= e($l['para']) ?></strong><br>
+              <span><?= e($l['assunto']) ?> · via <?= e($l['via']) ?></span><?= $l['erro'] !== '' ? '<br><span class="erro-envio">' . e($l['erro']) . '</span>' : '' ?></li>
+          <?php endforeach; ?>
+        </ul>
+        <p class="dica">"✓" quer dizer que o servidor de e-mail aceitou a mensagem. Se mesmo assim não chegou, peça para conferir o spam.</p>
+      <?php endif; ?>
     <?php
 }
 

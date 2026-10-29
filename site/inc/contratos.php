@@ -644,30 +644,138 @@ function dh_emails_lista(string $texto): array
     return array_values(array_unique($lista));
 }
 
-// E-mail pelo servidor da Locaweb, saindo de contato@donkeyheadcervejaria.com.br
-function dh_email(string $para, string $assunto, string $html): bool
+// E-mail pelo SMTP autenticado da Locaweb (conta contato@). A senha é digitada no painel
+// (Contratos → Configurações) e fica só no servidor, em dados/email.json. Sem senha, tenta o mail() do PHP.
+const DH_ARQ_EMAIL = DH_RAIZ . '/dados/email.json';
+const DH_ARQ_EMAIL_LOG = DH_RAIZ . '/dados/emails-log.json';
+const DH_SMTP_HOST = 'email-ssl.com.br';
+const DH_SMTP_PORTA = 587;
+
+function dh_email_config(): array
 {
+    $c = json_decode((string) @file_get_contents(DH_ARQ_EMAIL), true);
+    return is_array($c) ? $c : [];
+}
+
+function dh_email_config_salvar(array $c): void
+{
+    if (@file_put_contents(DH_ARQ_EMAIL, json_encode($c, JSON_PRETTY_PRINT), LOCK_EX) === false) {
+        throw new RuntimeException('Não foi possível gravar a configuração de e-mail.');
+    }
+    @chmod(DH_ARQ_EMAIL, 0600);
+}
+
+// Últimos envios (para conferir se saiu e ver o erro, quando houver)
+function dh_email_log(): array
+{
+    $l = json_decode((string) @file_get_contents(DH_ARQ_EMAIL_LOG), true);
+    return is_array($l) ? $l : [];
+}
+
+function dh_email_registrar(string $para, string $assunto, string $via, bool $ok, string $erro): void
+{
+    $l = dh_email_log();
+    array_unshift($l, ['em' => date('Y-m-d H:i:s'), 'para' => $para, 'assunto' => mb_substr($assunto, 0, 120), 'via' => $via, 'ok' => $ok, 'erro' => mb_substr($erro, 0, 300)]);
+    @file_put_contents(DH_ARQ_EMAIL_LOG, json_encode(array_slice($l, 0, 100), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+}
+
+// Conversa SMTP mínima: STARTTLS + AUTH LOGIN. Devolve '' se deu certo, ou a mensagem de erro.
+function dh_smtp_enviar(string $usuario, string $senha, string $para, string $mensagem): string
+{
+    // DH_SMTP_TESTE (só nos testes locais): servidor falso, com certificado próprio
+    $teste = (string) getenv('DH_SMTP_TESTE');
+    $alvo = $teste !== '' ? $teste : DH_SMTP_HOST . ':' . DH_SMTP_PORTA;
+    $ctx = stream_context_create(['ssl' => $teste !== '' ? ['verify_peer' => false, 'verify_peer_name' => false] : ['peer_name' => DH_SMTP_HOST]]);
+    $s = @stream_socket_client('tcp://' . $alvo, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $ctx);
+    if (!$s) {
+        return 'Não conectou em ' . $alvo . " ($errstr)";
+    }
+    stream_set_timeout($s, 20);
+    $ler = function () use ($s): string {
+        $r = '';
+        while (($linha = fgets($s, 1024)) !== false) {
+            $r .= $linha;
+            if (strlen($linha) < 4 || $linha[3] === ' ') {
+                break;
+            }
+        }
+        return $r;
+    };
+    $cmd = function (?string $c, string $espera) use ($s, $ler): void {
+        if ($c !== null) {
+            fwrite($s, $c . "\r\n");
+        }
+        $r = $ler();
+        if (strpos($r, $espera) !== 0) {
+            throw new RuntimeException(trim($r) ?: 'o servidor não respondeu');
+        }
+    };
+    try {
+        $cmd(null, '220');
+        $cmd('EHLO donkeyheadcervejaria.com.br', '250');
+        $cmd('STARTTLS', '220');
+        if (!@stream_socket_enable_crypto($s, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT)) {
+            throw new RuntimeException('falha ao ativar TLS');
+        }
+        $cmd('EHLO donkeyheadcervejaria.com.br', '250');
+        $cmd('AUTH LOGIN', '334');
+        $cmd(base64_encode($usuario), '334');
+        try {
+            $cmd(base64_encode($senha), '235');
+        } catch (RuntimeException $e) {
+            throw new RuntimeException('Usuário ou senha do e-mail recusados (' . $e->getMessage() . ')');
+        }
+        $cmd('MAIL FROM:<' . $usuario . '>', '250');
+        $cmd('RCPT TO:<' . $para . '>', '25');
+        $cmd('DATA', '354');
+        // Linhas que começam com ponto ganham outro ponto (regra do SMTP)
+        $cmd(preg_replace('/^\./m', '..', $mensagem) . "\r\n.", '250');
+        fwrite($s, "QUIT\r\n");
+        return '';
+    } catch (RuntimeException $e) {
+        return $e->getMessage();
+    } finally {
+        fclose($s);
+    }
+}
+
+function dh_email(string $para, string $assunto, string $html, ?string &$erro = null): bool
+{
+    $erro = '';
     if (!filter_var($para, FILTER_VALIDATE_EMAIL)) {
+        $erro = 'E-mail do destinatário inválido.';
         return false;
     }
     $de = DH_EMPRESA['email'];
     $corpo = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#222;line-height:1.5;max-width:720px">'
         . '<p><img src="' . e(dh_url_site()) . 'assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="70"></p>' . $html
         . '<p style="color:#777;font-size:12px;margin-top:24px">Donkey Head Cervejaria · ' . e(DH_EMPRESA['endereco']) . ' · ' . e(DH_EMPRESA['telefone']) . '</p></body></html>';
-    $cab = implode("\r\n", [
+    $cab = [
         'MIME-Version: 1.0',
         'Content-Type: text/html; charset=UTF-8',
         'Content-Transfer-Encoding: base64',
         'From: =?UTF-8?B?' . base64_encode('Donkey Head Cervejaria') . '?= <' . $de . '>',
         'Reply-To: ' . $de,
-    ]);
+    ];
     $assuntoCod = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
+    $corpoCod = chunk_split(base64_encode($corpo));
     if (getenv('DH_EMAIL_TESTE')) {
         // Ambiente de teste: grava o e-mail num arquivo em vez de enviar
         @file_put_contents(getenv('DH_EMAIL_TESTE'), "PARA: $para\nASSUNTO: $assunto\n$html\n----\n", FILE_APPEND);
         return true;
     }
-    return @mail($para, $assuntoCod, chunk_split(base64_encode($corpo)), $cab, '-f' . $de);
+    $senha = (string) (dh_email_config()['senha'] ?? '');
+    if ($senha !== '') {
+        $msg = implode("\r\n", array_merge(['Date: ' . date('r'), 'To: <' . $para . '>', 'Subject: ' . $assuntoCod,
+            'Message-ID: <' . bin2hex(random_bytes(12)) . '@donkeyheadcervejaria.com.br>'], $cab)) . "\r\n\r\n" . str_replace("\n", "\r\n", rtrim($corpoCod));
+        $erro = dh_smtp_enviar($de, $senha, $para, $msg);
+        dh_email_registrar($para, $assunto, 'SMTP', $erro === '', $erro);
+        return $erro === '';
+    }
+    $ok = @mail($para, $assuntoCod, $corpoCod, implode("\r\n", $cab), '-f' . $de);
+    $erro = $ok ? '' : 'O servidor recusou o envio pelo mail() do PHP. Cadastre a senha do e-mail em Contratos → Configurações.';
+    dh_email_registrar($para, $assunto, 'mail() do PHP (sem senha)', $ok, $erro);
+    return $ok;
 }
 
 function dh_contrato_campos_padrao(string $tipo): array
