@@ -287,3 +287,24 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .pastas-novas form { margin: 0; }
 .mini-cadastrar { min-height: 44px; padding: 8px 16px; font-size: .95rem; }
 .drive-verificar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+/* Contratos */
+.novo-contrato { display: grid; gap: 10px; margin-bottom: 20px; }
+.tres { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; }
+@media (max-width: 520px) { .tres { grid-template-columns: 1fr 1fr; } .tres label:first-child { grid-column: 1 / -1; } }
+.rotulo { font-weight: 600; font-size: 1.05rem; margin: 0 0 6px; }
+.form-contrato .escolhas { margin-bottom: 18px; }
+.linha-item { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+.linha-item label { margin-bottom: 8px; }
+.linha-equip { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 0; margin-bottom: 10px; }
+.barra-dupla { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+.barra-dupla .btn { width: 100%; }
+.assinaturas-status { display: grid; gap: 8px; margin: 12px 0 20px; }
+.assinaturas-status p { margin: 0; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; }
+.assinaturas-status p.feito { border-color: #2e9d4a; background: rgba(46, 157, 74, .12); }
+.caixa-assinar { border: 2px solid var(--amber); border-radius: 14px; padding: 16px; }
+.caixa-assinar h2 { margin-top: 0; }
+.tag.ct-rascunho { background: rgba(255,255,255,.08); color: var(--muted); }
+.tag.ct-enviado { background: rgba(106,169,255,.18); color: #8cbcff; }
+.tag.ct-assinado, .tag.ct-ok { background: #2e9d4a; color: #fff; }
+.tag.ct-cancelado { background: rgba(229,83,61,.18); color: #ff9b8a; text-decoration: line-through; }
+.botoes-link form { margin: 0; }

@@ -46,6 +46,18 @@ Endereço: `/admin/`
 - **Google Agenda:** `/agenda/ics.php` (pública) e o link da equipe (com valores), criado em Agenda → Configurações. Para importar o que já existe: Usuários → Importar Google Agenda (endereço secreto iCal ou arquivo .ics, uma agenda por vez, escolhendo a unidade dela), com revisão antes de gravar. Só os shows **de hoje em diante** entram na agenda. Os eventos antigos servem para cadastrar as bandas e completar tributos, cachê e consumação: quando o evento traz só o nome da banda, vale o tributo completo escrito em outro evento dela. Reservas, contas, fretes, pedidos de barril e dias "sem música" são ignorados, e erros de digitação no nome da banda ("Black Pepers" e "Black Peppers") viram um cadastro só.
 - Dados em `dados/agenda.json` (com backup diário) e fotos em `uploads/bandas/`. Limites de envio em `site/admin/.user.ini`.
 
+## Contratos com assinatura eletrônica
+
+Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento corporativo no pub** (texto do contrato jurídico da casa, com o Anexo I – Menu) e **Venda de chope com comodato de equipamentos** (equipamentos com valor de reposição já preenchidos).
+
+1. Preencha o formulário (dá para salvar rascunho) e toque em **Gerar para assinatura**: o texto é congelado e ganha número (DH-2026-001) e **código de integridade** (SHA-256).
+2. **A Donkey assina** no painel, com a senha do administrador. O nome e o CPF de quem assina ficam em Contratos → Configurações (só no servidor, nunca no código).
+3. **O cliente** recebe o link (WhatsApp ou e-mail), lê, informa nome e CPF, recebe um **código de 6 números no e-mail** e assina.
+4. Com as duas assinaturas, os dois lados recebem a cópia por e-mail. A página do contrato tem o **Relatório de assinaturas** (horário, IP, aparelho, forma de autenticação) e vira PDF pelo botão **Baixar PDF / Imprimir**.
+5. Qualquer pessoa confere a autenticidade em `/contrato/verificar.php` pelo número ou pelo código de integridade.
+
+Validade: assinatura eletrônica entre as partes (MP 2.200-2/2001, art. 10, § 2º; Lei 14.063/2020). Os e-mails saem de contato@donkeyheadcervejaria.com.br pelo servidor da Locaweb. Dados em `dados/contratos.json`, com cópia diária em `dados/backup/`.
+
 ## Tap list na TV
 
 Endereços (tela cheia, TV na horizontal):
