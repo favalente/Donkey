@@ -65,12 +65,12 @@ p, li { font-size: .95rem; text-align: justify; }
 .pedido .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .pedido .check { display: flex; gap: 10px; align-items: center; }
 .pedido .check input { width: 26px; height: 26px; accent-color: var(--ambar); }
-.linha-chope { display: grid; grid-template-columns: 2.2fr 1fr; gap: 10px; }
+.linha-chope { display: grid; grid-template-columns: 2.2fr 1fr 44px; gap: 10px; }
 .caixa-comodato { margin: 18px 0; padding: 14px; border: 2px dashed var(--ambar); border-radius: 12px; background: #fffaf1; }
 .caixa-comodato .legal { margin: 0 0 10px; }
 .resumo { margin-top: 16px; }
 .resumo td:last-child { text-align: right; white-space: nowrap; }
-@media (max-width: 560px) { .pedido .duas { grid-template-columns: 1fr; gap: 0; } .linha-chope { grid-template-columns: 1.6fr 1fr; } }
+@media (max-width: 560px) { .pedido .duas { grid-template-columns: 1fr; gap: 0; } .linha-chope { grid-template-columns: 1.6fr 1fr 40px; gap: 8px; } }
 .rotulo-pedido { font-weight: 700; margin: 6px 0 8px; }
 .opcoes-local { display: grid; gap: 10px; margin-bottom: 14px; }
 .opcoes-local .check { align-items: flex-start; padding: 12px; border: 2px solid var(--linha); border-radius: 10px; margin: 0; }
@@ -93,3 +93,5 @@ p, li { font-size: .95rem; text-align: justify; }
 .comprovante-ok { color: #1f7a3a; font-weight: 700; overflow-wrap: anywhere; }
 .cupom label { margin-bottom: 0; }
 [hidden] { display: none !important; }
+.tirar-linha { align-self: end; margin-bottom: 14px; height: 52px; border: 2px solid var(--linha); border-radius: 10px; background: #fff; color: #b3261e; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0; }
+.tirar-linha:hover, .tirar-linha:focus { border-color: #b3261e; background: #fdecea; }

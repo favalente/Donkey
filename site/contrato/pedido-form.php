@@ -35,6 +35,7 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
       <div class="linha-chope">
         <label>Rótulo <select name="itens[<?= $n ?>][cerveja]"><?= $opcoes((string) ($it['cerveja'] ?? '')) ?></select></label>
         <label>Litros <input name="itens[<?= $n ?>][litros]" inputmode="numeric" value="<?= e($it['litros'] ?? '') ?>" placeholder="Ex.: 50"></label>
+        <button type="button" class="tirar-linha" aria-label="Remover este rótulo" title="Remover">×</button>
       </div>
     <?php endforeach; ?>
   </div>
@@ -49,6 +50,7 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
           <div class="linha-chope">
             <label>Rótulo <select name="comodato[<?= $n ?>][cerveja]"><?= $opcoes((string) ($it['cerveja'] ?? '')) ?></select></label>
             <label>Litros <input name="comodato[<?= $n ?>][litros]" inputmode="numeric" value="<?= e($it['litros'] ?? '') ?>" placeholder="Ex.: 50"></label>
+            <button type="button" class="tirar-linha" aria-label="Remover este rótulo" title="Remover">×</button>
           </div>
         <?php endforeach; ?>
       </div>
@@ -152,12 +154,22 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
     if (cupomInput.value.trim()) aplicarCupom();
     document.querySelectorAll('[data-mais]').forEach(function (b) {
       b.addEventListener('click', function () {
-        var caixa = document.getElementById(b.dataset.mais), modelo = caixa.querySelector('.linha-chope'), n = caixa.children.length;
+        // Índice novo que não repete os que já existem (linhas podem ter sido removidas)
+        var caixa = document.getElementById(b.dataset.mais), modelo = caixa.querySelector('.linha-chope'), n = Date.now();
         var nova = modelo.cloneNode(true);
         nova.querySelector('select').name = b.dataset.nome + '[' + n + '][cerveja]'; nova.querySelector('select').value = '';
         nova.querySelector('input').name = b.dataset.nome + '[' + n + '][litros]'; nova.querySelector('input').value = '';
         caixa.appendChild(nova);
       });
+    });
+    // × remove a linha; se for a única, só limpa
+    form.addEventListener('click', function (ev) {
+      var x = ev.target.closest('.tirar-linha');
+      if (!x) return;
+      var linha = x.closest('.linha-chope');
+      if (linha.parentNode.querySelectorAll('.linha-chope').length > 1) linha.remove();
+      else linha.querySelectorAll('select, input').forEach(function (c) { c.value = ''; });
+      total();
     });
     var quer = document.getElementById('quer-comodato'), area = document.getElementById('area-comodato');
     quer.addEventListener('change', function () {

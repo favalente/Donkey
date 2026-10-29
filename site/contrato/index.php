@@ -284,7 +284,7 @@ $f = $k['campos'] ?? [];
   <meta name="referrer" content="no-referrer">
   <title><?= $k ? 'Contrato nº ' . e($k['numero']) . ' · ' : '' ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=6">
+  <link rel="stylesheet" href="contrato.css?v=7">
 </head>
 <body>
   <div class="barra no-print">
