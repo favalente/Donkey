@@ -150,10 +150,6 @@ function detalhe(array $c): string
         <div class="hero-texto">
           <h1><img src="assets/img/mais-cerveja-menos-arenga.png" alt="Mais cerveja, menos arenga!" width="1003" height="324"></h1>
           <p class="lead">Cerveja artesanal feita aqui, gastronomia de verdade e muito rock. Aqui, a vida acontece fora da tela.</p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="#cervejas"<?= $temTaplist ? ' data-ir-filtro="aldeota"' : '' ?>><?= $temTaplist ? 'O que está engatado' : 'Nossas cervejas' ?></a>
-            <a class="btn btn-ghost" href="#contato">Onde estamos</a>
-          </div>
         </div>
       </div>
     </section>
