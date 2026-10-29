@@ -178,17 +178,15 @@ function detalhe(array $c): string
           <figcaption>Lá no começo: a brassagem no equipamento de casa e uma das primeiras StigmAPA.</figcaption>
         </figure>
         <div class="prose">
-          <p>Tudo começou com três amigos, uma paixão por cerveja e uma ideia meio maluca: fazer a própria cerveja no quintal de casa.</p>
-          <p>A primeira leva ficou boa. Boa até demais! Os amigos provaram, elogiaram e logo veio aquela pergunta: por que não vender essa cerveja?</p>
-          <p>Resolvemos testar a ideia produzindo nossas primeiras cervejas na estrutura de outra cervejaria, a Patt Lou, em Recife. Foi lá que encontramos o cervejeiro Luiz, que deu uma força danada nesse começo.</p>
+          <p>Três amigos apaixonados por cerveja resolvem fazê-la no quintal de casa. O resultado da primeira produção foi inesperado: uma cerveja excelente. Entregamos para os amigos e alguns especialistas e logo começaram os elogios, então surgiu a ideia: por que não comercializá-la?</p>
+          <p>Decidimos então fazer um teste mercadológico como cervejaria cigana, fizemos nossa cerveja em uma estrutura de outra cervejaria, a Patt Lou em Recife, a qual agradecemos ao cervejeiro Luiz imensamente por fazer parte da nossa história.</p>
           <figure class="foto-jornal">
             <img src="assets/img/historia-pattlou.jpg" alt="Fermentador com o adesivo da Donkey Head Cervejaria, os sócios ao lado dele e a brassagem com saco de malte na Patt Lou" width="1200" height="915" loading="lazy">
             <figcaption>Nossa primeira brassagem na Patt Lou, em Recife, com o nosso fermentador.</figcaption>
           </figure>
-          <p>A aceitação foi tão boa que a brincadeira começou a ficar séria. Queríamos produzir nossa própria cerveja aqui, bem fresquinha, sem precisar viajar quilômetros até chegar ao copo.</p>
-          <p>Mas faltava uma coisa. Porque, pra gente, cerveja boa merece comida boa também.</p>
-          <p>Foi assim que nasceu a Donkey Head Cervejaria. Uma cervejaria com produção própria, cozinha caprichada e um lugar pra reunir os amigos.</p>
-          <p>De lá pra cá, muita coisa mudou. Mas a vontade de fazer cerveja boa e juntar gente em volta da mesa continua a mesma.</p>
+          <p>Após a boa aceitação do mercado, surgiu mais uma ideia: e se nós produzíssemos localmente, proporcionando uma cerveja extremamente fresca, sem intervenção de mau armazenamento ou transporte?</p>
+          <p>Após fazermos um estudo de mercado, percebemos a necessidade de um local que, além de boas cervejas, oferecesse também uma culinária à altura. Então surgiu o desejo de criar uma cervejaria com produção local aliada a uma boa cozinha.</p>
+          <p>Nossa cerveja sai do fermentador direto para a câmara fria, o que retarda consideravelmente o seu envelhecimento, garantindo uma maior qualidade. Nosso chef de cozinha, Júnior Sales, possui formação pela Le Cordon Bleu, em Paris, considerada uma das mais renomadas escolas de gastronomia do mundo.</p>
           <p class="assinatura">Mais cerveja, menos arenga! 🍺</p>
         </div>
         <p class="centro"><button type="button" class="btn btn-ghost fechar-historia">Voltar para o site</button></p>
