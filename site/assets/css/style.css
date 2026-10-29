@@ -291,3 +291,5 @@ a.filtro { text-decoration: none; color: var(--text); }
 .cal-linha-onde small { display: block; color: var(--muted); font-weight: 500; }
 .calendario { touch-action: pan-y; }
 .cal-mes-perto { justify-content: space-between; margin: 14px 0 10px; }
+.historia-foto img { height: auto; }
+.historia-foto figcaption { margin-top: .6rem; color: var(--muted); font-size: .9rem; }

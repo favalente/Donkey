@@ -90,7 +90,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=12">
+  <link rel="stylesheet" href="assets/css/style.css?v=13">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -164,7 +164,8 @@ function detalhe(array $c): string
           <p class="eyebrow">Nossa história</p>
           <h2>Começou no quintal de casa.</h2>
           <figure class="historia-foto">
-            <img src="assets/img/galeria/mini/24.jpg" alt="Interior da Donkey Head Cervejaria" loading="lazy">
+            <img src="assets/img/historia-comeco.jpg" alt="Panela de brassagem caseira com mosto e, ao lado, uma garrafa da StigmAPA servida no copo" width="1200" height="906" loading="lazy">
+            <figcaption>Lá no começo: a brassagem no equipamento de casa e uma das primeiras StigmAPA.</figcaption>
           </figure>
         </div>
         <div class="prose">
