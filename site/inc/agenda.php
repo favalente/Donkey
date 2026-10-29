@@ -23,6 +23,7 @@ function dh_agenda(): array
     }
     $a = dh_agenda_bandas_iniciais($a);
     $a = dh_agenda_limpar_nomes($a);
+    $a = dh_agenda_restaurar_nomes($a);
     return $a;
 }
 
@@ -36,13 +37,41 @@ function dh_nome_sem_banda(string $nome): string
     return $n !== '' ? $n : trim($nome);
 }
 
+// A primeira versão da limpeza tirava "banda" dos nomes ("Iago Vital e Banda" virou "Iago Vital").
+// Onde ela já rodou, volta o nome original guardado na cópia feita antes da limpeza.
+function dh_agenda_restaurar_nomes(array $a): array
+{
+    if (!empty($a['config']['nomes_restaurados']) || empty($a['config']['nomes_limpos'])) {
+        return $a;
+    }
+    $copia = json_decode((string) @file_get_contents(dirname(DH_ARQ_AGENDA) . '/backup/agenda-antes-limpeza-nomes.json'), true);
+    $original = [];
+    foreach ($copia['bandas'] ?? [] as $b) {
+        $original[$b['id']] = $b['nome'];
+    }
+    foreach ($a['bandas'] as &$b) {
+        $antes = $original[$b['id']] ?? null;
+        if ($antes !== null && $antes !== $b['nome'] && dh_nome_sem_banda($antes) === $b['nome']) {
+            $b['nome'] = $antes;
+        }
+    }
+    unset($b);
+    $a['config']['nomes_restaurados'] = date('Y-m-d H:i');
+    try {
+        dh_agenda_salvar($a);
+    } catch (RuntimeException $e) {
+        // Sem permissão de gravar: tenta de novo na próxima vez
+    }
+    return $a;
+}
+
 // Nomes que são, na verdade, um tributo (erro da importação): "Tributo Divas Miss Rock"
 function dh_nome_e_tributo(string $nome): bool
 {
     return preg_match('/^\s*(tributo|tributos|trib\.?|cover|homenagem)\b/iu', $nome) === 1;
 }
 
-// Uma vez só: tira "banda" dos nomes, junta bandas que ficaram com o mesmo nome e apaga as
+// Uma vez só: junta bandas com o mesmo nome e apaga as
 // "bandas" que eram tributo. Se uma delas tiver show, o show passa para a banda citada no nome;
 // sem banda reconhecível, ela fica para ser revista no painel. Guarda uma cópia antes.
 function dh_agenda_limpar_nomes(array $a): array
@@ -61,12 +90,6 @@ function dh_agenda_limpar_nomes(array $a): array
     foreach ($a['shows'] as $s) {
         $comShow[$s['banda_id']] = true;
     }
-    foreach ($a['bandas'] as &$b) {
-        if (!dh_nome_e_tributo($b['nome'])) {
-            $b['nome'] = dh_nome_sem_banda($b['nome']);
-        }
-    }
-    unset($b);
     // Bandas com o mesmo nome viram uma só (a que tem mais dados fica)
     $peso = fn($b) => count($b['fotos'] ?? []) * 10 + count($b['drive'] ?? []) * 5 + count($b['tributos'] ?? []) + ($b['cache'] !== '' ? 1 : 0);
     $porChave = [];
@@ -130,6 +153,7 @@ function dh_agenda_limpar_nomes(array $a): array
     unset($s);
     $a['bandas'] = array_values(array_filter($a['bandas'], fn($b) => empty($b['_sai'])));
     $a['config']['nomes_limpos'] = date('Y-m-d H:i');
+    $a['config']['nomes_restaurados'] = date('Y-m-d H:i');
     try {
         dh_agenda_salvar($a);
     } catch (RuntimeException $e) {

@@ -520,7 +520,7 @@ function dh_ics_historico(array $linhas, array $bandas): array
         $nomes = array_keys($b['nomes']);
         $caixaAlta = fn($n) => (int) ($n === mb_strtoupper($n));
         usort($nomes, fn($x, $y) => [$b['nomes'][$y], $caixaAlta($x), mb_strlen($y)] <=> [$b['nomes'][$x], $caixaAlta($y), mb_strlen($x)]);
-        $b['nome'] = $cadastro[$k]['nome'] ?? dh_nome_sem_banda($nomes[0]);
+        $b['nome'] = $cadastro[$k]['nome'] ?? $nomes[0];
         $b['nova'] = !isset($cadastro[$k]);
         // Só vira cadastro o que parece banda mesmo: já cadastrada, com cachê ou tributo, ou que se repete
         $b['confiavel'] = !$b['nova'] || $b['forte'] || $b['eventos'] >= 3;
@@ -573,7 +573,7 @@ function agenda_acao(string $acao): bool
             if (!isset(DH_UNIDADES[$unidade])) {
                 throw new RuntimeException('Escolha a unidade.');
             }
-            $nomeNovo = dh_nome_sem_banda(mb_substr(trim((string) ($_POST['banda_nova'] ?? '')), 0, 80));
+            $nomeNovo = mb_substr(trim((string) ($_POST['banda_nova'] ?? '')), 0, 80);
             if (!isset($bandas[$bandaId]) && $nomeNovo !== '') {
                 // Banda digitada no show que ainda não existe: cadastra na hora (ou usa a de mesmo nome)
                 foreach ($a['bandas'] as $b) {
@@ -883,7 +883,7 @@ function agenda_acao(string $acao): bool
             // Primeiro o cadastro das bandas aprendido com o histórico
             $bandasHist = json_decode((string) ($_POST['json_bandas'] ?? ''), true);
             foreach (is_array($bandasHist) ? $bandasHist : [] as $hb) {
-                $nome = dh_nome_sem_banda(mb_substr(trim((string) ($hb['nome'] ?? '')), 0, 80));
+                $nome = mb_substr(trim((string) ($hb['nome'] ?? '')), 0, 80);
                 $chave = dh_chave_banda($nome);
                 if (empty($hb['incluir']) || $chave === '') {
                     continue;
@@ -922,7 +922,6 @@ function agenda_acao(string $acao): bool
                     continue;
                 }
                 $nome = mb_substr(trim((string) ($l['banda'] ?? '')), 0, 80);
-                $nome = isset($porNome[dh_chave_banda($nome)]) ? $nome : dh_nome_sem_banda($nome);
                 $data = (string) ($l['data'] ?? '');
                 $hora = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string) ($l['hora'] ?? '')) ? $l['hora'] : $a['config']['hora_padrao'];
                 $unidade = isset(DH_UNIDADES[$l['unidade'] ?? '']) ? $l['unidade'] : 'aldeota';
