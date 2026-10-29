@@ -30,6 +30,9 @@ function dh_carregar(): array
     if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['cervejas_novas_2026'])) {
         $dados = dh_cervejas_novas_2026($dados);
     }
+    if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['variacoes_2026'])) {
+        $dados = dh_cervejas_variacoes_2026($dados);
+    }
     if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['jegue_brown_ibu_20'])) {
         // IBU da Jegue Brown é 20, como no rótulo
         foreach ($dados['cervejas'] as $i => $c) {
@@ -60,6 +63,43 @@ function dh_carregar(): array
         } catch (RuntimeException $e) {
             // tenta de novo na próxima leitura
         }
+    }
+    return $dados;
+}
+
+// Variações enviadas em out/2026 (uma vez só): Peste Negra Toffee e Carvalho (mesmo rótulo da Peste
+// Negra) e Severina Sour Manga, Graviola e Abacaxi com Hortelã (a Graviola não está no xMenu).
+function dh_cervejas_variacoes_2026(array $dados): array
+{
+    $peste = fn(string $extra, string $notas) => "Escura, intensamente saborosa, forte, orientada ao sabor do malte tostado. Em sua receita está presente aveia, melaço e $extra. O conjunto remete a notas de café, chocolate, frutas secas e $notas. Apesar da sua potência, o álcool está muito bem inserido. Na receita utilizamos maltes importados de dupla tosta para oferecer uma maior complexidade.";
+    $severina = fn(string $fruta) => "Versão com $fruta.\n\nBerliner Weiss é uma cerveja de trigo originalmente alemã, ácida, clara, refrescante e de baixo teor alcoólico. Possui acidez limpa e moderada, além de alta carbonatação para dar um efeito frisante. O nome Severina Sour faz alusão à Catharina Sour, uma Berliner que utiliza frutas da região sul do Brasil, já a Severina Sour é uma série que engloba frutas tropicais da região nordeste.";
+    $basePeste = ['estilo' => 'Imperial Stout', 'pais' => 'Inglaterra', 'categoria' => 4, 'abv' => '12.0', 'ibu' => '100', 'preco_1l' => '62.00', 'imagem' => 'assets/img/cervejas/peste_negra.jpg'];
+    $baseSev = ['estilo' => 'Catharina Sour', 'pais' => 'Brasil', 'categoria' => 1, 'abv' => '4', 'ibu' => '3', 'preco_1l' => '40.00'];
+    $novas = [
+        ['id' => 'peste-negra-toffee', 'nome' => 'Peste Negra Toffee', 'nome_xmenu' => 'PESTE NEGRA TOFFEE', 'descricao' => $peste('toffee', 'toffee')] + $basePeste,
+        ['id' => 'peste-negra-carvalho', 'nome' => 'Peste Negra Carvalho', 'nome_xmenu' => 'PESTE NEGRA CARVALHO', 'descricao' => $peste('maturação com carvalho', 'madeira')] + $basePeste,
+        ['id' => 'severina-sour-manga', 'nome' => 'Severina Sour (Manga)', 'nome_xmenu' => 'SEVERINA SOUR (MANGA)', 'imagem' => 'assets/img/cervejas/severina-sour-manga.jpg', 'descricao' => $severina('manga')] + $baseSev,
+        ['id' => 'severina-sour-graviola', 'nome' => 'Severina Sour (Graviola)', 'nome_xmenu' => 'SEVERINA SOUR (GRAVIOLA)', 'imagem' => 'assets/img/cervejas/severina-sour-graviola.jpg', 'descricao' => $severina('graviola')] + $baseSev,
+        ['id' => 'severina-sour-abacaxi-com-hortela', 'nome' => 'Severina Sour (Abacaxi com Hortelã)', 'nome_xmenu' => 'SEVERINA SOUR (ABACAXI COM HORTELÃ)', 'imagem' => 'assets/img/cervejas/severina-sour-abacaxi.jpg', 'descricao' => $severina('abacaxi com hortelã')] + $baseSev,
+    ];
+    foreach ($novas as $n) {
+        $achou = false;
+        foreach ($dados['cervejas'] as $i => $c) {
+            if ($c['id'] === $n['id'] || dh_slug((string) $c['nome']) === dh_slug($n['nome']) || dh_slug((string) ($c['nome_xmenu'] ?? '')) === dh_slug($n['nome'])) {
+                $dados['cervejas'][$i] = array_merge($c, $n, ['id' => $c['id'], 'ativa' => true]);
+                $achou = true;
+            }
+        }
+        if (!$achou) {
+            $dados['cervejas'][] = $n + ['preco_300' => '', 'ativa' => true];
+        }
+    }
+    usort($dados['cervejas'], fn($a, $b) => strcasecmp(dh_slug($a['nome']), dh_slug($b['nome'])));
+    $dados['migracoes']['variacoes_2026'] = date('c');
+    try {
+        dh_salvar($dados);
+    } catch (RuntimeException $e) {
+        // tenta de novo na próxima leitura
     }
     return $dados;
 }
