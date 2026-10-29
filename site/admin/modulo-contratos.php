@@ -26,10 +26,11 @@ function dh_contrato_ler_form(string $tipo, array $p): array
         $f['cardapio'] = mb_substr(trim((string) ($p['cardapio'] ?? '')), 0, 8000);
         return $f;
     }
-    foreach (['entrega_endereco', 'entrega_data', 'entrega_hora', 'devolucao_data', 'devolucao_hora'] as $k) {
+    foreach (['entrega_endereco', 'cidade', 'entrega_data', 'entrega_hora', 'devolucao_data', 'devolucao_hora'] as $k) {
         $f[$k] = $txt($k);
     }
     $f['frete'] = dh_valor($p['frete'] ?? '');
+    $f['desconto'] = dh_valor($p['desconto'] ?? '');
     $f['observacoes'] = mb_substr(trim((string) ($p['observacoes'] ?? '')), 0, 2000);
     $f['itens'] = [];
     foreach ((array) ($p['itens'] ?? []) as $it) {
@@ -187,7 +188,17 @@ function contratos_acao(string $acao): bool
             }
             $k = $i !== null ? $c['contratos'][$i] : ['id' => dh_id_novo('c'), 'token' => bin2hex(random_bytes(16)), 'numero' => '', 'tipo' => $tipo, 'status' => 'rascunho',
                 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'assinaturas' => []];
+            $antes = $k['campos'] ?? [];
             $k['campos'] = dh_contrato_ler_form($k['tipo'], $_POST);
+            // Pedido preenchido pelo cliente e depois editado: o comprovante e o cupom continuam
+            foreach (['comprovante', 'cupom', 'entrega_hora_estimada'] as $x) {
+                if (isset($antes[$x]) && $k['tipo'] === 'comodato') {
+                    $k['campos'][$x] = $antes[$x];
+                }
+            }
+            if (($k['campos']['desconto'] ?? '') === '') {
+                $k['campos']['cupom'] = '';
+            }
             $enviar = ($_POST['op'] ?? '') === 'enviar';
             if ($enviar) {
                 $faltam = dh_contrato_pendencias($k);
@@ -204,7 +215,8 @@ function contratos_acao(string $acao): bool
                 if (empty($c['config']['representante_cpf'])) {
                     throw new RuntimeException('Antes de enviar, preencha o nome e o CPF de quem assina pela Donkey em Contratos → Configurações.');
                 }
-                $k['numero'] = dh_contrato_numero($c);
+                // Contrato editado mantém o número e o link
+                $k['numero'] = $k['numero'] ?: dh_contrato_numero($c);
                 dh_contrato_congelar($k, $c['config']);
                 dh_cliente_registrar($k);
             }
@@ -311,7 +323,8 @@ function contratos_acao(string $acao): bool
             if ($i === null || $c['contratos'][$i]['status'] === 'assinado') {
                 throw new RuntimeException('Contrato assinado não pode ser cancelado por aqui.');
             }
-            if (in_array($c['contratos'][$i]['status'], ['rascunho', 'preenchimento', 'consulta'], true)) {
+            // Rascunho que já teve número (contrato em edição) é cancelado, não apagado
+            if (in_array($c['contratos'][$i]['status'], ['rascunho', 'preenchimento', 'consulta'], true) && $c['contratos'][$i]['numero'] === '') {
                 dh_comprovante_apagar($c['contratos'][$i]['campos']['comprovante'] ?? null);
                 array_splice($c['contratos'], $i, 1);
                 dh_contratos_salvar($c);
@@ -322,6 +335,28 @@ function contratos_acao(string $acao): bool
             $c['contratos'][$i]['cancelado_por'] = $usuario['nome'];
             dh_contratos_salvar($c);
             ir('./?acao=contrato&id=' . $c['contratos'][$i]['id'], 'Contrato cancelado. O link do cliente não aceita mais assinatura.');
+
+        case 'contrato-editar':
+            exigir_post();
+            exigir('contratos');
+            $c = dh_contratos();
+            $i = dh_contrato_indice($c, (string) ($_POST['id'] ?? ''));
+            if ($i === null || $c['contratos'][$i]['status'] !== 'enviado') {
+                throw new RuntimeException('Só dá para editar contrato que está aguardando assinatura.');
+            }
+            $k = $c['contratos'][$i];
+            if (!empty($k['assinaturas']['contratante'])) {
+                throw new RuntimeException('O cliente já assinou este contrato. Para mudar, cancele e use "Duplicar".');
+            }
+            // Guarda o registro da versão anterior (texto e código de integridade) e volta para rascunho
+            $k['versoes'][] = ['hash' => $k['hash'], 'documento' => $k['documento'], 'enviado_em' => $k['enviado_em'], 'assinaturas' => $k['assinaturas'],
+                'editado_em' => date('Y-m-d H:i:s'), 'editado_por' => $usuario['nome']];
+            unset($k['documento'], $k['hash'], $k['enviado_em']);
+            $k['assinaturas'] = [];
+            $k['status'] = 'rascunho';
+            $c['contratos'][$i] = $k;
+            dh_contratos_salvar($c);
+            ir('./?acao=contrato&id=' . $k['id'], 'Contrato nº ' . $k['numero'] . ' aberto para edição. Faça as mudanças e toque em "Gerar para assinatura" (o link do cliente continua o mesmo).');
 
         case 'contrato-duplicar':
             exigir_post();
@@ -387,9 +422,11 @@ function contratos_tela(string $tela): bool
     return false;
 }
 
-function dh_contrato_tag(string $st): string
+function dh_contrato_tag(array $k): string
 {
-    return '<em class="tag ct-' . e($st) . '">' . e(DH_CONTRATO_STATUS[$st] ?? $st) . '</em>';
+    // Rascunho com número = contrato aberto para edição
+    $st = $k['status'] === 'rascunho' && $k['numero'] !== '' ? 'edicao' : $k['status'];
+    return '<em class="tag ct-' . e($st) . '">' . e($st === 'edicao' ? 'Em edição' : (DH_CONTRATO_STATUS[$st] ?? $st)) . '</em>';
 }
 
 function contratos_tela_lista(): void
@@ -415,7 +452,7 @@ function contratos_tela_lista(): void
               <span class="info">
                 <strong><?= e($f['contratante_nome'] ?: ($k['referencia'] ?? '') ?: 'Sem nome') ?></strong>
                 <span><?= e($k['numero'] ?: 'Rascunho') ?> · <?= e(DH_CONTRATO_TIPOS[$k['tipo']]) ?><?= $quando ? ' · ' . e(dh_data_br($quando)) : '' ?> · <?= e(dh_moeda(dh_contrato_total($k))) ?></span>
-                <span class="tags"><?= dh_contrato_tag($k['status']) ?>
+                <span class="tags"><?= dh_contrato_tag($k) ?>
                   <?php if ($k['status'] === 'enviado'): ?>
                     <em class="tag <?= isset($k['assinaturas']['contratada']) ? 'ct-ok' : 'cinza' ?>">Donkey <?= isset($k['assinaturas']['contratada']) ? '✓' : 'pendente' ?></em>
                     <em class="tag <?= isset($k['assinaturas']['contratante']) ? 'ct-ok' : 'cinza' ?>">Cliente <?= isset($k['assinaturas']['contratante']) ? '✓' : 'pendente' ?></em>
@@ -519,13 +556,17 @@ function contratos_tela_contrato(): void
     ?>
       <p><a class="voltar" href="./?acao=contratos">‹ Voltar para Contratos</a></p>
       <h1><?= e(DH_CONTRATO_TIPOS[$k['tipo']]) ?></h1>
-      <p><?= $k['numero'] ? 'Contrato nº <strong>' . e($k['numero']) . '</strong> · ' : '' ?><?= dh_contrato_tag($k['status']) ?></p>
+      <p><?= $k['numero'] ? 'Contrato nº <strong>' . e($k['numero']) . '</strong> · ' : '' ?><?= dh_contrato_tag($k) ?></p>
     <?php
     if ($k['status'] === 'rascunho') {
+        if ($k['numero'] !== '') {
+            ?><p class="aviso">✏️ Você está editando o contrato nº <?= e($k['numero']) ?>. Enquanto isso, o link do cliente mostra que o contrato está em ajuste. Ao tocar em <strong>Gerar para assinatura</strong>, o mesmo link volta a funcionar com o texto novo<?= !empty($k['versoes']) && !empty(end($k['versoes'])['assinaturas']['contratada']) ? ' e você assina de novo pela Donkey' : '' ?>.</p><?php
+        }
         contratos_form($k);
         if ($k['id']) {
+            $editando = $k['numero'] !== '';
             ?>
-              <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('Excluir este rascunho?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo">Excluir rascunho</button></form>
+              <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('<?= $editando ? 'Cancelar o contrato nº ' . e($k['numero']) . '? O link do cliente deixa de funcionar.' : 'Excluir este rascunho?' ?>');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo"><?= $editando ? 'Cancelar contrato' : 'Excluir rascunho' ?></button></form>
             <?php
         }
         return;
@@ -606,6 +647,12 @@ function contratos_tela_contrato(): void
         <?php endif; ?>
       <?php endif; ?>
 
+      <?php if ($k['status'] === 'enviado' && !$cliente): ?>
+        <form method="post" action="./?acao=contrato-editar" class="form-editar" onsubmit="return confirm('Editar o contrato nº <?= e($k['numero']) ?>?<?= $donkey ? ' A assinatura da Donkey será descartada e você assina de novo depois.' : '' ?> O cliente continua usando o mesmo link.');">
+          <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>">
+          <button class="btn secundario largo">✏️ Editar contrato</button>
+        </form>
+      <?php endif; ?>
       <div class="botoes-link">
         <a class="btn secundario" href="../contrato/?t=<?= e($k['token']) ?>" target="_blank">📄 Abrir o contrato</a>
         <form method="post" action="./?acao=contrato-duplicar"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">⧉ Duplicar</button></form>
@@ -676,6 +723,7 @@ function contratos_form(array $k): void
         <?php else: ?>
           <h2>Entrega e devolução</h2>
           <label>Endereço de entrega <input name="entrega_endereco" value="<?= e($f['entrega_endereco']) ?>"></label>
+          <label>Cidade <small>(opcional)</small><input name="cidade" value="<?= e($f['cidade'] ?? '') ?>" placeholder="Ex.: Fortaleza/CE"></label>
           <div class="duas">
             <label>Data da entrega <input type="date" name="entrega_data" value="<?= e($f['entrega_data']) ?>"></label>
             <label>Horário da entrega <input type="time" name="entrega_hora" value="<?= e($f['entrega_hora']) ?>"></label>
@@ -695,6 +743,8 @@ function contratos_form(array $k): void
             </div>
           <?php endforeach; ?>
           <label>Frete de ida e volta (R$) <small>(em branco = incluso)</small><input name="frete" value="<?= $v($f['frete']) ?>" inputmode="decimal" class="calc"></label>
+          <label>Desconto no chope (R$) <small>(opcional<?= !empty($f['cupom']) ? '; cupom ' . e($f['cupom']) : '' ?>)</small><input name="desconto" value="<?= $v($f['desconto'] ?? '') ?>" inputmode="decimal" class="calc"></label>
+          <?php if (!empty($f['comprovante'])): ?><p class="dica">📎 Comprovante anexado pelo cliente: <a href="./?acao=contrato-comprovante&amp;id=<?= e($k['id']) ?>" target="_blank"><?= e($f['comprovante']['nome']) ?></a> (continua no contrato).</p><?php endif; ?>
           <p class="aviso" id="total-comodato"></p>
           <h2>Equipamentos em comodato</h2>
           <?php
@@ -747,7 +797,7 @@ function contratos_form(array $k): void
               form.querySelectorAll('.linha-item').forEach(function (l) {
                 var i = l.querySelectorAll('input'); if (!i[3].checked) s += num(i[1].value) * num(i[2].value);
               });
-              s += num(form.frete.value);
+              s = s - Math.min(s, num(form.desconto.value)) + num(form.frete.value);
               tc.textContent = 'Valor total: ' + brl(s);
             }
           }

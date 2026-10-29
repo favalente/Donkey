@@ -16,14 +16,17 @@ $token = (string) ($_GET['t'] ?? '');
 $c = dh_contratos();
 $i = dh_contrato_por_token($c, $token);
 $k = $i !== null ? $c['contratos'][$i] : null;
+// Contrato sendo editado pela Donkey (já tinha número): o link avisa e volta a funcionar quando for gerado de novo
+$emAjuste = $k && $k['status'] === 'rascunho' && $k['numero'] !== '';
 if (!$k || $k['status'] === 'rascunho') {
-    http_response_code(404);
+    http_response_code($emAjuste ? 200 : 404);
     $k = null;
 }
 $aviso = $_SESSION['contrato_aviso'] ?? '';
 unset($_SESSION['contrato_aviso']);
 $pend = $_SESSION['contrato_codigo'] ?? null;
-if ($k && ($pend['id'] ?? '') !== $k['id']) {
+// O código vale só para o texto que o cliente leu (se o contrato for editado, pede outro)
+if ($k && (($pend['id'] ?? '') !== $k['id'] || ($pend['doc'] ?? '') !== ($k['hash'] ?? ''))) {
     $pend = null;
 }
 $erro = '';
@@ -220,7 +223,7 @@ if ($podeAssinar && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $_SESSION['contrato_codigo'] = ['id' => $k['id'], 'hash' => hash('sha256', $codigo . $k['token']), 'ate' => time() + 900, 'enviado' => time(),
-                'tentativas' => 0, 'nome' => $nome, 'cpf' => dh_so_digitos($cpf), 'email' => $email];
+                'tentativas' => 0, 'doc' => $k['hash'], 'nome' => $nome, 'cpf' => dh_so_digitos($cpf), 'email' => $email];
             $ok = dh_email($email, 'Seu código para assinar o contrato nº ' . $k['numero'] . ' · Donkey Head Cervejaria',
                 '<p>Use este código para assinar o contrato nº <b>' . e($k['numero']) . '</b> da Donkey Head Cervejaria:</p>'
                 . '<p style="font-size:32px;font-weight:bold;letter-spacing:8px;margin:12px 0">' . $codigo . '</p>'
@@ -290,7 +293,11 @@ $f = $k['campos'] ?? [];
   </div>
   <main>
     <?php if (!$k): ?>
-      <div class="papel"><h1>Contrato não encontrado</h1><p>Este link não existe ou foi trocado. Fale com a Donkey Head Cervejaria.</p></div>
+      <?php if ($emAjuste): ?>
+        <div class="papel"><h1>Contrato em ajuste</h1><p>A Donkey Head Cervejaria está ajustando este contrato. Volte neste mesmo link em instantes para conferir e assinar.</p></div>
+      <?php else: ?>
+        <div class="papel"><h1>Contrato não encontrado</h1><p>Este link não existe ou foi trocado. Fale com a Donkey Head Cervejaria.</p></div>
+      <?php endif; ?>
     <?php else: ?>
       <?php if ($aviso): ?><p class="msg ok no-print"><?= e($aviso) ?></p><?php endif; ?>
       <?php if ($erro): ?><p class="msg erro no-print"><?= e($erro) ?></p><?php endif; ?>

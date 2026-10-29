@@ -52,6 +52,7 @@ Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento co
 
 1. Preencha o formulário (dá para salvar rascunho) e toque em **Gerar para assinatura**: o texto é congelado e ganha número (DH-2026-001) e **código de integridade** (SHA-256).
 2. **A Donkey assina** no painel, com a senha do administrador. O nome e o CPF de quem assina ficam em Contratos → Configurações (só no servidor, nunca no código).
+2b. **Editar antes do cliente assinar:** no contrato, **✏️ Editar contrato** volta para o formulário com o mesmo número e o mesmo link (o cliente vê "Contrato em ajuste" enquanto isso). Ao gerar de novo, o texto ganha novo código de integridade, a assinatura da Donkey é refeita e o código de e-mail pedido antes da edição deixa de valer. A versão anterior fica guardada no registro do contrato. Depois que o cliente assina, só cancelando e duplicando.
 3. **O cliente** recebe o link (WhatsApp ou e-mail), lê, informa nome e CPF, recebe um **código de 6 números no e-mail** e assina.
 4. Com as duas assinaturas, os dois lados recebem a cópia por e-mail (e também os **e-mails de cópia** cadastrados em Contratos → Configurações, que recebem ainda os avisos de pedido preenchido e de cliente que assinou). A página do contrato tem o **Relatório de assinaturas** (horário, IP, aparelho, forma de autenticação) e vira PDF pelo botão **Baixar PDF / Imprimir**.
 5. Qualquer pessoa confere a autenticidade em `/contrato/verificar.php` pelo número ou pelo código de integridade.
