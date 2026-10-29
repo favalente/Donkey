@@ -1,6 +1,6 @@
 <?php
 // Página da banda: pelo link secreto (enviado pelo painel), a própria banda atualiza
-// as fotos e o Instagram. Não mostra nem altera mais nada do cadastro.
+// as fotos, o Instagram e a chave Pix para receber o cachê. Não mostra nem altera mais nada do cadastro.
 require __DIR__ . '/../inc/dados.php';
 
 header('X-Robots-Tag: noindex, nofollow');
@@ -43,6 +43,8 @@ if ($i !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Instagram inválido. Escreva só o nome do perfil, ex.: @suabanda');
             }
             $b['instagram'] = dh_instagram($insta);
+            $b['pix'] = mb_substr(trim((string) ($_POST['pix'] ?? '')), 0, 140);
+            $b['pix_nome'] = mb_substr(trim((string) ($_POST['pix_nome'] ?? '')), 0, 80);
             // Cada foto é salva por si: uma com problema não derruba as outras
             $enviadas = 0;
             $problemas = [];
@@ -115,6 +117,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
     .fotos-banda form { display: flex; gap: 6px; padding: 8px; }
     .fotos-banda button { flex: 1; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--line); background: none; color: var(--text); font: inherit; font-size: .8rem; cursor: pointer; }
     .fotos-banda button.perigo { color: #f19a8b; }
+    .pix { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 0; margin: 0 0 20px; }
+    .pix legend { padding: 0 6px; font-weight: 700; color: var(--amber); }
     .enviando { display: none; color: var(--amber); font-weight: 600; text-align: center; margin-top: 12px; }
   </style>
 </head>
@@ -136,7 +140,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php else: ?>
         <p class="eyebrow">Área da banda</p>
         <h1 class="titulo-pagina"><?= e($b['nome']) ?></h1>
-        <p>Envie as fotos da banda e confira o Instagram. É o que aparece na agenda de shows da Donkey Head. Mande fotos em boa qualidade: a original é guardada para o nosso designer.</p>
+        <p>Envie as fotos da banda e confira o Instagram: é o que aparece na agenda de shows da Donkey Head. Mande fotos em boa qualidade, a original é guardada para o nosso designer. Informe também a chave Pix para o pagamento do cachê (só a nossa equipe financeira vê).</p>
         <?php if ($aviso): ?><p class="msg ok"><?= e($aviso) ?></p><?php endif; ?>
         <?php if ($erro): ?><p class="msg erro"><?= e($erro) ?></p><?php endif; ?>
 
@@ -145,6 +149,15 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
           <label>Instagram da banda
             <input type="text" name="instagram" value="<?= $b['instagram'] !== '' ? '@' . e($b['instagram']) : '' ?>" placeholder="@suabanda" autocapitalize="none" autocomplete="off" maxlength="80">
           </label>
+          <fieldset class="pix">
+            <legend>Pix para receber o cachê</legend>
+            <label>Chave Pix <small>(CPF, CNPJ, celular, e-mail ou chave aleatória)</small>
+              <input type="text" name="pix" value="<?= e($b['pix'] ?? '') ?>" autocapitalize="none" autocomplete="off" maxlength="140">
+            </label>
+            <label>Nome de quem recebe <small>(como aparece no banco)</small>
+              <input type="text" name="pix_nome" value="<?= e($b['pix_nome'] ?? '') ?>" maxlength="80">
+            </label>
+          </fieldset>
           <label>Adicionar fotos <small>(pode escolher várias; JPG, PNG ou WEBP, até <?= e(ini_get('upload_max_filesize')) ?> cada)</small>
             <input type="file" name="fotos[]" accept="image/jpeg,image/png,image/webp" multiple>
           </label>

@@ -639,6 +639,8 @@ function agenda_acao(string $acao): bool
             $b['contato'] = mb_substr(trim((string) ($_POST['contato'] ?? '')), 0, 120);
             $b['obs'] = mb_substr(trim((string) ($_POST['obs'] ?? '')), 0, 1000);
             if (pode('valores')) {
+                $b['pix'] = mb_substr(trim((string) ($_POST['pix'] ?? '')), 0, 140);
+                $b['pix_nome'] = mb_substr(trim((string) ($_POST['pix_nome'] ?? '')), 0, 80);
                 $b['cache'] = dh_valor($_POST['cache'] ?? '');
                 $b['consumacao'] = dh_valor($_POST['consumacao'] ?? '');
             }
@@ -1021,7 +1023,8 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
               <span class="cal-num"><?= date('j', $t) ?></span>
               <?php foreach ($porDia[$dia] ?? [] as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
                 <button type="button" class="cal-show u-<?= e($s['unidade']) ?> st-<?= e($s['status']) ?>" data-show="<?= e($s['id']) ?>"
-                  data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? '', 'status' => $s['status']], JSON_UNESCAPED_UNICODE)) ?>"><?php if ($s['status'] === 'pago'): ?><span class="flag-pago" title="Pago">✓</span><?php endif; ?><?= e($b['nome'] ?? '—') ?></button>
+                  data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? '', 'status' => $s['status']]
+                    + (pode('valores') ? ['pix' => $b['pix'] ?? '', 'pix_nome' => $b['pix_nome'] ?? '', 'cache' => dh_moeda($s['cache'])] : []), JSON_UNESCAPED_UNICODE)) ?>"><?php if ($s['status'] === 'pago'): ?><span class="flag-pago" title="Pago">✓</span><?php endif; ?><?= e($b['nome'] ?? '—') ?></button>
               <?php endforeach; ?>
             </div>
           <?php endfor; ?>
@@ -1033,6 +1036,13 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
         <h3 class="cal-menu-banda"></h3>
         <p class="cal-menu-tributo"></p>
         <p class="cal-menu-situacao"></p>
+        <?php if (pode('valores')): ?>
+          <div class="cal-menu-pix">
+            <p class="pix-valor"></p>
+            <p class="pix-chave"></p>
+            <button type="button" class="btn secundario" data-op="copiar-pix">Copiar Pix</button>
+          </div>
+        <?php endif; ?>
         <div class="cal-menu-botoes">
           <?php if (pode('valores')): ?>
             <form method="post" action="./?acao=show-pago" class="cal-menu-pago">
@@ -1079,12 +1089,26 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
                 pago.querySelector('[value=pagar]').hidden = i.status === 'pago' || i.status === 'cancelado';
                 pago.querySelector('[value=desfazer]').hidden = i.status !== 'pago';
               }
+              var caixaPix = menu.querySelector('.cal-menu-pix');
+              if (caixaPix) {
+                caixaPix.querySelector('.pix-valor').textContent = 'Cachê: ' + i.cache;
+                caixaPix.querySelector('.pix-chave').textContent = i.pix ? 'Pix: ' + i.pix + (i.pix_nome ? ' (' + i.pix_nome + ')' : '') : 'Pix: a banda ainda não informou';
+                caixaPix.querySelector('[data-op=copiar-pix]').hidden = !i.pix;
+                caixaPix.dataset.pix = i.pix || '';
+              }
               menu.querySelector('.cal-menu-situacao').className = 'cal-menu-situacao sit-' + i.status;
               menu.querySelector('.cal-menu-situacao').textContent = i.status === 'pago' ? '✓ Pago' : (i.status === 'cancelado' ? 'Cancelado' : '');
               menu.showModal();
             });
           });
           menu.querySelector('[data-op=fechar]').addEventListener('click', function () { menu.close(); });
+          var copiar = menu.querySelector('[data-op=copiar-pix]');
+          if (copiar) copiar.addEventListener('click', function () {
+            var chave = menu.querySelector('.cal-menu-pix').dataset.pix;
+            function ok() { copiar.textContent = '✓ Pix copiado'; setTimeout(function () { copiar.textContent = 'Copiar Pix'; }, 2500); }
+            if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(chave).then(ok); }
+            else { var t = document.createElement('textarea'); t.value = chave; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); ok(); }
+          });
           dhArrastarMes(cal.querySelector('.calendario'), cal.querySelector('[data-mes=anterior]'), cal.querySelector('[data-mes=proximo]'));
           menu.addEventListener('click', function (e) { if (e.target === menu) menu.close(); });
         })();
@@ -1446,6 +1470,10 @@ function agenda_tela_banda(): void
             <label>Cachê padrão (R$) <input name="cache" value="<?= e(dh_num($b['cache'])) ?>" inputmode="decimal"></label>
             <label>Consumação padrão (R$) <input name="consumacao" value="<?= e(dh_num($b['consumacao'])) ?>" inputmode="decimal"></label>
           </div>
+          <div class="duas">
+            <label>Chave Pix <input name="pix" value="<?= e($b['pix'] ?? '') ?>" maxlength="140" autocapitalize="none" placeholder="A banda pode preencher pelo link"></label>
+            <label>Nome de quem recebe <input name="pix_nome" value="<?= e($b['pix_nome'] ?? '') ?>" maxlength="80"></label>
+          </div>
         <?php endif; ?>
         <div class="duas">
           <label>Instagram <input name="instagram" value="<?= e($b['instagram']) ?>" placeholder="@banda" autocapitalize="none" maxlength="60"></label>
@@ -1460,12 +1488,12 @@ function agenda_tela_banda(): void
 
       <?php if ($b['id']): $linkBanda = !empty($b['token']) ? dh_url_site() . 'banda/?t=' . $b['token'] : ''; ?>
         <h2 id="link">Link para a banda</h2>
-        <p class="dica">A banda abre o link no celular e atualiza só as fotos e o Instagram, sem precisar de senha. Ninguém mais vê os outros dados.<?php if (!empty($b['atualizado_pela_banda'])): ?> <strong>Última atualização feita pela banda: <?= e(date('d/m/Y H:i', strtotime($b['atualizado_pela_banda']))) ?>.</strong><?php endif; ?></p>
+        <p class="dica">A banda abre o link no celular e atualiza só as fotos, o Instagram e a chave Pix, sem precisar de senha. Ninguém mais vê os outros dados.<?php if (!empty($b['atualizado_pela_banda'])): ?> <strong>Última atualização feita pela banda: <?= e(date('d/m/Y H:i', strtotime($b['atualizado_pela_banda']))) ?>.</strong><?php endif; ?></p>
         <?php if ($linkBanda): ?>
           <input class="link-banda" value="<?= e($linkBanda) ?>" readonly onclick="this.select()">
           <p class="botoes-link">
             <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($linkBanda) ?>').then(function(){ alert('Link copiado!'); })">Copiar link</button>
-            <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode('Oi! Aqui é a Donkey Head Cervejaria. Por esse link vocês podem enviar as fotos da ' . $b['nome'] . ' e conferir o Instagram que aparece na nossa agenda: ' . $linkBanda)) ?>">Enviar pelo WhatsApp</a>
+            <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode('Oi! Aqui é a Donkey Head Cervejaria. Por esse link vocês podem enviar as fotos da ' . $b['nome'] . ', conferir o Instagram que aparece na nossa agenda e informar a chave Pix para o pagamento do cachê: ' . $linkBanda)) ?>">Enviar pelo WhatsApp</a>
           </p>
         <?php endif; ?>
         <form method="post" action="./?acao=banda-link"<?= $linkBanda ? ' onsubmit="return confirm(\'Criar um link novo? O link enviado antes para a banda deixa de funcionar.\');"' : '' ?>>

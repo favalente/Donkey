@@ -247,3 +247,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .mini-pagar { min-height: 42px; padding: 8px 16px; font-size: .95rem; }
 .cal-show { max-height: none; }
 .cal-show .flag-pago { width: 1.25em; height: 1.25em; font-size: .9em; margin: 0 2px 1px 0; }
+.cal-menu-pix { margin: 12px 0 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #1c1612; }
+.cal-menu-pix p { color: var(--text); margin: 0 0 6px; overflow-wrap: anywhere; }
+.cal-menu-pix .pix-valor { font-weight: 700; }
+.cal-menu-pix .btn { width: 100%; margin-top: 4px; }
+.cal-menu-pix [hidden] { display: none; }
