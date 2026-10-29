@@ -11,6 +11,8 @@ const DH_CONTRATO_TIPOS = [
 ];
 // Frete de instalação e retirada em Fortaleza; outras cidades, sob consulta (a Donkey define no painel)
 const DH_FRETE_FORTALEZA = 40;
+// Copos personalizados vendidos junto com o chope
+const DH_COPOS = ['qtd' => 50, 'valor' => 40];
 // Comprovante de pagamento que o cliente anexa ao pedido (fica em dados/, sem acesso direto pela web)
 const DH_DIR_COMPROVANTES = DH_RAIZ . '/dados/comprovantes';
 const DH_COMPROVANTE_TIPOS = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/heic' => 'heic', 'image/heif' => 'heif', 'application/pdf' => 'pdf'];
@@ -252,11 +254,17 @@ function dh_comodato_chope(array $f): float
     return $t;
 }
 
-// Total a pagar: chope comprado − desconto do cupom + frete
+// Copos personalizados: pacotes × valor do pacote
+function dh_comodato_copos(array $f): float
+{
+    return max(0, (int) ($f['copos_pacotes'] ?? 0)) * DH_COPOS['valor'];
+}
+
+// Total a pagar: chope comprado − desconto do cupom (só no chope) + copos + frete
 function dh_comodato_total(array $f): float
 {
     $chope = dh_comodato_chope($f);
-    return $chope - min($chope, (float) (($f['desconto'] ?? '') ?: 0)) + (float) ($f['frete'] ?: 0);
+    return $chope - min($chope, (float) (($f['desconto'] ?? '') ?: 0)) + dh_comodato_copos($f) + (float) ($f['frete'] ?: 0);
 }
 
 // ---- Cupons de desconto (valem sobre o chope, não sobre o frete) ----
@@ -485,13 +493,18 @@ function dh_contrato_comodato(array $f, callable $linha): string
     }
     $comprado = array_filter($f['itens'], fn($it) => empty($it['comodato']));
     $emComodato = array_filter($f['itens'], fn($it) => !empty($it['comodato']));
-    $h .= '</table><h3>Chope comprado</h3><table class="itens"><tr><th>Item</th><th>Valor do litro</th><th>Quantidade</th><th>Valor total</th></tr>';
+    $temCopos = (int) ($f['copos_pacotes'] ?? 0) > 0;
+    $h .= '</table><h3>' . ($temCopos ? 'Chope e copos comprados' : 'Chope comprado') . '</h3><table class="itens"><tr><th>Item</th><th>' . ($temCopos ? 'Valor (litro ou pacote)' : 'Valor do litro') . '</th><th>Quantidade</th><th>Valor total</th></tr>';
     foreach ($comprado as $it) {
         $h .= '<tr><td>' . e($it['descricao']) . '</td><td>' . e(dh_moeda($it['valor_litro'])) . '</td><td>' . e(dh_litros($it['litros'])) . ' L</td><td>'
             . e(dh_moeda((float) $it['litros'] * (float) $it['valor_litro'])) . '</td></tr>';
     }
     if ((float) (($f['desconto'] ?? '') ?: 0) > 0) {
         $h .= '<tr><td colspan="3">Desconto' . (($f['cupom'] ?? '') !== '' ? ' (cupom ' . e($f['cupom']) . ')' : '') . '</td><td>− ' . e(dh_moeda(min(dh_comodato_chope($f), (float) $f['desconto']))) . '</td></tr>';
+    }
+    if (($pc = (int) ($f['copos_pacotes'] ?? 0)) > 0) {
+        $h .= '<tr><td>Copos personalizados (pacote com ' . DH_COPOS['qtd'] . ')</td><td>' . e(dh_moeda(DH_COPOS['valor'])) . ' o pacote</td><td>' . $pc . ' pacote' . ($pc > 1 ? 's' : '')
+            . ' (' . $pc * DH_COPOS['qtd'] . ' copos)</td><td>' . e(dh_moeda(dh_comodato_copos($f))) . '</td></tr>';
     }
     $frete = $f['frete'] !== '' && (float) $f['frete'] > 0;
     $h .= '<tr><td colspan="3">Frete (instalação e retirada)</td><td>' . ($frete ? e(dh_moeda($f['frete'])) : 'Incluso') . '</td></tr>';
@@ -604,15 +617,24 @@ function dh_contrato_concluir(array &$k): bool
     }
     $k['status'] = 'assinado';
     $k['concluido_em'] = date('Y-m-d H:i:s');
+    dh_contrato_enviar_copia($k, array_merge([$k['assinaturas']['contratante']['email']], dh_emails_equipe()));
+    return true;
+}
+
+// Manda a cópia do contrato assinado; devolve os e-mails que falharam (e => motivo)
+function dh_contrato_enviar_copia(array $k, array $para): array
+{
     $link = dh_url_site() . 'contrato/?t=' . $k['token'];
     $texto = '<p>O contrato nº <b>' . e($k['numero']) . '</b> (' . e(DH_CONTRATO_TIPOS[$k['tipo']]) . ') foi assinado pelas duas partes.</p>'
         . '<p>Código de integridade: <span style="font-family:monospace;font-size:12px">' . e($k['hash']) . '</span></p>'
         . '<p><a href="' . e($link) . '">Abrir o contrato assinado</a> (dá para baixar em PDF pela própria página).</p>';
-    $para = array_unique(array_filter([$k['assinaturas']['contratante']['email'], ...dh_emails_equipe()]));
-    foreach ($para as $email) {
-        dh_email($email, 'Contrato assinado nº ' . $k['numero'] . ' · Donkey Head Cervejaria', $texto . '<hr>' . $k['documento'] . dh_contrato_relatorio($k));
+    $falhas = [];
+    foreach (array_unique(array_filter($para)) as $email) {
+        if (!dh_email($email, 'Contrato assinado nº ' . $k['numero'] . ' · Donkey Head Cervejaria', $texto . '<hr>' . $k['documento'] . dh_contrato_relatorio($k), $erro)) {
+            $falhas[$email] = $erro;
+        }
     }
-    return true;
+    return $falhas;
 }
 
 // Quem recebe os avisos e as cópias dos contratos: o e-mail da Donkey + os extras das Configurações

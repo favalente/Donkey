@@ -79,6 +79,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         $f['devolucao_data'] = (string) ($_POST['devolucao_data'] ?? '');
         $f['entrega_hora'] = (string) ($_POST['entrega_hora'] ?? '');
         $f['entrega_hora_estimada'] = true;
+        $f['copos_pacotes'] = min(200, max(0, (int) ($_POST['copos_pacotes'] ?? 0)));
         // Fortaleza: frete fixo; outra cidade: o cliente digita o valor combinado com o vendedor
         $foraDeFortaleza = ($_POST['local'] ?? '') === 'outra';
         $f['cidade'] = $foraDeFortaleza ? $txt('cidade', 80) : 'Fortaleza/CE';
@@ -185,6 +186,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         dh_contratos_salvar($c);
         dh_email_equipe('Pedido de chope preenchido nº ' . $k['numero'],
             '<p>' . e($f['contratante_nome']) . ' preencheu o pedido de chope nº <b>' . e($k['numero']) . '</b> (entrega em ' . e($f['cidade']) . ', ' . e(dh_data_br($f['entrega_data'])) . ', total ' . e(dh_moeda(dh_comodato_total($f)))
+            . ($f['copos_pacotes'] > 0 ? ', ' . $f['copos_pacotes'] . ' pacote(s) de copos personalizados' : '')
             . ($f['cupom'] !== '' ? ', com o cupom ' . e($f['cupom']) . ' (− ' . e(dh_moeda($f['desconto'])) . ')' : '') . ($foraDeFortaleza ? ', frete combinado de ' . e(dh_moeda($f['frete'])) : '') . ').</p>'
             . '<p><a href="' . e(dh_url_site() . 'admin/?acao=contrato-comprovante&id=' . $k['id']) . '">Ver o comprovante de pagamento</a> (entre no painel) e confira se o valor caiu.</p>'
             . '<p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>');
@@ -284,7 +286,7 @@ $f = $k['campos'] ?? [];
   <meta name="referrer" content="no-referrer">
   <title><?= $k ? 'Contrato nº ' . e($k['numero']) . ' · ' : '' ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=8">
+  <link rel="stylesheet" href="contrato.css?v=9">
 </head>
 <body>
   <div class="barra no-print">

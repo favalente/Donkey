@@ -31,6 +31,7 @@ function dh_contrato_ler_form(string $tipo, array $p): array
     }
     $f['frete'] = dh_valor($p['frete'] ?? '');
     $f['desconto'] = dh_valor($p['desconto'] ?? '');
+    $f['copos_pacotes'] = min(200, max(0, (int) ($p['copos_pacotes'] ?? 0)));
     $f['observacoes'] = mb_substr(trim((string) ($p['observacoes'] ?? '')), 0, 2000);
     $f['itens'] = [];
     foreach ((array) ($p['itens'] ?? []) as $it) {
@@ -352,6 +353,25 @@ function contratos_acao(string $acao): bool
             }
             ir(($_POST['volta'] ?? '') === 'lista' ? './?acao=contratos' : './?acao=contrato&id=' . $k['id'], '✉️ E-mail com o link do contrato nº ' . $k['numero'] . ' enviado para ' . $k['campos']['contratante_email'] . '. Peça para o cliente conferir também o spam.');
 
+        case 'contrato-reenviar-copia':
+            // Reenvia a cópia do contrato assinado para contato@ e a lista de cópia das Configurações
+            exigir_post();
+            exigir('contratos');
+            $telaErro = ($_POST['volta'] ?? '') === 'lista' ? 'contratos' : 'contrato';
+            $c = dh_contratos();
+            $i = dh_contrato_indice($c, (string) ($_POST['id'] ?? ''));
+            if ($i === null || $c['contratos'][$i]['status'] !== 'assinado') {
+                throw new RuntimeException('Só dá para reenviar a cópia de contrato assinado pelas duas partes.');
+            }
+            $k = $c['contratos'][$i];
+            $para = dh_emails_equipe();
+            $falhas = dh_contrato_enviar_copia($k, $para);
+            if ($falhas) {
+                throw new RuntimeException('A cópia não saiu para ' . implode(', ', array_map(fn($e, $m) => "$e ($m)", array_keys($falhas), $falhas)) . '.'
+                    . (count($falhas) < count($para) ? ' Para os outros e-mails, saiu.' : ''));
+            }
+            ir(($_POST['volta'] ?? '') === 'lista' ? './?acao=contratos' : './?acao=contrato&id=' . $k['id'], '✉️ Cópia do contrato nº ' . $k['numero'] . ' reenviada para ' . implode(', ', $para) . '.');
+
         case 'contrato-cancelar':
             exigir_post();
             exigir('contratos');
@@ -531,6 +551,9 @@ function contratos_card(array $k): void
               <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($f['contratante_telefone'])) ?>?text=<?= e(rawurlencode('Olá, ' . $f['contratante_nome'] . ", aqui é a Donkey Head Cervejaria.\n\nSegue o contrato nº " . $k['numero'] . " para leitura e assinatura eletrônica:\n" . $link)) ?>">📲 Enviar</a>
               <form method="post" action="./?acao=contrato-convite" onsubmit="return confirm('Reenviar o e-mail de assinatura para <?= e(addslashes($f['contratante_email'])) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><input type="hidden" name="volta" value="lista"><button class="btn secundario">✉️ Reenviar e-mail</button></form>
               <?= $post('contrato-editar', '✏️ Editar', 'secundario', 'Editar o contrato nº ' . $k['numero'] . '?' . ($donkey ? ' A assinatura da Donkey será descartada e você assina de novo depois.' : '') . ' O cliente continua usando o mesmo link.') ?>
+            <?php endif; ?>
+            <?php if ($k['status'] === 'assinado'): ?>
+              <form method="post" action="./?acao=contrato-reenviar-copia" onsubmit="return confirm('Reenviar a cópia do contrato assinado para <?= e(addslashes(implode(', ', dh_emails_equipe()))) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><input type="hidden" name="volta" value="lista"><button class="btn secundario">✉️ Reenviar cópia</button></form>
             <?php endif; ?>
             <?= $post('contrato-duplicar', '⧉ Duplicar') ?>
           <?php endif; ?>
@@ -779,6 +802,12 @@ function contratos_tela_contrato(): void
           <button class="btn secundario largo">✏️ Editar contrato</button>
         </form>
       <?php endif; ?>
+      <?php if ($k['status'] === 'assinado'): ?>
+        <form method="post" action="./?acao=contrato-reenviar-copia" onsubmit="return confirm('Reenviar a cópia do contrato assinado?');" class="form-editar">
+          <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>">
+          <button class="btn secundario largo">✉️ Reenviar cópia para <?= e(implode(', ', dh_emails_equipe())) ?></button>
+        </form>
+      <?php endif; ?>
       <div class="botoes-link">
         <a class="btn secundario" href="../contrato/?t=<?= e($k['token']) ?>" target="_blank">📄 Abrir o contrato</a>
         <form method="post" action="./?acao=contrato-duplicar"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">⧉ Duplicar</button></form>
@@ -869,6 +898,7 @@ function contratos_form(array $k): void
             </div>
           <?php endforeach; ?>
           <label>Frete de ida e volta (R$) <small>(em branco = incluso)</small><input name="frete" value="<?= $v($f['frete']) ?>" inputmode="decimal" class="calc"></label>
+          <label>Pacotes de copos personalizados <small>(<?= DH_COPOS['qtd'] ?> copos por <?= e(dh_moeda(DH_COPOS['valor'])) ?> o pacote; 0 = sem copos)</small><input name="copos_pacotes" value="<?= (int) ($f['copos_pacotes'] ?? 0) ?>" inputmode="numeric" class="calc"></label>
           <label>Desconto no chope (R$) <small>(opcional<?= !empty($f['cupom']) ? '; cupom ' . e($f['cupom']) : '' ?>)</small><input name="desconto" value="<?= $v($f['desconto'] ?? '') ?>" inputmode="decimal" class="calc"></label>
           <p class="aviso" id="total-comodato"></p>
           <h2>Equipamentos em comodato</h2>
@@ -933,7 +963,7 @@ function contratos_form(array $k): void
               form.querySelectorAll('.linha-item').forEach(function (l) {
                 var i = l.querySelectorAll('input'); if (!i[3].checked) s += num(i[1].value) * num(i[2].value);
               });
-              s = s - Math.min(s, num(form.desconto.value)) + num(form.frete.value);
+              s = s - Math.min(s, num(form.desconto.value)) + (parseInt(form.copos_pacotes.value, 10) || 0) * <?= json_encode(DH_COPOS['valor']) ?> + num(form.frete.value);
               tc.textContent = 'Valor total: ' + brl(s);
             }
           }
