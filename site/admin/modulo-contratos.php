@@ -547,6 +547,7 @@ function contratos_card(array $k): void
           <?php else: ?>
             <?php if ($k['status'] === 'enviado' && !$donkey): ?><a class="btn primario" href="<?= e($abrir) ?>#form-assinar">✍ Assinar</a><?php endif; ?>
             <a class="btn secundario" href="../contrato/?t=<?= e($k['token']) ?>" target="_blank">📄 Ver contrato</a>
+            <?php if (!empty($f['comprovante'])): ?><a class="btn secundario" href="./?acao=contrato-comprovante&amp;id=<?= e(rawurlencode($k['id'])) ?>" target="_blank">📎 Ver comprovante</a><?php endif; ?>
             <?php if ($k['status'] === 'enviado' && !$cliente): ?>
               <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($f['contratante_telefone'])) ?>?text=<?= e(rawurlencode('Olá, ' . $f['contratante_nome'] . ", aqui é a Donkey Head Cervejaria.\n\nSegue o contrato nº " . $k['numero'] . " para leitura e assinatura eletrônica:\n" . $link)) ?>">📲 Enviar</a>
               <form method="post" action="./?acao=contrato-convite" onsubmit="return confirm('Reenviar o e-mail de assinatura para <?= e(addslashes($f['contratante_email'])) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><input type="hidden" name="volta" value="lista"><button class="btn secundario">✉️ Reenviar e-mail</button></form>
