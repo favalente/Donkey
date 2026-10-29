@@ -58,6 +58,10 @@ Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento co
 
 Validade: assinatura eletrônica entre as partes (MP 2.200-2/2001, art. 10, § 2º; Lei 14.063/2020). Os e-mails saem de contato@donkeyheadcervejaria.com.br pelo servidor da Locaweb. Dados em `dados/contratos.json`, com cópia diária em `dados/backup/`.
 
+### Clientes
+
+Painel → **Clientes**: cada contrato registra ou atualiza o cliente (pelo CPF/CNPJ) em `dados/clientes.json`. Dá para buscar, chamar no WhatsApp, criar um **pedido de chope já preenchido** com os dados dele e baixar a planilha. No pedido, o cliente marca (opcional) se quer receber novidades; a **planilha para prospecção** traz só quem autorizou (LGPD), e "Parar novidades" retira a autorização quando o cliente pedir. Ninguém puxa dados digitando um CPF no site: o preenchimento automático só acontece no link criado pelo painel.
+
 ## Tap list na TV
 
 Endereços (tela cheia, TV na horizontal):

@@ -416,7 +416,7 @@ function dh_contrato_comodato(array $f, callable $linha): string
 <h3>VII | DO CANCELAMENTO</h3>
 <p>7.1. O cancelamento pelo CONTRATANTE deverá ser comunicado por escrito com antecedência mínima de 48 (quarenta e oito) horas da data de entrega. Após esse prazo, poderão ser cobradas as despesas já realizadas pela CONTRATADA, como frete e chope separado para o pedido.</p>
 <h3>VIII | DOS DADOS PESSOAIS</h3>
-<p>8.1. Os dados pessoais informados neste contrato serão utilizados pela CONTRATADA somente para a sua execução, cobrança e cumprimento de obrigações legais, nos termos da Lei nº 13.709/2018 (LGPD).</p>
+<p>8.1. Os dados pessoais informados neste contrato serão utilizados pela CONTRATADA para a sua execução, cobrança, cumprimento de obrigações legais e para facilitar pedidos futuros do CONTRATANTE, nos termos da Lei nº 13.709/2018 (LGPD). O envio de novidades e promoções depende de autorização expressa do CONTRATANTE, que pode ser retirada a qualquer momento.</p>
 <h3>IX | DAS DISPOSIÇÕES FINAIS</h3>
 <p>9.1. Para dirimir quaisquer controvérsias oriundas do presente contrato, as partes elegem o foro da comarca de Fortaleza/CE.</p>
 <p>9.2. E assim, por estarem de pleno acordo e ajustadas, as partes assinam o presente instrumento eletronicamente, de livre vontade, reconhecendo a validade e a eficácia da assinatura eletrônica, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020, e dispensando a assinatura de testemunhas, conforme o art. 784, § 4º, do Código de Processo Civil.</p>

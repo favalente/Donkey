@@ -55,8 +55,44 @@ function contratos_acao(string $acao): bool
         case 'contratos':
         case 'contrato':
         case 'contratos-config':
+        case 'clientes':
             exigir('contratos');
             return true;
+
+        case 'clientes-csv':
+            exigir('contratos');
+            // Planilha para prospecção: ?todos=1 traz também quem não autorizou novidades (só para consulta interna)
+            $todos = !empty($_GET['todos']);
+            $contratos = dh_contratos()['contratos'];
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="clientes-donkey-' . date('Y-m-d') . ($todos ? '-todos' : '-novidades') . '.csv"');
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Nome', 'CPF/CNPJ', 'Telefone', 'E-mail', 'Endereço', 'Cidade', 'Contratos', 'Último pedido', 'Total assinado (R$)', 'Aceita novidades', 'Autorizou em'], ';');
+            foreach (dh_clientes() as $cl) {
+                if (!$todos && empty($cl['novidades'])) {
+                    continue;
+                }
+                $r = dh_cliente_resumo($cl, $contratos);
+                fputcsv($out, [$cl['nome'], dh_cpf_formatar($cl['doc']), $cl['telefone'], $cl['email'], $cl['endereco'] ?? '', $cl['cidade'] ?? '', $r['qtd'],
+                    dh_data_br($r['ultimo']), number_format($r['total'], 2, ',', '.'), !empty($cl['novidades']) ? 'Sim' : 'Não',
+                    !empty($cl['novidades']) && $cl['novidades_em'] ? date('d/m/Y H:i', strtotime($cl['novidades_em'])) : ''], ';');
+            }
+            exit;
+
+        case 'cliente-novidades':
+            exigir_post();
+            exigir('contratos');
+            $todos = dh_clientes();
+            $doc = dh_so_digitos((string) ($_POST['doc'] ?? ''));
+            if (!isset($todos[$doc])) {
+                throw new RuntimeException('Cliente não encontrado.');
+            }
+            // Só dá para retirar a autorização pelo painel; quem autoriza é o próprio cliente, no pedido
+            $todos[$doc]['novidades'] = false;
+            $todos[$doc]['novidades_em'] = date('Y-m-d H:i:s');
+            dh_clientes_salvar($todos);
+            ir('./?acao=clientes', $todos[$doc]['nome'] . ' não recebe mais novidades.');
 
         case 'contrato-salvar':
             exigir_post();
@@ -90,6 +126,7 @@ function contratos_acao(string $acao): bool
                 }
                 $k['numero'] = dh_contrato_numero($c);
                 dh_contrato_congelar($k, $c['config']);
+                dh_cliente_registrar($k);
             }
             if ($i === null) {
                 $c['contratos'][] = $k;
@@ -106,6 +143,13 @@ function contratos_acao(string $acao): bool
             $k = ['id' => dh_id_novo('c'), 'token' => bin2hex(random_bytes(16)), 'numero' => '', 'tipo' => 'comodato', 'status' => 'preenchimento',
                 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'assinaturas' => [], 'campos' => dh_contrato_campos_padrao('comodato')];
             $k['campos']['itens'] = [];
+            // Cliente da base: o link já vai com os dados dele preenchidos
+            $cl = dh_clientes()[dh_so_digitos((string) ($_POST['cliente'] ?? ''))] ?? null;
+            if ($cl) {
+                $k['campos'] = array_merge($k['campos'], ['contratante_nome' => $cl['nome'], 'contratante_doc' => $cl['doc'], 'contratante_telefone' => $cl['telefone'],
+                    'contratante_email' => $cl['email'], 'entrega_endereco' => $cl['endereco'] ?? '', 'contratante_endereco' => $cl['endereco'] ?? '', 'cidade' => $cl['cidade'] ?? '']);
+                $k['referencia'] = $cl['nome'];
+            }
             $k['campos']['pagamento'] = isset(DH_PAGAMENTOS[$_POST['pagamento'] ?? '']) ? $_POST['pagamento'] : 'pix';
             $k['campos']['observacoes'] = mb_substr(trim((string) ($_POST['observacoes'] ?? '')), 0, 2000);
             $k['referencia'] = mb_substr(trim((string) ($_POST['referencia'] ?? '')), 0, 80);
@@ -245,6 +289,9 @@ function contratos_tela(string $tela): bool
             return true;
         case 'contratos-config':
             contratos_tela_config();
+            return true;
+        case 'clientes':
+            contratos_tela_clientes();
             return true;
     }
     return false;
@@ -438,6 +485,7 @@ function contratos_form(array $k): void
       <form method="post" action="./?acao=contrato-salvar" class="form-cerveja form-contrato">
         <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><input type="hidden" name="tipo" value="<?= e($k['tipo']) ?>">
         <h2>Contratante</h2>
+        <?= contratos_campo_cliente('', 'Puxar cliente da base', 'Preenche os campos abaixo com os dados do cliente') ?>
         <label>Nome / Razão social <input name="contratante_nome" value="<?= e($f['contratante_nome']) ?>" maxlength="200"></label>
         <div class="duas">
           <label>CPF ou CNPJ <input name="contratante_doc" value="<?= e($f['contratante_doc']) ?>" inputmode="numeric"></label>
@@ -579,6 +627,7 @@ function contratos_form_pedido(): void
       <?php endif; ?>
       <form method="post" action="./?acao=contrato-pedido" class="form-cerveja">
         <?= $csrf ?>
+        <?= contratos_campo_cliente('cliente', 'Cliente da base (opcional)', 'Escolha para o link já ir com os dados dele preenchidos') ?>
         <label>Referência <small>(só para você achar na lista, ex.: nome do cliente ou do evento)</small><input name="referencia" maxlength="80"></label>
         <p class="rotulo">Forma de pagamento</p>
         <span class="escolhas"><?php foreach (DH_PAGAMENTOS as $p => $rot): ?><label class="escolha"><input type="radio" name="pagamento" value="<?= $p ?>" <?= $p === 'pix' ? 'checked' : '' ?>><span><?= e($rot) ?></span></label><?php endforeach; ?></span>
@@ -586,5 +635,83 @@ function contratos_form_pedido(): void
         <label>Observações para o contrato <small>(opcional)</small><textarea name="observacoes" rows="3"></textarea></label>
         <div class="barra-salvar"><button class="btn primario">Criar pedido e gerar o link</button></div>
       </form>
+    <?php
+}
+
+// Busca de cliente da base (lista com sugestões). Com $nome, vai no formulário; sem nome, só preenche os campos do contratante.
+function contratos_campo_cliente(string $nome, string $rotulo, string $dica): string
+{
+    $clientes = dh_clientes();
+    if (!$clientes) {
+        return '';
+    }
+    $dados = [];
+    $opcoes = '';
+    foreach ($clientes as $doc => $cl) {
+        $txt = $cl['nome'] . ' · ' . dh_cpf_mascara($doc) . ($cl['telefone'] ? ' · ' . $cl['telefone'] : '');
+        $opcoes .= '<option value="' . e($txt) . '">';
+        $dados[$txt] = ['doc' => $doc, 'nome' => $cl['nome'], 'doc_formatado' => dh_cpf_formatar($doc), 'telefone' => $cl['telefone'], 'email' => $cl['email'], 'endereco' => $cl['endereco'] ?? ''];
+    }
+    $id = 'cli-' . bin2hex(random_bytes(3));
+    $h = '<label>' . e($rotulo) . ' <small>(' . e($dica) . ')</small><input list="' . $id . '" class="busca-cliente" data-alvo="' . e($nome) . '" placeholder="Digite o nome ou o telefone" autocomplete="off"></label>';
+    $h .= '<datalist id="' . $id . '">' . $opcoes . '</datalist>';
+    if ($nome !== '') {
+        $h .= '<input type="hidden" name="' . e($nome) . '" class="cliente-escolhido">';
+    }
+    $h .= '<script>(function () {
+      var dados = ' . json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . ';
+      var campo = document.currentScript.parentNode.querySelector(".busca-cliente:not([data-ok])");
+      campo.setAttribute("data-ok", "1");
+      campo.addEventListener("change", function () {
+        var c = dados[campo.value], form = campo.form;
+        if (!c) return;
+        var oculto = form.querySelector(".cliente-escolhido");
+        if (oculto) { oculto.value = c.doc; return; }
+        var mapa = { contratante_nome: c.nome, contratante_doc: c.doc_formatado, contratante_telefone: c.telefone, contratante_email: c.email, contratante_endereco: c.endereco, entrega_endereco: c.endereco };
+        Object.keys(mapa).forEach(function (n) { if (form.elements[n] && mapa[n]) form.elements[n].value = mapa[n]; });
+      });
+    })();</script>';
+    return $h;
+}
+
+function contratos_tela_clientes(): void
+{
+    global $csrf;
+    $clientes = dh_clientes();
+    $contratos = dh_contratos()['contratos'];
+    $comNovidades = count(array_filter($clientes, fn($c) => !empty($c['novidades'])));
+    ?>
+      <div class="titulo-acao"><h1>Clientes <small><?= count($clientes) ?></small></h1></div>
+      <p class="dica">Entram aqui sozinhos, a cada contrato. <strong><?= $comNovidades ?></strong> autorizaram receber novidades e promoções: só esses devem ser usados para prospecção (LGPD).</p>
+      <p class="botoes-link">
+        <a class="btn primario" href="./?acao=clientes-csv">⬇ Planilha para prospecção (<?= $comNovidades ?>)</a>
+        <a class="btn secundario" href="./?acao=clientes-csv&todos=1">⬇ Planilha completa (uso interno)</a>
+      </p>
+      <input type="search" id="busca" placeholder="Buscar por nome, telefone, e-mail ou cidade…" class="busca">
+      <div class="abas filtro-pasta">
+        <a href="#" data-pasta="todas" class="ativo">Todos <small><?= count($clientes) ?></small></a>
+        <a href="#" data-pasta="sem">Aceitam novidades <small><?= $comNovidades ?></small></a>
+      </div>
+      <?php if (!$clientes): ?><p class="dica">Nenhum cliente ainda. Eles aparecem aqui a partir do primeiro contrato.</p><?php endif; ?>
+      <ul class="lista clientes">
+        <?php foreach ($clientes as $doc => $cl): $r = dh_cliente_resumo($cl, $contratos); ?>
+          <li data-busca="<?= e(mb_strtolower($cl['nome'] . ' ' . $cl['telefone'] . ' ' . dh_so_digitos($cl['telefone']) . ' ' . $cl['email'] . ' ' . ($cl['cidade'] ?? ''))) ?>" data-sem-pasta="<?= !empty($cl['novidades']) ? '1' : '' ?>">
+            <div class="cliente">
+              <strong><?= e($cl['nome']) ?></strong>
+              <span><?= e(dh_cpf_mascara($doc)) ?><?= !empty($cl['cidade']) ? ' · ' . e($cl['cidade']) : '' ?></span>
+              <span><?= $r['qtd'] ?> contrato<?= $r['qtd'] === 1 ? '' : 's' ?><?= $r['ultimo'] ? ' · último em ' . e(dh_data_br($r['ultimo'])) : '' ?><?= $r['total'] > 0 ? ' · ' . e(dh_moeda($r['total'])) . ' assinados' : '' ?></span>
+              <span class="tags"><?= !empty($cl['novidades']) ? '<em class="tag ct-ok">Aceita novidades</em>' : '<em class="tag cinza">Sem autorização para novidades</em>' ?></span>
+              <span class="botoes-link">
+                <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($cl['telefone'])) ?>">WhatsApp</a>
+                <a class="btn secundario" href="mailto:<?= e($cl['email']) ?>">E-mail</a>
+                <form method="post" action="./?acao=contrato-pedido"><?= $csrf ?><input type="hidden" name="cliente" value="<?= e($doc) ?>"><input type="hidden" name="pagamento" value="pix"><button class="btn primario">+ Pedido de chope</button></form>
+                <?php if (!empty($cl['novidades'])): ?>
+                  <form method="post" action="./?acao=cliente-novidades" onsubmit="return confirm('O cliente pediu para não receber mais novidades?');"><?= $csrf ?><input type="hidden" name="doc" value="<?= e($doc) ?>"><button class="btn mini">Parar novidades</button></form>
+                <?php endif; ?>
+              </span>
+            </div>
+          </li>
+        <?php endforeach; ?>
+      </ul>
     <?php
 }

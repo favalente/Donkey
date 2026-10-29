@@ -15,7 +15,11 @@ $opcoes = function (string $sel) use ($cervejas): string {
 };
 $itens = (array) ($_POST['itens'] ?? [['cerveja' => '', 'litros' => '']]);
 $comodato = array_values(array_filter((array) ($_POST['comodato'] ?? []), fn($x) => ($x['cerveja'] ?? '') !== '' || ($x['litros'] ?? '') !== ''));
-$local = (string) ($_POST['local'] ?? '');
+// Cliente da base: os dados já vêm preenchidos (o painel escolheu o cliente ao criar o pedido)
+$cidadeBase = (string) ($f['cidade'] ?? '');
+$local = (string) ($_POST['local'] ?? ($cidadeBase === '' ? '' : (stripos($cidadeBase, 'fortaleza') !== false ? 'fortaleza' : 'outra')));
+$doc = dh_so_digitos($f['contratante_doc']);
+$novidades = isset($_POST['op']) ? !empty($_POST['novidades']) : !empty(dh_clientes()[$doc]['novidades']);
 ?>
 <form method="post" class="papel pedido" id="pedido">
   <?= $csrf ?><input type="hidden" name="op" value="preencher">
@@ -60,12 +64,12 @@ $local = (string) ($_POST['local'] ?? '');
   </table>
 
   <h2>3. Seus dados</h2>
-  <label>Nome completo <input name="nome" required autocomplete="name" value="<?= $v('nome') ?>"></label>
+  <label>Nome completo <input name="nome" required autocomplete="name" value="<?= $v('nome', $f['contratante_nome']) ?>"></label>
   <div class="duas">
-    <label>CPF <input name="cpf" required inputmode="numeric" placeholder="000.000.000-00" value="<?= $v('cpf') ?>"></label>
-    <label>Celular <input name="celular" required inputmode="tel" autocomplete="tel" placeholder="(85) 99999-9999" value="<?= $v('celular') ?>"></label>
+    <label>CPF <input name="cpf" required inputmode="numeric" placeholder="000.000.000-00" value="<?= $v('cpf', $doc !== '' ? dh_cpf_formatar($doc) : '') ?>"></label>
+    <label>Celular <input name="celular" required inputmode="tel" autocomplete="tel" placeholder="(85) 99999-9999" value="<?= $v('celular', $f['contratante_telefone']) ?>"></label>
   </div>
-  <label>Endereço de entrega <input name="endereco" required autocomplete="street-address" value="<?= $v('endereco') ?>"></label>
+  <label>Endereço de entrega <input name="endereco" required autocomplete="street-address" value="<?= $v('endereco', $f['entrega_endereco']) ?>"></label>
   <div class="duas">
     <label>Data de recebimento do equipamento <input type="date" name="entrega_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('entrega_data') ?>"></label>
     <label>Data de devolução do equipamento <input type="date" name="devolucao_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('devolucao_data') ?>"></label>
@@ -75,8 +79,9 @@ $local = (string) ($_POST['local'] ?? '');
     <label class="check"><input type="radio" name="local" value="fortaleza" required <?= $local === 'fortaleza' ? 'checked' : '' ?>> Sim, em Fortaleza <small>(frete de <?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?>, instalação e retirada)</small></label>
     <label class="check"><input type="radio" name="local" value="outra" <?= $local === 'outra' ? 'checked' : '' ?>> Não, em outra cidade <small>(frete sob consulta)</small></label>
   </div>
-  <label id="campo-cidade" <?= $local === 'outra' ? '' : 'hidden' ?>>Cidade da entrega <input name="cidade" value="<?= $v('cidade') ?>" placeholder="Ex.: Guaramiranga/CE"></label>
-  <label>E-mail <small>(para a cópia do contrato e o código de assinatura)</small><input type="email" name="email" required autocapitalize="none" autocomplete="email" value="<?= $v('email') ?>"></label>
+  <label id="campo-cidade" <?= $local === 'outra' ? '' : 'hidden' ?>>Cidade da entrega <input name="cidade" value="<?= $v('cidade', $local === 'outra' ? $cidadeBase : '') ?>" placeholder="Ex.: Guaramiranga/CE"></label>
+  <label>E-mail <small>(para a cópia do contrato e o código de assinatura)</small><input type="email" name="email" required autocapitalize="none" autocomplete="email" value="<?= $v('email', $f['contratante_email']) ?>"></label>
+  <label class="check novidades"><input type="checkbox" name="novidades" value="1" <?= $novidades ? 'checked' : '' ?>> Quero receber novidades, promoções e a agenda de shows da Donkey Head Cervejaria por WhatsApp e e-mail. <small>(opcional; dá para cancelar quando quiser)</small></label>
   <p class="legal">Forma de pagamento: <?= e(DH_PAGAMENTOS[$f['pagamento']] ?? '') ?><?= trim($f['observacoes']) !== '' ? ' · ' . e($f['observacoes']) : '' ?></p>
   <button class="btn grande" id="bt-pedido">Continuar para o contrato</button>
 </form>

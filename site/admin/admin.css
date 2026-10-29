@@ -313,3 +313,11 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .tag.ct-consulta, .tag.ct-preenchimento { background: rgba(233,162,59,.2); color: var(--amber); }
 .resumo-pedido { margin: 0 0 16px; padding-left: 1.1em; }
 .resumo-pedido li { margin-bottom: 4px; }
+/* Clientes */
+.lista.clientes li { border-bottom: 1px solid var(--line); }
+.cliente { display: flex; flex-direction: column; gap: 2px; padding: 14px 4px; }
+.cliente > span { color: var(--muted); font-size: 1rem; }
+.cliente .botoes-link { margin-top: 8px; }
+.cliente .btn { min-height: 44px; padding: 8px 14px; font-size: .95rem; }
+.lista .cliente a.btn.secundario { border: 2px solid var(--amber); color: var(--amber); padding: 8px 14px; border-radius: 999px; }
+.lista .cliente a.btn.secundario:hover { background: rgba(233, 162, 59, .12); }

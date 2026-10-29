@@ -110,6 +110,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         }
         $k = $c['contratos'][$i];
         $k['campos'] = $f;
+        dh_cliente_registrar($k, !empty($_POST['novidades']));
         if ($foraDeFortaleza) {
             $k['status'] = 'consulta';
             $c['contratos'][$i] = $k;
@@ -223,7 +224,7 @@ $f = $k['campos'] ?? [];
   <meta name="referrer" content="no-referrer">
   <title><?= $k ? 'Contrato nº ' . e($k['numero']) . ' · ' : '' ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=4">
+  <link rel="stylesheet" href="contrato.css?v=5">
 </head>
 <body>
   <div class="barra no-print">
