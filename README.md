@@ -66,7 +66,7 @@ Validade: assinatura eletrônica entre as partes (MP 2.200-2/2001, art. 10, § 2
 
 ### Chope delivery (site)
 
-A página inicial tem o card **Chope Delivery** ("Leve o nosso chope para o seu evento!"), que abre `/chope/`: tabela de preços **automática**, só com as cervejas **engatadas agora** (tap list do xMenu). O valor do litro para evento é o litro do bar com **30% de desconto na Premium Lager e 35% nas especiais**, arredondado para cima até o próximo R$ 0,50 (`dh_preco_delivery`, em `inc/contratos.php`). A Aldeota é a referência; cerveja engatada só na Maraponga usa o preço de lá. O formulário de pedido do cliente usa a mesma lista. A página mostra ainda o que está incluso, frete, copos, como funciona e o pedido pelo WhatsApp.
+A página inicial tem o card **Chope Delivery** ("Leve o nosso chope para o seu evento!"), que abre `/chope/`: tabela de preços **automática**, só com as cervejas **engatadas agora** (tap list do xMenu). O valor do litro para evento é o litro do bar com **30% de desconto na Premium Lager e 35% nas especiais**, arredondado para cima até o próximo R$ 0,50 (`dh_preco_delivery`, em `inc/contratos.php`). O preço de referência é sempre o da **Aldeota** (nunca o da Maraponga): cerveja engatada só na Maraponga usa o último preço visto na Aldeota (`dados/precos-aldeota.json`) ou, se nunca foi vista lá, a planilha de produtos da Aldeota (`DH_PRECOS_ALDEOTA_PLANILHA`); sem preço da Aldeota, não entra. O formulário de pedido do cliente usa a mesma lista. A página mostra ainda o que está incluso, frete, copos, como funciona e o pedido pelo WhatsApp.
 
 ### Relatórios de vendas de chope
 

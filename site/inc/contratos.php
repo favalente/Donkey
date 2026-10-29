@@ -236,19 +236,39 @@ function dh_evento_valores(array $f): array
 
 // Cervejas oferecidas para evento (com valor do litro cadastrado em Cervejas), por nome
 // Chope delivery: só as cervejas engatadas agora (tap list do xMenu), com o valor do litro calculado
-// pela regra: litro do bar com 30% de desconto na Premium Lager e 35% nas especiais, arredondado
-// para cima até o próximo R$ 0,50. A Aldeota é a referência de preço; cerveja engatada só na
-// Maraponga usa o preço de lá.
+// pela regra: litro da ALDEOTA com 30% de desconto na Premium Lager e 35% nas especiais, arredondado
+// para cima até o próximo R$ 0,50. Nunca usa o preço da Maraponga: cerveja engatada só lá usa o
+// último preço visto na Aldeota ou, se nunca foi vista, a planilha de produtos da Aldeota (out/2026).
 const DH_DELIVERY_DESCONTO_LAGER = 0.30;
 const DH_DELIVERY_DESCONTO_ESPECIAIS = 0.35;
 // Variações da lager que não entram no delivery
 const DH_DELIVERY_FORA = ['green', 'socio', 'falae', 'aniversariante', 'evento', 'viagem'];
+const DH_ARQ_PRECOS_ALDEOTA = DH_RAIZ . '/dados/precos-aldeota.json';
+// Litro na Aldeota pela planilha de produtos do xMenu (out/2026), para quem não está engatado lá
+const DH_PRECOS_ALDEOTA_PLANILHA = [
+    'PREMIUM LAGER' => 30, 'STIGMAPA' => 42, 'MANDACARIPA' => 45, 'GALO CAMPINA' => 37, 'ASA BRANCA' => 40,
+    'SEVERINA SOUR (CAJU)' => 40, 'SEVERINA SOUR (ACEROLA)' => 40, 'SEVERINA SOUR (MANGA)' => 40, 'SEVERINA SOUR MANGA' => 40,
+    'SEVERINA SOUR (ABACAXI COM HORTELÃ)' => 40, 'SEVERINA SOUR (GOIABA)' => 40, 'MIOLO DE POTE' => 38,
+    'AZEDINHA (SOUR DE MELANCIA)' => 40, 'AZEDINHA' => 40, 'VELAS DO MUCURIPE' => 34, 'ASSUM PRETO' => 48, 'PESTE NEGRA' => 62,
+    'PESTE NEGRA TOFFEE' => 62, 'PESTE NEGRA AVELÃ' => 62, 'PESTE NEGRA CARVALHO' => 62, 'PESTE NEGRA AMARULA' => 62,
+    'RYE SE LASCAR' => 48, 'RYE TIMBORA' => 45, 'CALDO DE BILA' => 59, 'VIXEBIER' => 40, 'SOFTHOP' => 40, 'ALL MY LOVE' => 62,
+    'CITRANELA' => 59, 'ST. PADIM CIÇU TRIPEL' => 48, 'ST. PADIM CIÇU QUADRUPEL 10' => 50, 'ST. PADIM ÇIÇU 10' => 50,
+    'MEL DA GOIABA' => 40, 'METANOIA' => 47, 'PARDAL NEGRO' => 62, 'RED HOP' => 45, 'PIFITÃO DAS VÉIA' => 40,
+    'BRUT IPA' => 62, 'BRUT DE SAUVIN' => 62, 'MARACUTAIA' => 45, 'CACAU BROWNIEIPA' => 45, 'STRAWBERRY' => 62,
+    'STRAWBERRY FIELDS FOREVER' => 62, 'SANTA STOUT' => 62, 'JEGUE BROWN' => 45, 'DRAGÃO DO MAR' => 45,
+];
 
 function dh_preco_delivery(string $nome, float $litroBar): float
 {
     $lager = strpos(dh_slug($nome), 'premium-lager') !== false;
     $v = $litroBar * (1 - ($lager ? DH_DELIVERY_DESCONTO_LAGER : DH_DELIVERY_DESCONTO_ESPECIAIS));
     return ceil(round($v * 2, 4)) / 2;
+}
+
+// Chave para achar a mesma cerveja escrita de jeitos diferentes ("Soft HOP" = "SOFTHOP")
+function dh_chave_preco(string $nome): string
+{
+    return str_replace('-', '', preg_replace('/^dh-/', '', dh_slug($nome)));
 }
 
 function dh_cervejas_evento(): array
@@ -259,26 +279,58 @@ function dh_cervejas_evento(): array
     }
     $dados = dh_carregar();
     $porId = dh_por_id($dados);
-    $lista = [];
-    foreach (array_keys(DH_UNIDADES) as $u) {
-        foreach (dh_xmenu_taplist($u, $dados['cervejas']) ?? [] as $it) {
-            $litro = null;
-            foreach ($it['precos'] as $p) {
-                if (preg_match('/^1\s*L$/i', trim($p['tam']))) {
-                    $litro = (float) $p['valor'];
-                }
+    $litro = function (array $it): ?float {
+        foreach ($it['precos'] as $p) {
+            if (preg_match('/^1\s*L$/i', trim($p['tam']))) {
+                return (float) $p['valor'];
             }
+        }
+        return null;
+    };
+    $chaves = fn(array $it) => array_values(array_unique(array_filter(array_map('dh_chave_preco', [$it['nome'] ?? '', $it['nome_xmenu'] ?? '', $it['id'] ?? '']))));
+    // Referência da Aldeota: planilha < último preço visto < preço de agora
+    $ref = [];
+    foreach (DH_PRECOS_ALDEOTA_PLANILHA as $n => $v) {
+        $ref[dh_chave_preco($n)] = (float) $v;
+    }
+    $visto = json_decode((string) @file_get_contents(DH_ARQ_PRECOS_ALDEOTA), true);
+    $ref = array_merge($ref, is_array($visto) ? $visto : []);
+    $tapAldeota = dh_xmenu_taplist('aldeota', $dados['cervejas']) ?? [];
+    $mudou = false;
+    foreach ($tapAldeota as $it) {
+        if ($l = $litro($it)) {
+            foreach ($chaves($it) as $k) {
+                $mudou = $mudou || ($visto[$k] ?? null) !== $l;
+                $visto[$k] = $l;
+                $ref[$k] = $l;
+            }
+        }
+    }
+    if ($mudou && is_dir(dirname(DH_ARQ_PRECOS_ALDEOTA))) {
+        @file_put_contents(DH_ARQ_PRECOS_ALDEOTA, json_encode($visto, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+    $lista = [];
+    foreach (['aldeota' => $tapAldeota, 'maraponga' => dh_xmenu_taplist('maraponga', $dados['cervejas']) ?? []] as $u => $tap) {
+        foreach ($tap as $it) {
             $chave = $it['id'] ?: dh_slug($it['nome']);
-            if (!$litro || isset($lista[$chave]) || array_filter(DH_DELIVERY_FORA, fn($x) => strpos(dh_slug($it['nome']), $x) !== false)) {
-                if (isset($lista[$chave])) {
-                    $lista[$chave]['unidades'][] = $u;
-                }
+            if (isset($lista[$chave])) {
+                $lista[$chave]['unidades'][] = $u;
                 continue;
+            }
+            if (!$litro($it) || array_filter(DH_DELIVERY_FORA, fn($x) => strpos(dh_slug($it['nome']), $x) !== false)) {
+                continue;
+            }
+            $bar = null;
+            foreach ($chaves($it) as $k) {
+                $bar ??= $ref[$k] ?? null;
+            }
+            if (!$bar) {
+                continue; // sem preço de referência da Aldeota, não entra
             }
             $c = ($it['id'] && isset($porId[$it['id']]) ? $porId[$it['id']] : $it) + ['estilo' => '', 'abv' => '', 'imagem' => 'assets/img/rotulo-padrao.png'];
             $c['id'] = $chave;
-            $c['preco_bar'] = $litro;
-            $c['preco_evento'] = number_format(dh_preco_delivery($c['nome'], $litro), 2, '.', '');
+            $c['preco_bar'] = $bar;
+            $c['preco_evento'] = number_format(dh_preco_delivery($c['nome'], $bar), 2, '.', '');
             $c['unidades'] = [$u];
             $lista[$chave] = $c;
         }
