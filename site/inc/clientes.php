@@ -67,9 +67,19 @@ function dh_cliente_registrar(array $k, ?bool $novidades = null): void
 // Resumo de compras do cliente a partir dos contratos dele
 function dh_cliente_resumo(array $cl, array $contratos): array
 {
+    static $historico = null;
+    $historico ??= array_column(dh_vendas_historico()['pedidos'], null, 'id');
     $porId = array_column($contratos, null, 'id');
     $r = ['qtd' => 0, 'assinados' => 0, 'total' => 0.0, 'ultimo' => ''];
     foreach ($cl['contratos'] as $id) {
+        // Contrato antigo importado da ZapSign (já assinado)
+        if (isset($historico[$id]) && !$historico[$id]['duplicado']) {
+            $r['qtd']++;
+            $r['assinados']++;
+            $r['total'] += (float) $historico[$id]['valor'];
+            $r['ultimo'] = max($r['ultimo'], $historico[$id]['data']);
+            continue;
+        }
         $k = $porId[$id] ?? null;
         if (!$k || in_array($k['status'], ['rascunho', 'cancelado'], true)) {
             continue;

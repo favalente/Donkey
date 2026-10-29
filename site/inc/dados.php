@@ -232,3 +232,4 @@ function dh_gravar_jpeg($img, string $destino, int $max, int $qualidade = 82): v
 require_once __DIR__ . '/agenda.php';
 require_once __DIR__ . '/contratos.php';
 require_once __DIR__ . '/clientes.php';
+require_once __DIR__ . '/vendas.php';

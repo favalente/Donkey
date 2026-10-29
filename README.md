@@ -64,6 +64,12 @@ Contrato assinado tem **✉️ Reenviar cópia** (para contato@ e a lista de có
 
 Validade: assinatura eletrônica entre as partes (MP 2.200-2/2001, art. 10, § 2º; Lei 14.063/2020). Os e-mails saem de contato@donkeyheadcervejaria.com.br pelo **SMTP autenticado da Locaweb** (email-ssl.com.br, porta 587, TLS): a senha da caixa é cadastrada em Contratos → Configurações e fica só em `dados/email.json` (sem senha, o sistema tenta o `mail()` do PHP). A mesma tela tem **Enviar e-mail de teste** e o histórico dos últimos envios, com o erro quando algum falha. Dados em `dados/contratos.json`, com cópia diária em `dados/backup/`.
 
+### Relatórios de vendas de chope
+
+Painel → **📊 Relatórios** (administrador e financeiro), no padrão do painel do Reverti: período no topo (últimos 12/6/3 meses, este ano, ano passado, todo o histórico ou datas), cartões de faturamento, pedidos, litros, ticket médio, valor médio do litro, clientes, empresas e chope consignado (com comparação com o mesmo período do ano anterior), **💡 Onde melhorar** (leituras automáticas dos números), faturamento por mês, época do ano, tamanho do pedido, dia da semana, rótulos, antecedência, bairros/cidades, ranking de clientes (top 5/10/20) e clientes sem comprar há 6/12/24 meses, com botão de WhatsApp.
+
+Os dados vêm dos contratos de comodato assinados no site e do **histórico da ZapSign**: no fim da página de Relatórios, envie a planilha .xlsx de respostas do modelo de contrato. O importador (`inc/vendas.php`) limpa o texto livre (rótulo escrito de vários jeitos, litragem, valores em R$ ou $, datas com ano errado, total trocado com o valor do litro), marca contratos repetidos e lista o que foi corrigido para conferir. Reenviar a planilha atualiza, sem duplicar. Os clientes entram na base de Clientes. Tudo fica só no servidor (`dados/vendas-historico.json`).
+
 ### Clientes
 
 Painel → **Clientes**: cada contrato registra ou atualiza o cliente (pelo CPF/CNPJ) em `dados/clientes.json`. Dá para buscar, chamar no WhatsApp, criar um **pedido de chope já preenchido** com os dados dele e baixar a planilha. Os dados dos pedidos servem para análise interna de vendas; o pedido não pede mais autorização de novidades. A **planilha para prospecção** traz só quem autorizou antes (LGPD), e "Parar novidades" retira a autorização quando o cliente pedir. Ninguém puxa dados digitando um CPF no site: o preenchimento automático só acontece no link criado pelo painel.

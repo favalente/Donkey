@@ -367,3 +367,45 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .log-email li.falha-envio { border-left-color: var(--erro); }
 .log-email .erro-envio { color: var(--vermelho-txt); font-weight: 600; }
 h1, h2, h3 { overflow-wrap: anywhere; }
+/* Relatórios de vendas */
+.filtro-periodo { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.filtro-periodo label { margin-bottom: 0; flex: 1 1 200px; }
+.filtro-periodo .datas { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; flex: 2 1 300px; }
+.filtro-periodo .datas[hidden] { display: none; }
+.grade-metricas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 14px 0 18px; }
+@media (min-width: 760px) { .grade-metricas { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.grade-metricas.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grade-metricas a { text-decoration: none; color: inherit; }
+.grade-metricas a.ativo .cartao-metrica { border-color: var(--amber); box-shadow: 0 0 0 2px var(--amber); }
+.cartao-metrica { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; height: 100%; }
+.cm-rotulo { margin: 0; font-size: .85rem; color: var(--muted); }
+.cm-valor { margin: 2px 0 0; font-size: 1.45rem; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.cm-dica { margin: 2px 0 0; font-size: .78rem; color: var(--muted); }
+.caixa-relatorio { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.caixa-relatorio h2 { margin: 0 0 12px; font-size: 1.15rem; }
+.caixa-relatorio h2 small { font-weight: 400; color: var(--muted); font-size: .8rem; }
+.duas-colunas { display: grid; gap: 14px; margin-bottom: 14px; }
+.duas-colunas .caixa-relatorio { margin-bottom: 0; }
+@media (min-width: 760px) { .duas-colunas { grid-template-columns: 1fr 1fr; } }
+.dicas-vendas { border-left: 6px solid var(--amber); }
+.dicas-vendas ul { margin: 0; padding-left: 18px; }
+.dicas-vendas li { margin-bottom: 8px; }
+.barras { display: grid; gap: 6px; }
+.barra-linha { display: grid; grid-template-columns: minmax(70px, 34%) 1fr auto; gap: 8px; align-items: center; padding: 2px 0; border-radius: 6px; }
+.barra-linha:hover { background: var(--hover); }
+.barra-rotulo { font-size: .88rem; overflow-wrap: anywhere; }
+.barra-trilho { height: 14px; display: block; }
+.barra { display: block; height: 100%; min-width: 2px; background: var(--amber); border-radius: 0 4px 4px 0; }
+.barra-valor { font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.abas-mini { display: flex; gap: 6px; }
+.abas-mini a { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: .85rem; color: var(--text); text-decoration: none; }
+.abas-mini a.ativo { border-color: var(--amber); background: rgba(233, 162, 59, .14); color: var(--ambar-txt); font-weight: 700; }
+.ranking { margin: 0; padding-left: 22px; }
+.ranking li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ranking li { display: list-item; }
+.ranking li .info { display: inline-flex; flex-direction: column; vertical-align: top; width: calc(100% - 130px); }
+.ranking li .btn { float: right; padding: 8px 12px; font-size: .85rem; }
+.alertas-importacao { margin-top: 12px; }
+.alertas-importacao summary { cursor: pointer; font-weight: 600; }
+.alertas-importacao li { margin: 8px 0; font-size: .88rem; overflow-wrap: anywhere; }
+.alertas-importacao li span { color: var(--muted); }
