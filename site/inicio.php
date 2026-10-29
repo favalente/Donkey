@@ -90,7 +90,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=15">
+  <link rel="stylesheet" href="assets/css/style.css?v=16">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -202,8 +202,8 @@ function detalhe(array $c): string
     <section class="section section-alt" id="cervejas">
       <div class="container">
         <div class="section-head">
-          <p class="eyebrow">Confira todos os rótulos que já produzimos</p>
           <h2>Nossas cervejas</h2>
+          <p class="eyebrow subtitulo">Confira todos os rótulos que já produzimos</p>
           <p>Veja o que está engatado em cada unidade e toque no rótulo para ver os detalhes da cerveja.</p>
         </div>
         <?php if ($temTaplist): ?>

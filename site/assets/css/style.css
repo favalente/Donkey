@@ -318,3 +318,5 @@ a.filtro { text-decoration: none; color: var(--text); }
 .historia-artigo h2 { margin-bottom: 1rem; }
 .historia-artigo .prose { margin-top: 1.2rem; }
 @media (max-width: 720px) { .historia-modal { width: 100%; max-width: 100%; height: 100dvh; margin: 0; border-radius: 0; border: 0; } }
+/* Subtítulo logo abaixo do título da seção */
+.section-head h2 + .subtitulo { margin: -.2em 0 1em; }
