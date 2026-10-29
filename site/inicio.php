@@ -130,11 +130,11 @@ function detalhe(array $c): string
         <span></span><span></span><span></span>
       </button>
       <nav id="menu" class="menu">
-        <a href="chope/">Chope Delivery</a>
-        <a href="agenda/">Agenda</a>
         <a href="#historia">Nossa história</a>
         <a href="#cervejas">Cervejas</a>
         <a href="#galeria">Galeria</a>
+        <a href="chope/">Chope Delivery</a>
+        <a href="agenda/">Agenda</a>
         <a href="#contato">Contato</a>
         <a class="btn btn-primary btn-sm" href="<?= e($cardapio) ?>" target="_blank" rel="noopener">Cardápio</a>
       </nav>
