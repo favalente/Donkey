@@ -462,3 +462,91 @@ function dh_banda_por_token(array $a, string $token): ?int
     }
     return null;
 }
+
+// ---- Pastas das bandas no Google Drive ----
+// A pasta principal é pública: o site lê a lista de subpastas ("12 - Banda Sonorah") sem senha.
+
+const DH_DRIVE_PASTA = '1ZBzibaWI60lIRi0HdE6bkZ3BsSk7wKfm';
+const DH_ARQ_DRIVE = DH_RAIZ . '/dados/drive-pastas.json';
+
+// Lista de subpastas [{id, nome}]; guarda por 10 minutos. Null se o Google não respondeu e não há cópia.
+function dh_drive_pastas(bool $forcar = false): ?array
+{
+    $cache = json_decode((string) @file_get_contents(DH_ARQ_DRIVE), true);
+    if (!$forcar && is_array($cache) && time() - ($cache['lido'] ?? 0) < 600) {
+        return $cache;
+    }
+    $url = 'https://drive.google.com/embeddedfolderview?id=' . DH_DRIVE_PASTA;
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_HTTPHEADER => ['User-Agent: Mozilla/5.0 (DonkeyHeadSite)']]);
+        $html = curl_exec($ch);
+        $ok = curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200;
+        curl_close($ch);
+    } else {
+        $html = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 10]]));
+        $ok = $html !== false;
+    }
+    if (!$ok || !is_string($html) || !preg_match_all('~id="entry-([\w-]{10,})".*?href="[^"]*/folders/\1[^"]*".*?flip-entry-title">([^<]*)<~s', $html, $m, PREG_SET_ORDER)) {
+        return is_array($cache) ? $cache + ['erro' => true] : null;
+    }
+    $pastas = [];
+    foreach ($m as $x) {
+        $pastas[] = ['id' => $x[1], 'nome' => trim(html_entity_decode($x[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'))];
+    }
+    $dados = ['lido' => time(), 'pastas' => $pastas];
+    if (is_dir(dirname(DH_ARQ_DRIVE))) {
+        @file_put_contents(DH_ARQ_DRIVE, json_encode($dados, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+    return $dados;
+}
+
+// "101 - Rádio Hits" -> "Rádio Hits"
+function dh_drive_nome_banda(string $pasta): string
+{
+    return trim(preg_replace('/^\s*\d+\s*[-–.)]\s*/u', '', $pasta));
+}
+
+// Liga as pastas novas às bandas de mesmo nome. Devolve o que mudou e as pastas sem banda cadastrada.
+function dh_drive_sincronizar(array &$a, bool $forcar = false): array
+{
+    $lista = dh_drive_pastas($forcar);
+    $r = ['ok' => $lista !== null && empty($lista['erro']), 'lido' => $lista['lido'] ?? 0, 'ligadas' => [], 'sem_banda' => []];
+    if ($lista === null) {
+        return $r;
+    }
+    $usadas = [];
+    $porChave = [];
+    foreach ($a['bandas'] as $i => $b) {
+        foreach ($b['drive'] ?? [] as $id) {
+            $usadas[$id] = true;
+        }
+        $porChave[dh_chave_banda($b['nome'])] = $i;
+    }
+    foreach ($lista['pastas'] as $p) {
+        if (isset($usadas[$p['id']])) {
+            continue;
+        }
+        $nome = dh_drive_nome_banda($p['nome']);
+        $k = dh_chave_banda($nome);
+        $i = $porChave[$k] ?? null;
+        if ($i === null && strlen($k) >= 7) {
+            // Uma letra de diferença ainda é a mesma banda ("Misteryman" / "Mysteryman")
+            foreach ($porChave as $outra => $j) {
+                if (abs(strlen($outra) - strlen($k)) <= 1 && levenshtein($outra, $k) <= 1) {
+                    $i = $j;
+                    break;
+                }
+            }
+        }
+        if ($i === null) {
+            $r['sem_banda'][] = ['id' => $p['id'], 'nome' => $nome];
+            continue;
+        }
+        $a['bandas'][$i]['drive'][] = $p['id'];
+        $usadas[$p['id']] = true;
+        $r['ligadas'][] = ['banda' => $a['bandas'][$i]['nome'], 'pasta' => $p['nome']];
+    }
+    return $r;
+}

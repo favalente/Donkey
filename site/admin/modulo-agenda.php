@@ -490,9 +490,38 @@ function agenda_acao(string $acao): bool
             exigir('agenda');
             return true;
         case 'bandas':
+            exigir('bandas');
+            // Confere a pasta das bandas no Google Drive (a cada 10 min, ou na hora pelo botão)
+            global $driveResultado;
+            $a = dh_agenda();
+            $driveResultado = dh_drive_sincronizar($a, !empty($_GET['verificar']));
+            if ($driveResultado['ligadas']) {
+                dh_agenda_salvar($a);
+            }
+            return true;
         case 'banda':
             exigir('bandas');
             return true;
+
+        case 'banda-da-pasta':
+            exigir_post();
+            exigir('bandas_editar');
+            $a = dh_agenda();
+            $pasta = (string) ($_POST['pasta'] ?? '');
+            $nome = mb_substr(trim((string) ($_POST['nome'] ?? '')), 0, 80);
+            if (!preg_match('/^[\w-]{10,}$/', $pasta) || $nome === '') {
+                throw new RuntimeException('Pasta inválida.');
+            }
+            foreach ($a['bandas'] as $b) {
+                if (in_array($pasta, $b['drive'] ?? [], true)) {
+                    ir('./?acao=banda&id=' . $b['id'], 'Essa pasta já é da banda "' . $b['nome'] . '".');
+                }
+            }
+            $id = dh_id_novo('b');
+            $a['bandas'][] = ['id' => $id, 'nome' => $nome, 'tributos' => [], 'cache' => '', 'consumacao' => '', 'instagram' => '', 'contato' => '',
+                'obs' => 'Cadastrada pela pasta do Google Drive', 'fotos' => [], 'drive' => [$pasta]];
+            dh_agenda_salvar($a);
+            ir('./?acao=banda&id=' . $id, '"' . $nome . '" cadastrada com a pasta do Google Drive. Complete o tributo e os valores.');
         case 'relatorio':
             exigir('relatorio');
             return true;
@@ -1379,6 +1408,7 @@ function agenda_tela_show(): void
 
 function agenda_tela_bandas(): void
 {
+    global $csrf;
     $a = dh_agenda();
     $hoje = date('Y-m-d');
     $proximo = [];
@@ -1392,6 +1422,34 @@ function agenda_tela_bandas(): void
         <h1>Bandas <small><?= count($a['bandas']) ?></small></h1>
         <?php if (pode('agenda_editar')): ?><a class="btn primario" href="./?acao=banda">+ Nova banda</a><?php endif; ?>
       </div>
+      <?php global $driveResultado; $dr = $driveResultado ?? null; if ($dr): ?>
+        <div class="drive-status">
+          <?php if ($dr['ligadas']): ?>
+            <p class="ok">✓ Pasta<?= count($dr['ligadas']) > 1 ? 's novas encontradas' : ' nova encontrada' ?> no Google Drive:<br>
+              <?= implode('<br>', array_map(fn($l) => '📁 ' . e($l['pasta']) . ' → <strong>' . e($l['banda']) . '</strong>', $dr['ligadas'])) ?></p>
+          <?php endif; ?>
+          <?php if ($dr['sem_banda']): ?>
+            <div class="aviso">
+              <p><strong>Pasta no Google Drive sem banda cadastrada:</strong></p>
+              <ul class="pastas-novas">
+                <?php foreach ($dr['sem_banda'] as $pn): ?>
+                  <li>
+                    <span>📁 <?= e($pn['nome']) ?></span>
+                    <?php if (pode('bandas_editar')): ?>
+                      <form method="post" action="./?acao=banda-da-pasta"><?= $csrf ?><input type="hidden" name="pasta" value="<?= e($pn['id']) ?>"><input type="hidden" name="nome" value="<?= e($pn['nome']) ?>"><button class="btn primario mini-cadastrar">Cadastrar esta banda</button></form>
+                    <?php endif; ?>
+                  </li>
+                <?php endforeach; ?>
+              </ul>
+              <?php if (!pode('bandas_editar')): ?><p class="dica">Avise o financeiro ou o administrador para cadastrar.</p><?php endif; ?>
+            </div>
+          <?php endif; ?>
+          <p class="dica drive-verificar">
+            <?= $dr['ok'] ? 'Pastas do Google Drive conferidas ' . ($dr['lido'] && time() - $dr['lido'] > 60 ? 'há ' . (int) round((time() - $dr['lido']) / 60) . ' min' : 'agora') . '.' : '⚠ Não foi possível consultar o Google Drive agora.' ?>
+            <a class="btn secundario" href="./?acao=bandas&verificar=1">🔄 Verificar pastas no Google Drive agora</a>
+          </p>
+        </div>
+      <?php endif; ?>
       <input type="search" id="busca" placeholder="Buscar por banda ou tributo…" class="busca">
       <?php $semPasta = count(array_filter($a['bandas'], 'dh_banda_sem_pasta')); ?>
       <div class="abas filtro-pasta">

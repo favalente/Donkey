@@ -280,3 +280,10 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .cal-menu-sem-pasta { margin: 4px 0 0; }
 .cal-menu-sem-pasta[hidden] { display: none; }
 .filtro-pasta { margin-top: 4px; }
+.drive-status { margin-bottom: 16px; }
+.drive-status .aviso p { margin: 0 0 8px; }
+.pastas-novas { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pastas-novas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.pastas-novas form { margin: 0; }
+.mini-cadastrar { min-height: 44px; padding: 8px 16px; font-size: .95rem; }
+.drive-verificar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
