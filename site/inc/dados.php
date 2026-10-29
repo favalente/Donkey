@@ -27,43 +27,57 @@ function dh_carregar(): array
     foreach (DH_UNIDADES as $u => $_) {
         $dados['torneiras'][$u] = array_values($dados['torneiras'][$u] ?? []);
     }
-    if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['precos_evento_2026'])) {
-        $dados = dh_precos_evento_2026($dados);
+    if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['cervejas_novas_2026'])) {
+        $dados = dh_cervejas_novas_2026($dados);
     }
     return $dados;
 }
 
-// Tabela do chope delivery 2026 (uma vez só): litro da tap list da Aldeota com 30% de desconto na
-// Premium Lager e 35% nas especiais, arredondado para cima até o próximo R$ 0,50.
-const DH_PRECOS_EVENTO_2026 = [
-    'dh premium lager puro m' => 21.00, // bar R$ 30
-    'velas do mucuripe' => 22.50,       // bar R$ 34
-    'galo campina' => 24.50,            // bar R$ 37
-    'miolo de pote' => 25.00,           // bar R$ 38
-    'asa branca' => 26.00,              // bar R$ 40
-    'vixebier' => 26.00,                // bar R$ 40
-    'mel da goiaba' => 26.00,           // bar R$ 40
-    'soft hop' => 26.00,                // bar R$ 40
-    'stigmapa' => 27.50,                // bar R$ 42
-    'mandacaripa' => 29.50,             // bar R$ 45
-];
-
-function dh_precos_evento_2026(array $dados): array
+// Cervejas novas enviadas em out/2026 (uma vez só). Se o xMenu já tiver cadastrado alguma sozinho,
+// a ficha dela é completada em vez de criar outra.
+function dh_cervejas_novas_2026(array $dados): array
 {
-    $chave = function (string $nome): string {
-        $t = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $nome);
-        return trim(preg_replace('/[^a-z0-9]+/', ' ', strtolower($t === false ? $nome : $t)));
-    };
-    $aplicados = [];
-    foreach ($dados['cervejas'] as $i => $c) {
-        $k = $chave((string) $c['nome']);
-        $k = $k === 'softhop' ? 'soft hop' : $k;
-        if (isset(DH_PRECOS_EVENTO_2026[$k])) {
-            $dados['cervejas'][$i]['preco_evento'] = number_format(DH_PRECOS_EVENTO_2026[$k], 2, '.', '');
-            $aplicados[] = $c['nome'];
+    $novas = [
+        ['id' => 'cacau-brownieipa', 'nome' => 'Cacau BrownieIPA', 'estilo' => 'Brown IPA', 'pais' => 'EUA', 'categoria' => 3, 'abv' => '6.0', 'ibu' => '65',
+            'nome_xmenu' => 'CACAU BROWNIEIPA', 'imagem' => 'assets/img/cervejas/cacau-brownieipa.jpg',
+            'descricao' => "Uma American Brown IPA com chocolate. Traz coloração marrom escura, corpo médio e final seco. No aroma, notas intensas de malte tostado, avelã, cacau e caramelo. O amargor elevado une-se ao do cacau, trazendo equilíbrio e complexidade.\n\nA combinação de lúpulos americanos de amargor, tosta de diferentes maltes e o toque de chocolate, traz um sabor especial e único para esta cerveja. Lúpulos americanos de perfil resinoso e cítrico complementam a experiência. Ideal para quem busca intensidade, amargor.\n\nÉ doce? Não! É Nutella? Jamais! É IPA? Demais!\n\nEsta é uma IPA de cor marrom com um toque de chocolate, possui um potente amargor, você deverá sentir uma mescla do amargor do cacau com o dos lúpulos. Traz também notas de avelã e caramelo."],
+        ['id' => 'santa-stout', 'nome' => 'Santa Stout', 'estilo' => 'Imperial Stout', 'pais' => 'Inglaterra', 'categoria' => 4, 'abv' => '12.0', 'ibu' => '100',
+            'nome_xmenu' => 'SANTA STOUT', 'imagem' => 'assets/img/rotulo-padrao.png',
+            'descricao' => "Imperial Stout com avelã e panetone.\n\nCriada especialmente para o período natalino, a Santa Stout é uma cerveja de lote super limitado e exclusivo, perfeita para celebrar em grande estilo. Com uma coloração escura e um perfil intensamente saboroso, ela combina potência e sofisticação em cada gole.\n\nSua composição alia avelã e panetone, transformando-a em uma verdadeira sobremesa líquida. O conjunto revela notas marcantes de café, chocolate, avelã e, claro, panetone, transportando você diretamente para o clima de Natal.\n\nPara alcançar uma complexidade única, utilizamos maltes importados de dupla tosta, garantindo uma profundidade de sabores que surpreende a cada degustação. A Santa Stout é robusta, intensa e inesquecível — um verdadeiro presente para os amantes de cervejas artesanais."],
+        ['id' => 'maracutaia', 'nome' => 'Maracutaia', 'estilo' => 'Catharina Sour (com maracujá e pitaia)', 'pais' => 'Brasil', 'categoria' => 1, 'abv' => '4.5', 'ibu' => '4',
+            'nome_xmenu' => 'MARACUTAIA', 'imagem' => 'assets/img/cervejas/maracutaia.jpg',
+            'descricao' => "Tão boa que se fosse licitação você não conseguiria pagar por ela. Ela tá tão linda que já ganhou um cargo comissionado 😍\n\nUma Sour Ale com adição de maracujá e pitaia, adições estas feitas na maturação para dar maior sensação de fruta bem fresca, um verdadeiro suquinho 🤤\n\nTrouxemos pra você uma cerveja refrescante com acidez média e limpa, a alta carbonatação completa o conjunto perfeito para o nosso clima.\n\nEm uma explicação simplificada poderíamos dizer que a Catharina Sour é como se fosse o estilo alemão Berliner Weiss um pouco mais forte e com adições de frutas frescas na maturação."],
+        ['id' => 'jegue-brown', 'nome' => 'Jegue Brown', 'estilo' => 'English Brown Ale', 'pais' => 'Inglaterra', 'categoria' => 2, 'abv' => '4.5', 'ibu' => '23',
+            'nome_xmenu' => 'JEGUE BROWN', 'imagem' => 'assets/img/cervejas/jegue-brown.jpg',
+            'descricao' => "Uma English Brown Ale que prioriza o sabor do malte, trazendo notas principais de caramelo, pão tostado e quem sabe um pouco de café e rapadura, o amargor é baixo. Com 4,5% de teor alcoólico, ela é leve, fácil de beber (mesmo sendo escura). Ela lembra o aconchego de uma mesa de café do sertão."],
+        ['id' => 'azedinha', 'nome' => 'Azedinha', 'estilo' => 'Sour de Melancia', 'pais' => 'Alemanha', 'categoria' => 1, 'abv' => '3.5', 'ibu' => '5',
+            'nome_xmenu' => 'AZEDINHA (SOUR DE MELANCIA)', 'imagem' => 'assets/img/cervejas/azedinha.jpg',
+            'descricao' => "Lembra de um bombom antigo chamado azedinho? Dentre seus vários sabores, ele tinha um de melancia, a ideia desta cerveja é trazer à memória aquele sabor de infância.\n\nEsta cerveja tem como base o estilo Berliner Weiss, uma cerveja de trigo originalmente alemã, ácida, clara, refrescante e de baixíssimo teor alcoólico. Isso a deixa muuuuuito refrescante e fácil de beber, pode tomar muitas sem medo que você não vai se embriagar hahahaah."],
+        ['id' => 'dragao-do-mar', 'nome' => 'Dragão do Mar', 'estilo' => 'Gose com Goiaba e Pitaia', 'pais' => 'Alemanha', 'categoria' => 1, 'abv' => '4.0', 'ibu' => '5',
+            'nome_xmenu' => 'DRAGÃO DO MAR', 'imagem' => 'assets/img/cervejas/dragao-do-mar.jpg',
+            'descricao' => "Gose com goiaba e pitaia, em versão low carb."],
+    ];
+    $chave = fn(string $n) => dh_slug(preg_replace('/\s*[\[(].*$/u', '', $n));
+    foreach ($novas as $n) {
+        $achou = false;
+        foreach ($dados['cervejas'] as $i => $c) {
+            if ($c['id'] === $n['id'] || $chave((string) $c['nome']) === $n['id'] || $chave((string) ($c['nome_xmenu'] ?? '')) === $n['id']) {
+                $dados['cervejas'][$i] = array_merge($c, $n, ['id' => $c['id'], 'ativa' => true]);
+                $achou = true;
+            }
+        }
+        if (!$achou) {
+            $dados['cervejas'][] = $n + ['preco_300' => '', 'preco_1l' => '', 'ativa' => true];
         }
     }
-    $dados['migracoes']['precos_evento_2026'] = ['em' => date('c'), 'cervejas' => $aplicados];
+    // A Brut IPA do xMenu é a Brut de Sauvin do catálogo
+    foreach ($dados['cervejas'] as $i => $c) {
+        if (dh_slug((string) $c['nome']) === 'brut-de-sauvin' && empty($c['nome_xmenu'])) {
+            $dados['cervejas'][$i]['nome_xmenu'] = 'BRUT IPA';
+        }
+    }
+    usort($dados['cervejas'], fn($a, $b) => strcasecmp(dh_slug($a['nome']), dh_slug($b['nome'])));
+    $dados['migracoes']['cervejas_novas_2026'] = date('c');
     try {
         dh_salvar($dados);
     } catch (RuntimeException $e) {

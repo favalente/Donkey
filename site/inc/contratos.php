@@ -235,11 +235,58 @@ function dh_evento_valores(array $f): array
 }
 
 // Cervejas oferecidas para evento (com valor do litro cadastrado em Cervejas), por nome
+// Chope delivery: só as cervejas engatadas agora (tap list do xMenu), com o valor do litro calculado
+// pela regra: litro do bar com 30% de desconto na Premium Lager e 35% nas especiais, arredondado
+// para cima até o próximo R$ 0,50. A Aldeota é a referência de preço; cerveja engatada só na
+// Maraponga usa o preço de lá.
+const DH_DELIVERY_DESCONTO_LAGER = 0.30;
+const DH_DELIVERY_DESCONTO_ESPECIAIS = 0.35;
+// Variações da lager que não entram no delivery
+const DH_DELIVERY_FORA = ['green', 'socio', 'falae', 'aniversariante', 'evento', 'viagem'];
+
+function dh_preco_delivery(string $nome, float $litroBar): float
+{
+    $lager = strpos(dh_slug($nome), 'premium-lager') !== false;
+    $v = $litroBar * (1 - ($lager ? DH_DELIVERY_DESCONTO_LAGER : DH_DELIVERY_DESCONTO_ESPECIAIS));
+    return ceil(round($v * 2, 4)) / 2;
+}
+
 function dh_cervejas_evento(): array
 {
-    $lista = array_values(array_filter(dh_carregar()['cervejas'], fn($c) => is_numeric($c['preco_evento'] ?? '') && (float) $c['preco_evento'] > 0));
-    usort($lista, fn($a, $b) => strcoll(dh_slug($a['nome']), dh_slug($b['nome'])));
-    return $lista;
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
+    }
+    $dados = dh_carregar();
+    $porId = dh_por_id($dados);
+    $lista = [];
+    foreach (array_keys(DH_UNIDADES) as $u) {
+        foreach (dh_xmenu_taplist($u, $dados['cervejas']) ?? [] as $it) {
+            $litro = null;
+            foreach ($it['precos'] as $p) {
+                if (preg_match('/^1\s*L$/i', trim($p['tam']))) {
+                    $litro = (float) $p['valor'];
+                }
+            }
+            $chave = $it['id'] ?: dh_slug($it['nome']);
+            if (!$litro || isset($lista[$chave]) || array_filter(DH_DELIVERY_FORA, fn($x) => strpos(dh_slug($it['nome']), $x) !== false)) {
+                if (isset($lista[$chave])) {
+                    $lista[$chave]['unidades'][] = $u;
+                }
+                continue;
+            }
+            $c = ($it['id'] && isset($porId[$it['id']]) ? $porId[$it['id']] : $it) + ['estilo' => '', 'abv' => '', 'imagem' => 'assets/img/rotulo-padrao.png'];
+            $c['id'] = $chave;
+            $c['preco_bar'] = $litro;
+            $c['preco_evento'] = number_format(dh_preco_delivery($c['nome'], $litro), 2, '.', '');
+            $c['unidades'] = [$u];
+            $lista[$chave] = $c;
+        }
+    }
+    $lista = array_values($lista);
+    // Mais barata primeiro (a Premium Lager abre a tabela)
+    usort($lista, fn($a, $b) => [(float) $a['preco_evento'], dh_slug($a['nome'])] <=> [(float) $b['preco_evento'], dh_slug($b['nome'])]);
+    return $cache = $lista;
 }
 
 // Valor do chope comprado (o chope em comodato não entra)

@@ -85,6 +85,8 @@ function dh_xmenu_produtos(string $unidade): ?array
 function dh_xmenu_separar_tamanho(string $nome): array
 {
     $nome = trim(preg_replace('/\s+/u', ' ', $nome));
+    // Observação depois do tamanho ("DRAGÃO DO MAR 1L (Low Carb)", "300 ML [LOW CARB]") sai do nome
+    $nome = preg_replace('/(\d\s*(?:ml|l|litros?))\s*[\[(][^\])]*[\])]$/iu', '$1', $nome);
     if (preg_match('/^(.*?)\s*(\d+(?:[.,]\d+)?)\s*(ml|l|litros?)$/iu', $nome, $m)) {
         $un = strtolower($m[3]) === 'ml' ? 'ml' : 'L';
         return [trim($m[1]), $m[2] . ' ' . $un];

@@ -20,7 +20,7 @@ $equipamentos = array_map(fn($eq) => $eq[0], DH_EQUIPAMENTOS);
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=17">
+  <link rel="stylesheet" href="../assets/css/style.css?v=18">
 </head>
 <body>
   <header class="site-header">
@@ -42,6 +42,7 @@ $equipamentos = array_map(fn($eq) => $eq[0], DH_EQUIPAMENTOS);
       </div>
 
       <h2 class="delivery-subtitulo">Tabela de preços</h2>
+      <p class="delivery-nota">Rótulos engatados hoje nas nossas torneiras. A tabela muda conforme o que está engatado.</p>
       <?php if (!$cervejas): ?>
         <p class="delivery-aviso">A tabela está sendo atualizada. Chame a gente no WhatsApp que passamos os rótulos e os valores.</p>
       <?php else: ?>
@@ -53,6 +54,7 @@ $equipamentos = array_map(fn($eq) => $eq[0], DH_EQUIPAMENTOS);
                 <h3><?= e($c['nome']) ?></h3>
                 <?php if ($c['estilo'] !== ''): ?><p class="delivery-estilo"><?= e($c['estilo']) ?><?= ($c['abv'] ?? '') !== '' ? ' · ' . e(dh_num($c['abv'])) . '%' : '' ?></p><?php endif; ?>
                 <p class="delivery-litro"><strong><?= e(dh_moeda($l)) ?></strong> o litro</p>
+                <p class="delivery-onde">Engatada na <?= e(implode(' e na ', array_map(fn($u) => DH_UNIDADES[$u], $c['unidades']))) ?></p>
                 <p class="delivery-barris">Barril de 30 L: <strong><?= e(dh_moeda($l * 30)) ?></strong><br>Barril de 50 L: <strong><?= e(dh_moeda($l * 50)) ?></strong></p>
               </div>
             </article>

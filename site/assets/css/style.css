@@ -346,3 +346,5 @@ a.filtro { text-decoration: none; color: var(--text); }
 .delivery-passos ol { margin: 0; padding-left: 22px; color: var(--muted); }
 .delivery-passos li { margin-bottom: 8px; }
 .delivery-legal { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 14px; }
+.delivery-nota { color: var(--muted); margin: -8px 0 16px; }
+.delivery-onde { font-size: .82rem; color: var(--muted); }

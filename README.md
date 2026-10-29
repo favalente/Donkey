@@ -66,7 +66,7 @@ Validade: assinatura eletrônica entre as partes (MP 2.200-2/2001, art. 10, § 2
 
 ### Chope delivery (site)
 
-A página inicial tem o card **Chope Delivery** ("Leve o nosso chope para o seu evento!"), que abre `/chope/`: tabela de preços com os rótulos que têm **valor do litro para evento** em Cervejas (preço do litro e exemplos de barril de 30 e 50 L), o que está incluso (equipamentos em comodato, instalação e retirada), frete, copos personalizados, como funciona e o botão de pedido pelo WhatsApp.
+A página inicial tem o card **Chope Delivery** ("Leve o nosso chope para o seu evento!"), que abre `/chope/`: tabela de preços **automática**, só com as cervejas **engatadas agora** (tap list do xMenu). O valor do litro para evento é o litro do bar com **30% de desconto na Premium Lager e 35% nas especiais**, arredondado para cima até o próximo R$ 0,50 (`dh_preco_delivery`, em `inc/contratos.php`). A Aldeota é a referência; cerveja engatada só na Maraponga usa o preço de lá. O formulário de pedido do cliente usa a mesma lista. A página mostra ainda o que está incluso, frete, copos, como funciona e o pedido pelo WhatsApp.
 
 ### Relatórios de vendas de chope
 
