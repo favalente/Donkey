@@ -90,7 +90,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=8">
+  <link rel="stylesheet" href="assets/css/style.css?v=9">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -260,14 +260,14 @@ function detalhe(array $c): string
       <a class="container cta agenda-card" href="agenda/">
         <div>
           <p class="eyebrow">Agenda</p>
-          <h2>Som ao vivo na Donkey</h2>
+          <h2>Próximos shows</h2>
           <ul class="agenda-proximos">
             <?php foreach (DH_UNIDADES as $u => $nomeU): if (empty($proximosShows[$u])) continue; $sh = $proximosShows[$u]; ?>
               <li><span><?= e($nomeU) ?></span> <?= e(dh_data_curta($sh['data'])) ?> · <strong><?= e($sh['banda']) ?></strong></li>
             <?php endforeach; ?>
           </ul>
         </div>
-        <span class="btn btn-ghost">Ver a agenda</span>
+        <span class="btn btn-ghost">Ver agenda completa</span>
       </a>
     </section>
     <?php endif; ?>
