@@ -80,6 +80,37 @@ function contratos_acao(string $acao): bool
             }
             exit;
 
+        case 'cliente-salvar':
+            exigir_post();
+            exigir('contratos');
+            $telaErro = 'clientes';
+            $doc = dh_so_digitos((string) ($_POST['doc'] ?? ''));
+            if (!dh_cpf_valido($doc) && !dh_cnpj_valido($doc)) {
+                throw new RuntimeException('CPF ou CNPJ inválido.');
+            }
+            $nome = mb_substr(trim((string) ($_POST['nome'] ?? '')), 0, 120);
+            if ($nome === '') {
+                throw new RuntimeException('Informe o nome do cliente.');
+            }
+            $email = trim((string) ($_POST['email'] ?? ''));
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new RuntimeException('E-mail inválido.');
+            }
+            $todos = dh_clientes();
+            $novo = !isset($todos[$doc]);
+            // Cadastro manual não dá autorização de novidades: quem autoriza é o cliente, no pedido
+            $cl = $todos[$doc] ?? ['doc' => $doc, 'criado_em' => date('Y-m-d H:i:s'), 'contratos' => [], 'novidades' => false, 'novidades_em' => '', 'origem' => 'Cadastro manual por ' . $usuario['nome']];
+            $cl['nome'] = $nome;
+            $cl['telefone'] = mb_substr(trim((string) ($_POST['telefone'] ?? '')), 0, 30);
+            $cl['email'] = mb_strtolower($email);
+            $cl['endereco'] = mb_substr(trim((string) ($_POST['endereco'] ?? '')), 0, 250);
+            $cl['cidade'] = mb_substr(trim((string) ($_POST['cidade'] ?? '')), 0, 80);
+            $cl['obs'] = mb_substr(trim((string) ($_POST['obs'] ?? '')), 0, 500);
+            $cl['atualizado_em'] = date('Y-m-d H:i:s');
+            $todos[$doc] = $cl;
+            dh_clientes_salvar($todos);
+            ir('./?acao=clientes', ($novo ? 'Cliente cadastrado: ' : 'Cliente atualizado: ') . $nome . '.');
+
         case 'cliente-novidades':
             exigir_post();
             exigir('contratos');
@@ -687,6 +718,26 @@ function contratos_tela_clientes(): void
         <a class="btn primario" href="./?acao=clientes-csv">⬇ Planilha para prospecção (<?= $comNovidades ?>)</a>
         <a class="btn secundario" href="./?acao=clientes-csv&todos=1">⬇ Planilha completa (uso interno)</a>
       </p>
+      <details class="config-agenda novo-cliente"<?= ($_GET['editar'] ?? '') !== '' || !empty($GLOBALS['erro']) ? ' open' : '' ?>>
+        <?php $ed = $clientes[dh_so_digitos((string) ($_GET['editar'] ?? ''))] ?? []; $pv = fn($k) => e($_POST[$k] ?? ($ed[$k] ?? '')); ?>
+        <summary><?= $ed ? 'Editar cliente: ' . e($ed['nome']) : '+ Cadastrar cliente' ?></summary>
+        <form method="post" action="./?acao=cliente-salvar" class="form-cerveja">
+          <?= $csrf ?>
+          <label>Nome completo / razão social <input name="nome" required maxlength="120" value="<?= $pv('nome') ?>"></label>
+          <div class="duas">
+            <label>CPF ou CNPJ <input name="doc" required inputmode="numeric" value="<?= e($_POST['doc'] ?? (isset($ed['doc']) ? dh_cpf_formatar($ed['doc']) : '')) ?>" <?= $ed ? 'readonly' : '' ?>></label>
+            <label>Celular <input name="telefone" inputmode="tel" value="<?= $pv('telefone') ?>"></label>
+          </div>
+          <label>E-mail <input type="email" name="email" autocapitalize="none" value="<?= $pv('email') ?>"></label>
+          <label>Endereço <input name="endereco" value="<?= $pv('endereco') ?>"></label>
+          <div class="duas">
+            <label>Cidade <input name="cidade" value="<?= $pv('cidade') ?>" placeholder="Ex.: Fortaleza/CE"></label>
+            <label>Observação <input name="obs" value="<?= $pv('obs') ?>" placeholder="Ex.: veio pela ZapSign"></label>
+          </div>
+          <p class="dica">A autorização para receber novidades só é dada pelo próprio cliente, no pedido.</p>
+          <button class="btn primario largo"><?= $ed ? 'Salvar alterações' : 'Cadastrar cliente' ?></button>
+        </form>
+      </details>
       <input type="search" id="busca" placeholder="Buscar por nome, telefone, e-mail ou cidade…" class="busca">
       <div class="abas filtro-pasta">
         <a href="#" data-pasta="todas" class="ativo">Todos <small><?= count($clientes) ?></small></a>
@@ -703,7 +754,8 @@ function contratos_tela_clientes(): void
               <span class="tags"><?= !empty($cl['novidades']) ? '<em class="tag ct-ok">Aceita novidades</em>' : '<em class="tag cinza">Sem autorização para novidades</em>' ?></span>
               <span class="botoes-link">
                 <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($cl['telefone'])) ?>">WhatsApp</a>
-                <a class="btn secundario" href="mailto:<?= e($cl['email']) ?>">E-mail</a>
+                <?php if ($cl['email'] !== ''): ?><a class="btn secundario" href="mailto:<?= e($cl['email']) ?>">E-mail</a><?php endif; ?>
+                <a class="btn secundario" href="./?acao=clientes&editar=<?= e($doc) ?>">Editar</a>
                 <form method="post" action="./?acao=contrato-pedido"><?= $csrf ?><input type="hidden" name="cliente" value="<?= e($doc) ?>"><input type="hidden" name="pagamento" value="pix"><button class="btn primario">+ Pedido de chope</button></form>
                 <?php if (!empty($cl['novidades'])): ?>
                   <form method="post" action="./?acao=cliente-novidades" onsubmit="return confirm('O cliente pediu para não receber mais novidades?');"><?= $csrf ?><input type="hidden" name="doc" value="<?= e($doc) ?>"><button class="btn mini">Parar novidades</button></form>

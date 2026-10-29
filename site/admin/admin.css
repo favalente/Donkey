@@ -321,3 +321,5 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .cliente .btn { min-height: 44px; padding: 8px 14px; font-size: .95rem; }
 .lista .cliente a.btn.secundario { border: 2px solid var(--amber); color: var(--amber); padding: 8px 14px; border-radius: 999px; }
 .lista .cliente a.btn.secundario:hover { background: rgba(233, 162, 59, .12); }
+.novo-cliente { margin: 0 0 16px; }
+.novo-cliente form { margin-top: 12px; }
