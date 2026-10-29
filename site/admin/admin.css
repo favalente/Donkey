@@ -261,3 +261,18 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .ficha-ver dt { margin-top: 20px; color: var(--muted); font-size: .95rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .ficha-ver dd { margin: 6px 0 0; font-size: 1.15rem; }
 .ficha-ver .btn { margin-top: 8px; }
+/* Linha do mês nunca mais larga que a tela */
+.cal-nav { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; }
+.cal-nav strong { text-align: center; line-height: 1.15; }
+.cal-nav strong small { display: block; font-size: .8em; color: var(--muted); font-weight: 600; }
+.mes-btn { padding: 10px 14px; }
+.mes-curto { display: none; }
+@media (max-width: 560px) { .mes-longo { display: none; } .mes-curto { display: inline; } }
+.cal-admin, .calendario { max-width: 100%; min-width: 0; }
+.cal-show { overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
+.conteudo { overflow-x: clip; }
+.cal-show { word-break: normal; overflow-wrap: anywhere; hyphens: manual; }
+@media (max-width: 420px) {
+  .cal-dia { padding: 2px; }
+  .cal-show { font-size: .62rem; padding: 2px 3px; letter-spacing: -.01em; }
+}

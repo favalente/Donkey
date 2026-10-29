@@ -1012,9 +1012,10 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
         <?php if ($mes !== date('Y-m')): ?><p class="centro"><a class="btn secundario hoje-btn" data-manter-posicao href="<?= e($nav . date('Y-m')) ?>">Voltar para o mês atual</a></p><?php endif; ?>
         <?php $ant = dh_mes_somar($mes, -1); $prox = dh_mes_somar($mes, 1); ?>
         <div class="mes-nav cal-nav">
-          <a class="btn mes-btn" data-mes="anterior" href="<?= e($nav . $ant) ?>">‹ <?= e(DH_MESES[(int) substr($ant, 5, 2)]) ?></a>
-          <strong><?= e(dh_mes_nome($mes)) ?></strong>
-          <a class="btn mes-btn" data-mes="proximo" href="<?= e($nav . $prox) ?>"><?= e(DH_MESES[(int) substr($prox, 5, 2)]) ?> ›</a>
+          <?php $mesAnt = DH_MESES[(int) substr($ant, 5, 2)]; $mesProx = DH_MESES[(int) substr($prox, 5, 2)]; ?>
+          <a class="btn mes-btn" data-mes="anterior" href="<?= e($nav . $ant) ?>" aria-label="<?= e($mesAnt) ?>">‹ <span class="mes-longo"><?= e($mesAnt) ?></span><span class="mes-curto"><?= e(mb_substr($mesAnt, 0, 3)) ?></span></a>
+          <strong><?= e(DH_MESES[(int) substr($mes, 5, 2)]) ?> <small><?= e(substr($mes, 0, 4)) ?></small></strong>
+          <a class="btn mes-btn" data-mes="proximo" href="<?= e($nav . $prox) ?>" aria-label="<?= e($mesProx) ?>"><span class="mes-longo"><?= e($mesProx) ?></span><span class="mes-curto"><?= e(mb_substr($mesProx, 0, 3)) ?></span> ›</a>
         </div>
         <div class="calendario">
           <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana"><?= $d ?></div><?php endforeach; ?>
