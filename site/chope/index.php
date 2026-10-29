@@ -40,7 +40,7 @@ function detalhe_delivery(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=20">
+  <link rel="stylesheet" href="../assets/css/style.css?v=21">
 </head>
 <body>
   <header class="site-header">

@@ -36,7 +36,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=20">
+  <link rel="stylesheet" href="../assets/css/style.css?v=21">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
   <script type="application/ld+json">
   <?= json_encode(array_map(fn($s) => [
@@ -107,20 +107,31 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
 
       <h2 class="cal-lista-titulo"><?= $mes === date('Y-m') ? 'Próximos shows do mês' : 'Shows do mês' ?></h2>
       <?php if ($shows): ?>
-        <ul class="cal-lista">
-          <?php foreach ($shows as $s): $t = strtotime($s['data']); ?>
-            <li>
-              <button class="cal-abrir cal-linha" data-dia="<?= $s['data'] ?>">
-                <span class="cal-linha-data"><strong><?= date('d', $t) ?></strong><?= e(mb_substr(DH_DIAS_SEMANA[(int) date('w', $t)], 0, 3)) ?></span>
-                <span class="cal-linha-info">
-                  <strong><?= e($s['banda']) ?></strong>
-                  <?php if ($s['tributo'] !== ''): ?><span><?= e($s['tributo']) ?></span><?php endif; ?>
-                </span>
-                <span class="cal-linha-onde cal-u-<?= $s['unidade'] ?>"><?= e(DH_UNIDADES[$s['unidade']]) ?><small><?= e(str_replace(':', 'h', $s['hora'])) ?></small></span>
-              </button>
-            </li>
+        <div class="cal-sedes">
+          <?php foreach (DH_UNIDADES as $u => $nomeU): if ($unidade && $unidade !== $u) continue; $daSede = array_values(array_filter($shows, fn($s) => $s['unidade'] === $u)); ?>
+            <section class="cal-sede cal-u-<?= $u ?>">
+              <h3 class="cal-sede-titulo"><?= e($nomeU) ?></h3>
+              <?php if (!$daSede): ?>
+                <p class="cal-sede-vazia">Nenhum show <?= $mes === date('Y-m') ? 'até o fim do mês' : 'neste mês' ?> por aqui.</p>
+              <?php else: ?>
+                <ul class="cal-lista">
+                  <?php foreach ($daSede as $s): $t = strtotime($s['data']); ?>
+                    <li>
+                      <button class="cal-abrir cal-linha" data-dia="<?= $s['data'] ?>">
+                        <span class="cal-linha-data"><strong><?= date('d', $t) ?></strong><?= e(mb_substr(DH_DIAS_SEMANA[(int) date('w', $t)], 0, 3)) ?></span>
+                        <span class="cal-linha-info">
+                          <strong><?= e($s['banda']) ?></strong>
+                          <?php if ($s['tributo'] !== ''): ?><span><?= e($s['tributo']) ?></span><?php endif; ?>
+                        </span>
+                        <span class="cal-linha-onde"><small><?= e(str_replace(':', 'h', $s['hora'])) ?></small></span>
+                      </button>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php endif; ?>
+            </section>
           <?php endforeach; ?>
-        </ul>
+        </div>
       <?php else: ?>
         <p class="agenda-vazia"><?= $doMes ? 'Os shows deste mês já aconteceram. Veja o próximo mês!' : 'A programação de ' . e($nomeMes) . ' ainda não foi divulgada. Volte em breve!' ?></p>
       <?php endif; ?>
