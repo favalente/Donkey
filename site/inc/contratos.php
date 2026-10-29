@@ -35,7 +35,7 @@ const DH_EQUIPAMENTOS = [
 const DH_ANEXO_EVENTO = "1. RODÍZIO DE FINGER FOODS + CERVEJA ARTESANAL + BEBIDAS NÃO ALCOÓLICAS
 
 RODÍZIO DE FINGER FOODS
-Escolha dentre 9 opções abaixo:
+Escolha 6 dentre as 9 opções abaixo:
 Pastéis de Queijo
 Feijão Verde Cremoso
 Chicken Balls
