@@ -4,7 +4,7 @@
 require __DIR__ . '/../inc/dados.php';
 
 $cervejas = dh_cervejas_evento();
-$whats = 'https://wa.me/5585982124149?text=' . rawurlencode("Olá! Vim pelo site e quero fazer um pedido de chope para o meu evento.");
+$whats = 'https://wa.me/5585982124149?text=' . rawurlencode("Olá! Vim pelo site e tenho uma dúvida sobre o chope delivery.");
 $equipamentos = array_map(fn($eq) => $eq[0], DH_EQUIPAMENTOS);
 
 // Ficha da cerveja (a mesma da página inicial), só com as informações da cerveja
@@ -40,7 +40,7 @@ function detalhe_delivery(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=22">
+  <link rel="stylesheet" href="../assets/css/style.css?v=23">
 </head>
 <body>
   <header class="site-header">
@@ -88,6 +88,10 @@ function detalhe_delivery(array $c): string
         </div>
       <?php endif; ?>
 
+      <?php if ($cervejas): ?>
+        <form method="post" action="pedido.php" class="centro delivery-pedido-topo"><button class="btn btn-primary btn-grande">🍺 Fazer meu pedido</button></form>
+      <?php endif; ?>
+
       <div class="delivery-extras">
         <section>
           <h2>Já incluso</h2>
@@ -114,14 +118,19 @@ function detalhe_delivery(array $c): string
       <section class="delivery-passos">
         <h2>Como funciona</h2>
         <ol>
-          <li>Fale com a gente no WhatsApp e diga a data, o local e quantos litros você precisa.</li>
-          <li>Você recebe o link do pedido, escolhe os rótulos, anexa o comprovante do Pix e assina o contrato online.</li>
+          <li>Toque em <strong>Fazer meu pedido</strong>, escolha os rótulos e a quantidade de litros e preencha os seus dados.</li>
+          <li>Pague pelo Pix, anexe o comprovante e assine o contrato online (o código de assinatura chega no seu e-mail).</li>
+          <li>A Donkey Head Cervejaria confere e aprova o pedido, e você recebe o contrato assinado por e-mail.</li>
           <li>Levamos e instalamos a chopeira no dia combinado.</li>
           <li>Depois do evento, buscamos o equipamento (no máximo no dia seguinte).</li>
         </ol>
       </section>
 
-      <p class="centro"><a class="btn btn-whats" href="<?= e($whats) ?>" target="_blank" rel="noopener">Fazer meu pedido pelo WhatsApp</a></p>
+      <?php if (isset($_GET['muitos'])): ?><p class="delivery-aviso">Muitos pedidos abertos deste aparelho na última hora. Tente de novo mais tarde ou fale com a gente no WhatsApp.</p><?php endif; ?>
+      <?php if ($cervejas): ?>
+        <form method="post" action="pedido.php" class="centro"><button class="btn btn-primary btn-grande">🍺 Fazer meu pedido</button></form>
+      <?php endif; ?>
+      <p class="delivery-duvidas">Ficou com alguma dúvida? <a href="<?= e($whats) ?>" target="_blank" rel="noopener">Fale com a gente no WhatsApp</a>.</p>
       <p class="delivery-legal">Valores sujeitos a alteração. Venda proibida para menores de 18 anos.</p>
     </div>
   </main>

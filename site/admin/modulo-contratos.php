@@ -534,6 +534,7 @@ function contratos_card(array $k): void
               <em class="tag <?= $cliente ? 'ct-ok' : 'cinza' ?>">Cliente <?= $cliente ? '✓' : 'pendente' ?></em>
             <?php endif; ?>
             <?php if (!empty($f['comprovante'])): ?><em class="tag ct-ok">📎 Comprovante</em><?php endif; ?>
+            <?php if (($k['origem'] ?? '') === 'site'): ?><em class="tag">🌐 Pelo site</em><?php endif; ?>
           </span>
         </a>
         <div class="card-botoes">
@@ -569,7 +570,8 @@ function contratos_card(array $k): void
 function contratos_tela_lista(): void
 {
     $c = dh_contratos();
-    $lista = array_reverse($c['contratos']);
+    // Pedidos abertos pelo site e ainda não preenchidos não aparecem (podem nunca virar pedido)
+    $lista = array_reverse(array_values(array_filter($c['contratos'], fn($k) => !(($k['origem'] ?? '') === 'site' && $k['status'] === 'preenchimento'))));
     ?>
       <div class="titulo-acao"><h1>Contratos</h1></div>
       <?php if (empty($c['config']['representante_cpf'])): ?>
