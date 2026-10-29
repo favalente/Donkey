@@ -52,7 +52,7 @@ Endereço: `/admin/`
 Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento corporativo no pub** (texto do contrato jurídico da casa, com o Anexo I – Menu) e **Venda de chope com comodato de equipamentos** (equipamentos com valor de reposição já preenchidos).
 
 1. Preencha o formulário (dá para salvar rascunho) e toque em **Gerar para assinatura**: o texto é congelado e ganha número (DH-2026-001) e **código de integridade** (SHA-256).
-2. **A Donkey assina** no painel, com a senha do administrador. O nome e o CPF de quem assina ficam em Contratos → Configurações (só no servidor, nunca no código).
+2. **A Donkey assina** no painel, com a senha do administrador ou do financeiro (fica registrado qual usuário assinou). O nome e o CPF de quem assina ficam em Contratos → Configurações (só no servidor, nunca no código).
 Na lista, cada contrato é um cartão com os botões do momento (assinar, ver, enviar pelo WhatsApp, editar, duplicar) e **🗑 Excluir**, que apaga de vez (útil para testes; contrato assinado, só o administrador exclui).
 
 2b. **Editar antes do cliente assinar:** no contrato, **✏️ Editar contrato** volta para o formulário com o mesmo número e o mesmo link (o cliente vê "Contrato em ajuste" enquanto isso). Ao gerar de novo, o texto ganha novo código de integridade, a assinatura da Donkey é refeita e o código de e-mail pedido antes da edição deixa de valer. A versão anterior fica guardada no registro do contrato. Depois que o cliente assina, só cancelando e duplicando.

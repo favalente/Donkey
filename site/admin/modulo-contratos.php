@@ -1,7 +1,7 @@
 <?php
 // Painel: contratos com assinatura eletrônica (evento corporativo e comodato de equipamentos).
 // Rascunho pode ser editado; ao enviar, o texto é congelado. A Donkey assina com a senha do
-// administrador e o cliente pelo link (código por e-mail). Ver inc/contratos.php.
+// administrador ou do financeiro e o cliente pelo link (código por e-mail). Ver inc/contratos.php.
 
 // Lê o formulário do contrato (só os campos do tipo)
 function dh_contrato_ler_form(string $tipo, array $p): array
@@ -292,9 +292,6 @@ function contratos_acao(string $acao): bool
             exigir_post();
             exigir('contratos');
             $telaErro = 'contrato';
-            if ($usuario['papel'] !== 'admin') {
-                throw new RuntimeException('Só o administrador assina pela Donkey.');
-            }
             $c = dh_contratos();
             $i = dh_contrato_indice($c, (string) ($_POST['id'] ?? ''));
             if ($i === null || $c['contratos'][$i]['status'] !== 'enviado') {
@@ -308,7 +305,7 @@ function contratos_acao(string $acao): bool
             }
             $cfg = $c['config'];
             $c['contratos'][$i]['assinaturas']['contratada'] = dh_contrato_assinatura($cfg['representante_nome'], $cfg['representante_cpf'], DH_EMPRESA['email'],
-                'Senha do painel administrativo (usuário "' . $usuario['login'] . '") · representante da CONTRATADA', (string) ($_POST['geo'] ?? ''));
+                'Senha do painel administrativo (usuário "' . $usuario['login'] . '", ' . $usuario['nome'] . ') · representante da CONTRATADA', (string) ($_POST['geo'] ?? ''));
             $fechou = dh_contrato_concluir($c['contratos'][$i]);
             dh_contratos_salvar($c);
             ir('./?acao=contrato&id=' . $c['contratos'][$i]['id'], $fechou ? 'Contrato assinado pelas duas partes. As cópias foram enviadas por e-mail.' : 'Assinado pela Donkey. Agora falta o cliente.');
@@ -371,7 +368,7 @@ function contratos_acao(string $acao): bool
             ir('./?acao=contrato&id=' . $k['id'], 'Contrato nº ' . $k['numero'] . ' aberto para edição. Faça as mudanças e toque em "Gerar para assinatura" (o link do cliente continua o mesmo).');
 
         case 'contrato-excluir':
-            // Apaga de vez (para testes e pedidos que não vão acontecer); contrato assinado, só o administrador
+            // Apaga de vez (para testes e pedidos que não vão acontecer)
             exigir_post();
             exigir('contratos');
             $c = dh_contratos();
@@ -380,9 +377,6 @@ function contratos_acao(string $acao): bool
                 throw new RuntimeException('Contrato não encontrado.');
             }
             $k = $c['contratos'][$i];
-            if ($k['status'] === 'assinado' && $usuario['papel'] !== 'admin') {
-                throw new RuntimeException('Só o administrador exclui contrato assinado.');
-            }
             dh_comprovante_apagar($k['campos']['comprovante'] ?? null);
             array_splice($c['contratos'], $i, 1);
             dh_contratos_salvar($c);
@@ -414,9 +408,6 @@ function contratos_acao(string $acao): bool
             exigir_post();
             exigir('contratos');
             $telaErro = 'contratos-config';
-            if ($usuario['papel'] !== 'admin') {
-                throw new RuntimeException('Só o administrador altera quem assina pela Donkey.');
-            }
             $nome = mb_substr(trim((string) ($_POST['representante_nome'] ?? '')), 0, 100);
             $cpf = (string) ($_POST['representante_cpf'] ?? '');
             if ($nome === '' || !dh_cpf_valido($cpf)) {
@@ -501,7 +492,7 @@ function contratos_card(array $k): void
           <?php elseif ($k['status'] === 'consulta'): ?>
             <a class="btn primario" href="<?= e($abrir) ?>">🚚 Definir frete</a>
           <?php else: ?>
-            <?php if ($k['status'] === 'enviado' && !$donkey && $usuario['papel'] === 'admin'): ?><a class="btn primario" href="<?= e($abrir) ?>#form-assinar">✍ Assinar</a><?php endif; ?>
+            <?php if ($k['status'] === 'enviado' && !$donkey): ?><a class="btn primario" href="<?= e($abrir) ?>#form-assinar">✍ Assinar</a><?php endif; ?>
             <a class="btn secundario" href="../contrato/?t=<?= e($k['token']) ?>" target="_blank">📄 Ver contrato</a>
             <?php if ($k['status'] === 'enviado' && !$cliente): ?>
               <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($f['contratante_telefone'])) ?>?text=<?= e(rawurlencode('Olá, ' . $f['contratante_nome'] . ", aqui é a Donkey Head Cervejaria.\n\nSegue o contrato nº " . $k['numero'] . " para leitura e assinatura eletrônica:\n" . $link)) ?>">📲 Enviar</a>
@@ -509,11 +500,9 @@ function contratos_card(array $k): void
             <?php endif; ?>
             <?= $post('contrato-duplicar', '⧉ Duplicar') ?>
           <?php endif; ?>
-          <?php if ($k['status'] !== 'assinado' || $usuario['papel'] === 'admin'): ?>
             <?= $post('contrato-excluir', '🗑 Excluir', 'perigo', $k['status'] === 'assinado'
                 ? 'ATENÇÃO: este contrato está ASSINADO pelas duas partes. Excluir apaga o contrato e o comprovante para sempre. Excluir mesmo assim?'
                 : 'Excluir ' . ($k['numero'] !== '' ? 'o contrato nº ' . $k['numero'] : 'este ' . ($k['status'] === 'preenchimento' ? 'pedido' : 'rascunho')) . ' de ' . $nome . ' para sempre? O link do cliente deixa de funcionar.') ?>
-          <?php endif; ?>
         </div>
       </article>
     <?php
@@ -559,7 +548,7 @@ function contratos_tela_config(): void
         <label>Dados para pagamento <small>(aparecem no pedido do cliente, ex.: chave Pix e nome de quem recebe)</small>
           <textarea name="pagamento_instrucoes" rows="3" maxlength="500" placeholder="Pix (CNPJ): 00.000.000/0000-00 · Nome de quem recebe"><?= e($_POST ? (string) ($_POST['pagamento_instrucoes'] ?? '') : ($c['config']['pagamento_instrucoes'] ?? '')) ?></textarea></label>
         <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato assinado e os avisos de pedido preenchido e de cliente que assinou.</p>
-        <?php if ($usuario['papel'] === 'admin'): ?><div class="barra-salvar"><button class="btn primario">Salvar</button></div><?php else: ?><p class="aviso">Só o administrador altera estes dados.</p><?php endif; ?>
+        <div class="barra-salvar"><button class="btn primario">Salvar</button></div>
       </form>
     <?php
 }
@@ -685,7 +674,7 @@ function contratos_tela_contrato(): void
     $cliente = $k['assinaturas']['contratante'] ?? null;
     ?>
       <div class="assinaturas-status">
-        <p class="<?= $donkey ? 'feito' : '' ?>"><?= $donkey ? '✓' : '○' ?> <strong>Donkey Head Cervejaria</strong><br><?= $donkey ? 'Assinado por ' . e($donkey['nome']) . ' em ' . e(date('d/m/Y H:i', strtotime($donkey['em']))) : 'Aguardando assinatura do administrador' ?></p>
+        <p class="<?= $donkey ? 'feito' : '' ?>"><?= $donkey ? '✓' : '○' ?> <strong>Donkey Head Cervejaria</strong><br><?= $donkey ? 'Assinado por ' . e($donkey['nome']) . ' em ' . e(date('d/m/Y H:i', strtotime($donkey['em']))) : 'Aguardando a assinatura da Donkey no painel' ?></p>
         <p class="<?= $cliente ? 'feito' : '' ?>"><?= $cliente ? '✓' : '○' ?> <strong><?= e($k['campos']['contratante_nome']) ?></strong><br><?= $cliente ? 'Assinado por ' . e($cliente['nome']) . ' em ' . e(date('d/m/Y H:i', strtotime($cliente['em']))) : 'Aguardando assinatura do cliente' ?></p>
       </div>
 
@@ -698,7 +687,7 @@ function contratos_tela_contrato(): void
       <?php endif; ?>
 
       <?php if ($k['status'] === 'enviado'): ?>
-        <?php if (!$donkey && $usuario['papel'] === 'admin'): ?>
+        <?php if (!$donkey): ?>
           <form method="post" action="./?acao=contrato-assinar" class="form-cerveja caixa-assinar" id="form-assinar">
             <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><input type="hidden" name="geo" id="geo">
             <h2>Assinar pela Donkey Head Cervejaria</h2>
@@ -707,8 +696,6 @@ function contratos_tela_contrato(): void
             <label>Sua senha do painel <input type="password" name="senha" required autocomplete="current-password"></label>
             <button class="btn primario largo">✍ Assinar pela Donkey</button>
           </form>
-        <?php elseif (!$donkey): ?>
-          <p class="aviso">A assinatura pela Donkey é feita pelo administrador.</p>
         <?php endif; ?>
         <?php if (!$cliente): ?>
           <h2>Enviar ao cliente</h2>
