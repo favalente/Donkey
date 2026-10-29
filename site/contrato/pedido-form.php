@@ -19,9 +19,10 @@ $comodato = array_values(array_filter((array) ($_POST['comodato'] ?? []), fn($x)
 $cidadeBase = (string) ($f['cidade'] ?? '');
 $local = (string) ($_POST['local'] ?? ($cidadeBase === '' ? '' : (stripos($cidadeBase, 'fortaleza') !== false ? 'fortaleza' : 'outra')));
 $doc = dh_so_digitos($f['contratante_doc']);
-$novidades = isset($_POST['op']) ? !empty($_POST['novidades']) : !empty(dh_clientes()[$doc]['novidades']);
+$comprovante = $k['campos']['comprovante'] ?? null;
+$instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
 ?>
-<form method="post" class="papel pedido" id="pedido">
+<form method="post" class="papel pedido" id="pedido" enctype="multipart/form-data">
   <?= $csrf ?><input type="hidden" name="op" value="preencher">
   <header class="timbre"><img src="../assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="56"><span><?= e(DH_EMPRESA['razao']) ?><br>CNPJ <?= e(DH_EMPRESA['cnpj']) ?></span></header>
   <h1>Pedido de chope</h1>
@@ -55,7 +56,13 @@ $novidades = isset($_POST['op']) ? !empty($_POST['novidades']) : !empty(dh_clien
     </div>
   </div>
 
-  <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
+  <div class="cupom">
+    <label for="cupom">Tem cupom de desconto?</label>
+    <div class="cupom-linha"><input id="cupom" name="cupom" autocapitalize="characters" autocomplete="off" maxlength="30" placeholder="Código do cupom" value="<?= $v('cupom') ?>"><button type="button" class="btn" id="bt-cupom">Aplicar</button></div>
+    <p class="cupom-msg" id="cupom-msg" aria-live="polite"></p>
+  </div>
+
+  <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr id="l-desconto" hidden><td id="t-desconto-rot">Desconto</td><td id="t-desconto">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
 
   <h2>2. Equipamentos em comodato</h2>
   <p class="legal">Já incluídos no pedido, com o valor de reposição em caso de dano ou perda.</p>
@@ -72,36 +79,77 @@ $novidades = isset($_POST['op']) ? !empty($_POST['novidades']) : !empty(dh_clien
   <label>Endereço de entrega <input name="endereco" required autocomplete="street-address" value="<?= $v('endereco', $f['entrega_endereco']) ?>"></label>
   <div class="duas">
     <label>Data de recebimento do equipamento <input type="date" name="entrega_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('entrega_data') ?>"></label>
-    <label>Data de devolução do equipamento <input type="date" name="devolucao_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('devolucao_data') ?>"></label>
+    <label>Horário de entrega estimado <input type="time" name="entrega_hora" required value="<?= $v('entrega_hora') ?>"></label>
   </div>
+  <p class="obs">O horário é apenas uma estimativa; o mesmo deve ser combinado diretamente com o entregador.</p>
+  <label>Data de devolução do equipamento <input type="date" name="devolucao_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('devolucao_data') ?>"></label>
+  <p class="obs">O equipamento deve ser devolvido no máximo no dia seguinte ao evento, exceto quando acordado com a Donkey Head Cervejaria.</p>
   <p class="rotulo-pedido">A entrega é em Fortaleza?</p>
   <div class="opcoes-local">
     <label class="check"><input type="radio" name="local" value="fortaleza" required <?= $local === 'fortaleza' ? 'checked' : '' ?>> Sim, em Fortaleza <small>(frete de <?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?>, instalação e retirada)</small></label>
-    <label class="check"><input type="radio" name="local" value="outra" <?= $local === 'outra' ? 'checked' : '' ?>> Não, em outra cidade <small>(frete sob consulta)</small></label>
+    <label class="check"><input type="radio" name="local" value="outra" <?= $local === 'outra' ? 'checked' : '' ?>> Não, em outra cidade <small>(digite o valor combinado com o vendedor)</small></label>
   </div>
-  <label id="campo-cidade" <?= $local === 'outra' ? '' : 'hidden' ?>>Cidade da entrega <input name="cidade" value="<?= $v('cidade', $local === 'outra' ? $cidadeBase : '') ?>" placeholder="Ex.: Guaramiranga/CE"></label>
+  <div class="duas" id="campo-cidade" <?= $local === 'outra' ? '' : 'hidden' ?>>
+    <label>Cidade da entrega <input name="cidade" value="<?= $v('cidade', $local === 'outra' ? $cidadeBase : '') ?>" placeholder="Ex.: Guaramiranga/CE"></label>
+    <label>Valor do frete (R$) <input name="frete_outra" id="frete-outra" inputmode="decimal" value="<?= $v('frete_outra') ?>" placeholder="Combinado com o vendedor"></label>
+  </div>
   <label>E-mail <small>(para a cópia do contrato e o código de assinatura)</small><input type="email" name="email" required autocapitalize="none" autocomplete="email" value="<?= $v('email', $f['contratante_email']) ?>"></label>
-  <label class="check novidades"><input type="checkbox" name="novidades" value="1" <?= $novidades ? 'checked' : '' ?>> Quero receber novidades, promoções e a agenda de shows da Donkey Head Cervejaria por WhatsApp e e-mail. <small>(opcional; dá para cancelar quando quiser)</small></label>
-  <p class="legal">Forma de pagamento: <?= e(DH_PAGAMENTOS[$f['pagamento']] ?? '') ?><?= trim($f['observacoes']) !== '' ? ' · ' . e($f['observacoes']) : '' ?></p>
+
+  <h2>4. Pagamento</h2>
+  <p>Forma de pagamento: <strong><?= e(DH_PAGAMENTOS[$f['pagamento']] ?? '') ?></strong> · Valor a pagar: <strong id="t-pagar">R$ 0,00</strong></p>
+  <?php if ($instrucoes !== ''): ?><p class="dados-pagamento"><?= nl2br(e($instrucoes)) ?></p><?php endif; ?>
+  <?php if (trim($f['observacoes']) !== ''): ?><p class="legal"><?= e($f['observacoes']) ?></p><?php endif; ?>
+  <?php if ($comprovante): ?>
+    <p class="comprovante-ok">✓ Comprovante recebido: <a href="./?t=<?= e($token) ?>&amp;comprovante=1" target="_blank"><?= e($comprovante['nome']) ?></a></p>
+    <label>Trocar o comprovante <small>(opcional)</small><input type="file" name="comprovante" accept="image/*,application/pdf"></label>
+  <?php else: ?>
+    <label>Comprovante de pagamento <small>(foto, print ou PDF; o contrato só vale com ele)</small><input type="file" name="comprovante" required accept="image/*,application/pdf"></label>
+  <?php endif; ?>
   <button class="btn grande" id="bt-pedido">Continuar para o contrato</button>
 </form>
 <script>
   (function () {
-    var form = document.getElementById('pedido'), freteFortaleza = <?= json_encode(DH_FRETE_FORTALEZA) ?>;
+    var form = document.getElementById('pedido'), freteFortaleza = <?= json_encode(DH_FRETE_FORTALEZA) ?>, cupom = null;
     function brl(n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+    function num(x) { x = (x || '').trim(); if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); return parseFloat(x) || 0; }
     function total() {
       var s = 0;
       document.querySelectorAll('#linhas-chope .linha-chope').forEach(function (l) {
         var op = l.querySelector('select').selectedOptions[0];
-        s += (op && op.dataset.preco ? parseFloat(op.dataset.preco) : 0) * (parseFloat((l.querySelector('input').value || '').replace(',', '.')) || 0);
+        s += (op && op.dataset.preco ? parseFloat(op.dataset.preco) : 0) * num(l.querySelector('input').value);
       });
       var local = (form.querySelector('[name=local]:checked') || {}).value;
+      var frete = local === 'fortaleza' ? freteFortaleza : (local === 'outra' ? num(document.getElementById('frete-outra').value) : 0);
+      var desc = cupom ? Math.min(s, Math.round((cupom.tipo === 'pct' ? s * cupom.valor / 100 : cupom.valor) * 100) / 100) : 0;
       document.getElementById('t-chope').textContent = brl(s);
-      document.getElementById('t-frete').textContent = local === 'fortaleza' ? brl(freteFortaleza) : (local === 'outra' ? 'Sob consulta' : 'Fortaleza: ' + brl(freteFortaleza));
-      document.getElementById('t-total').textContent = local === 'outra' ? brl(s) + ' + frete' : brl(s + (local === 'fortaleza' ? freteFortaleza : 0));
+      document.getElementById('l-desconto').hidden = !desc;
+      document.getElementById('t-desconto-rot').textContent = cupom ? 'Desconto (cupom ' + cupom.codigo + ')' : 'Desconto';
+      document.getElementById('t-desconto').textContent = '− ' + brl(desc);
+      document.getElementById('t-frete').textContent = local ? brl(frete) : 'Fortaleza: ' + brl(freteFortaleza);
+      document.getElementById('t-total').textContent = brl(s - desc + frete);
+      document.getElementById('t-pagar').textContent = brl(s - desc + frete);
       document.getElementById('campo-cidade').hidden = local !== 'outra';
-      document.getElementById('bt-pedido').textContent = local === 'outra' ? 'Enviar pedido para calcular o frete' : 'Continuar para o contrato';
+      document.querySelectorAll('#campo-cidade input').forEach(function (x) { x.required = local === 'outra'; });
     }
+    // Cupom: confere no servidor e mostra o desconto no total
+    var cupomInput = document.getElementById('cupom'), cupomMsg = document.getElementById('cupom-msg');
+    function aplicarCupom() {
+      var cod = cupomInput.value.trim();
+      cupom = null; cupomMsg.textContent = ''; cupomMsg.className = 'cupom-msg';
+      if (!cod) { total(); return; }
+      fetch('./?t=<?= rawurlencode($token) ?>&cupom=' + encodeURIComponent(cod), { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          cupomMsg.textContent = j.msg; cupomMsg.className = 'cupom-msg ' + (j.ok ? 'ok' : 'erro');
+          cupom = j.ok ? j : null; if (j.ok) cupomInput.value = j.codigo;
+          total();
+        })
+        .catch(function () { cupomMsg.textContent = 'Não foi possível conferir o cupom agora.'; cupomMsg.className = 'cupom-msg erro'; });
+    }
+    document.getElementById('bt-cupom').addEventListener('click', aplicarCupom);
+    cupomInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); aplicarCupom(); } });
+    cupomInput.addEventListener('input', function () { if (cupom) { cupom = null; cupomMsg.textContent = ''; total(); } });
+    if (cupomInput.value.trim()) aplicarCupom();
     document.querySelectorAll('[data-mais]').forEach(function (b) {
       b.addEventListener('click', function () {
         var caixa = document.getElementById(b.dataset.mais), modelo = caixa.querySelector('.linha-chope'), n = caixa.children.length;

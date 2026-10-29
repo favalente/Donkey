@@ -53,14 +53,16 @@ Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento co
 1. Preencha o formulário (dá para salvar rascunho) e toque em **Gerar para assinatura**: o texto é congelado e ganha número (DH-2026-001) e **código de integridade** (SHA-256).
 2. **A Donkey assina** no painel, com a senha do administrador. O nome e o CPF de quem assina ficam em Contratos → Configurações (só no servidor, nunca no código).
 3. **O cliente** recebe o link (WhatsApp ou e-mail), lê, informa nome e CPF, recebe um **código de 6 números no e-mail** e assina.
-4. Com as duas assinaturas, os dois lados recebem a cópia por e-mail (e também os **e-mails de cópia** cadastrados em Contratos → Configurações, que recebem ainda os avisos de pedido preenchido, frete para calcular e cliente que assinou). A página do contrato tem o **Relatório de assinaturas** (horário, IP, aparelho, forma de autenticação) e vira PDF pelo botão **Baixar PDF / Imprimir**.
+4. Com as duas assinaturas, os dois lados recebem a cópia por e-mail (e também os **e-mails de cópia** cadastrados em Contratos → Configurações, que recebem ainda os avisos de pedido preenchido e de cliente que assinou). A página do contrato tem o **Relatório de assinaturas** (horário, IP, aparelho, forma de autenticação) e vira PDF pelo botão **Baixar PDF / Imprimir**.
 5. Qualquer pessoa confere a autenticidade em `/contrato/verificar.php` pelo número ou pelo código de integridade.
+
+**Pedido de chope (o cliente preenche):** o painel cria o link; o cliente escolhe rótulos e litros (valores de evento cadastrados em Cervejas), chope em comodato opcional, dados do cabeçalho, data e **horário de entrega estimado**, data de devolução (no máximo no dia seguinte ao evento) e se a entrega é em Fortaleza (frete de R$ 40) ou em outra cidade (ele digita o frete combinado com o vendedor). Pode aplicar um **cupom de desconto** (Contratos → 🏷 Cupons: porcentagem ou valor, validade e limite de usos; vale sobre o chope, não sobre o frete). O cliente **anexa o comprovante de pagamento** (foto ou PDF, em `dados/comprovantes/`); o código SHA-256 do arquivo entra no texto do contrato, que só é gerado com ele. Os dados para pagamento (chave Pix) ficam em Contratos → Configurações.
 
 Validade: assinatura eletrônica entre as partes (MP 2.200-2/2001, art. 10, § 2º; Lei 14.063/2020). Os e-mails saem de contato@donkeyheadcervejaria.com.br pelo servidor da Locaweb. Dados em `dados/contratos.json`, com cópia diária em `dados/backup/`.
 
 ### Clientes
 
-Painel → **Clientes**: cada contrato registra ou atualiza o cliente (pelo CPF/CNPJ) em `dados/clientes.json`. Dá para buscar, chamar no WhatsApp, criar um **pedido de chope já preenchido** com os dados dele e baixar a planilha. No pedido, o cliente marca (opcional) se quer receber novidades; a **planilha para prospecção** traz só quem autorizou (LGPD), e "Parar novidades" retira a autorização quando o cliente pedir. Ninguém puxa dados digitando um CPF no site: o preenchimento automático só acontece no link criado pelo painel.
+Painel → **Clientes**: cada contrato registra ou atualiza o cliente (pelo CPF/CNPJ) em `dados/clientes.json`. Dá para buscar, chamar no WhatsApp, criar um **pedido de chope já preenchido** com os dados dele e baixar a planilha. Os dados dos pedidos servem para análise interna de vendas; o pedido não pede mais autorização de novidades. A **planilha para prospecção** traz só quem autorizou antes (LGPD), e "Parar novidades" retira a autorização quando o cliente pedir. Ninguém puxa dados digitando um CPF no site: o preenchimento automático só acontece no link criado pelo painel.
 
 ## Tap list na TV
 

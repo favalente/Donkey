@@ -61,6 +61,7 @@ jobs:
             **/.git*/**
             dados/*.json
             dados/backup/**
+            dados/comprovantes/**
             uploads/cervejas/*.jpg
             uploads/galeria/**/*.jpg
             uploads/bandas/**

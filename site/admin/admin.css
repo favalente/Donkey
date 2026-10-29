@@ -323,3 +323,9 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .lista .cliente a.btn.secundario:hover { background: rgba(233, 162, 59, .12); }
 .novo-cliente { margin: 0 0 16px; }
 .novo-cliente form { margin-top: 12px; }
+/* Cupons de desconto */
+.cupom-item { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 10px; border-bottom: 1px solid var(--line); }
+.cupom-item .info { flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cupom-item .info strong { font-size: 1.15rem; letter-spacing: .04em; }
+.cupom-botoes { display: flex; gap: 8px; }
+.cupom-botoes form { margin: 0; }

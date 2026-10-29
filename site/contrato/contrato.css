@@ -79,5 +79,17 @@ p, li { font-size: .95rem; text-align: justify; }
 .pedido input[type=radio] { display: inline-block; width: 24px; height: 24px; margin: 0; padding: 0; flex: none; accent-color: var(--ambar); }
 .opcoes-local .check { flex-wrap: wrap; align-items: center; }
 .opcoes-local .check small { flex-basis: 100%; padding-left: 34px; }
-.pedido .novidades { font-weight: 500; align-items: flex-start; background: #fffaf1; border-radius: 10px; padding: 12px; }
-.pedido .novidades small { color: var(--suave); }
+.pedido .obs { font-size: .85rem; color: var(--suave); margin: -6px 0 14px; padding-left: 10px; border-left: 3px solid var(--ambar); }
+.pedido input[type=file] { padding: 10px; background: #fffaf1; border-style: dashed; font-size: .95rem; }
+.cupom { margin: 18px 0 6px; }
+.cupom label { font-weight: 700; }
+.cupom-linha { display: flex; gap: 8px; margin-top: 4px; }
+.cupom-linha input { margin-top: 0 !important; text-transform: uppercase; min-width: 0; }
+.cupom-linha .btn { flex: none; }
+.cupom-msg { margin: 6px 0 0; font-size: .9rem; min-height: 1.2em; }
+.cupom-msg.ok { color: #1f7a3a; font-weight: 600; }
+.cupom-msg.erro { color: #b3261e; font-weight: 600; }
+.dados-pagamento { background: #fffaf1; border: 2px solid var(--ambar); border-radius: 10px; padding: 12px 14px; font-weight: 600; overflow-wrap: anywhere; }
+.comprovante-ok { color: #1f7a3a; font-weight: 700; overflow-wrap: anywhere; }
+.cupom label { margin-bottom: 0; }
+[hidden] { display: none !important; }

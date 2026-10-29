@@ -55,9 +55,58 @@ function contratos_acao(string $acao): bool
         case 'contratos':
         case 'contrato':
         case 'contratos-config':
+        case 'contratos-cupons':
         case 'clientes':
             exigir('contratos');
             return true;
+
+        case 'contrato-comprovante':
+            exigir('contratos');
+            $c = dh_contratos();
+            $i = dh_contrato_indice($c, (string) ($_GET['id'] ?? ''));
+            dh_comprovante_mostrar($i === null ? null : ($c['contratos'][$i]['campos']['comprovante'] ?? null));
+
+        case 'cupom-salvar':
+            exigir_post();
+            exigir('contratos');
+            $telaErro = 'contratos-cupons';
+            $codigo = dh_cupom_codigo((string) ($_POST['codigo'] ?? ''));
+            $tipo = ($_POST['tipo'] ?? '') === 'valor' ? 'valor' : 'pct';
+            $valor = dh_valor($_POST['valor'] ?? '');
+            $validade = (string) ($_POST['validade'] ?? '');
+            if (strlen($codigo) < 3) {
+                throw new RuntimeException('O código precisa ter ao menos 3 letras ou números (sem espaços).');
+            }
+            if ($valor === '' || (float) $valor <= 0 || ($tipo === 'pct' && (float) $valor > 100)) {
+                throw new RuntimeException($tipo === 'pct' ? 'Digite a porcentagem do desconto (de 1 a 100).' : 'Digite o valor do desconto em reais.');
+            }
+            if ($validade !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $validade)) {
+                throw new RuntimeException('Data de validade inválida.');
+            }
+            $c = dh_contratos();
+            $antigo = $c['cupons'][$codigo] ?? null;
+            $c['cupons'][$codigo] = ['codigo' => $codigo, 'tipo' => $tipo, 'valor' => $valor, 'validade' => $validade, 'limite' => max(0, (int) ($_POST['limite'] ?? 0)),
+                'usos' => (int) ($antigo['usos'] ?? 0), 'ativo' => true, 'criado_em' => $antigo['criado_em'] ?? date('Y-m-d H:i:s'), 'criado_por' => $antigo['criado_por'] ?? $usuario['nome']];
+            ksort($c['cupons']);
+            dh_contratos_salvar($c);
+            ir('./?acao=contratos-cupons', 'Cupom ' . $codigo . ($antigo ? ' atualizado.' : ' criado.'));
+
+        case 'cupom-ativo':
+        case 'cupom-apagar':
+            exigir_post();
+            exigir('contratos');
+            $c = dh_contratos();
+            $codigo = dh_cupom_codigo((string) ($_POST['codigo'] ?? ''));
+            if (!isset($c['cupons'][$codigo])) {
+                throw new RuntimeException('Cupom não encontrado.');
+            }
+            if ($acao === 'cupom-apagar') {
+                unset($c['cupons'][$codigo]);
+            } else {
+                $c['cupons'][$codigo]['ativo'] = empty($c['cupons'][$codigo]['ativo']);
+            }
+            dh_contratos_salvar($c);
+            ir('./?acao=contratos-cupons', $acao === 'cupom-apagar' ? 'Cupom apagado.' : ($c['cupons'][$codigo]['ativo'] ? 'Cupom reativado.' : 'Cupom pausado: ninguém consegue usar até reativar.'));
 
         case 'clientes-csv':
             exigir('contratos');
@@ -263,6 +312,7 @@ function contratos_acao(string $acao): bool
                 throw new RuntimeException('Contrato assinado não pode ser cancelado por aqui.');
             }
             if (in_array($c['contratos'][$i]['status'], ['rascunho', 'preenchimento', 'consulta'], true)) {
+                dh_comprovante_apagar($c['contratos'][$i]['campos']['comprovante'] ?? null);
                 array_splice($c['contratos'], $i, 1);
                 dh_contratos_salvar($c);
                 ir('./?acao=contratos', 'Excluído.');
@@ -282,6 +332,8 @@ function contratos_acao(string $acao): bool
                 throw new RuntimeException('Contrato não encontrado.');
             }
             $o = $c['contratos'][$i];
+            // O comprovante e o cupom são do pedido original
+            unset($o['campos']['comprovante'], $o['campos']['cupom'], $o['campos']['desconto'], $o['campos']['entrega_hora_estimada']);
             $k = ['id' => dh_id_novo('c'), 'token' => bin2hex(random_bytes(16)), 'numero' => '', 'tipo' => $o['tipo'], 'status' => 'rascunho',
                 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'assinaturas' => [], 'campos' => $o['campos']];
             $c['contratos'][] = $k;
@@ -301,10 +353,12 @@ function contratos_acao(string $acao): bool
                 throw new RuntimeException('Informe o nome e um CPF válido do representante.');
             }
             $copia = dh_emails_lista((string) ($_POST['emails_copia'] ?? ''));
+            $instrucoes = mb_substr(trim(str_replace("\r", '', (string) ($_POST['pagamento_instrucoes'] ?? ''))), 0, 500);
             $c = dh_contratos();
             $c['config']['representante_nome'] = $nome;
             $c['config']['representante_cpf'] = dh_so_digitos($cpf);
             $c['config']['emails_copia'] = $copia;
+            $c['config']['pagamento_instrucoes'] = $instrucoes;
             dh_contratos_salvar($c);
             ir('./?acao=contratos', 'Configurações dos contratos salvas.');
     }
@@ -322,6 +376,9 @@ function contratos_tela(string $tela): bool
             return true;
         case 'contratos-config':
             contratos_tela_config();
+            return true;
+        case 'contratos-cupons':
+            contratos_tela_cupons();
             return true;
         case 'clientes':
             contratos_tela_clientes();
@@ -370,7 +427,7 @@ function contratos_tela_lista(): void
           </li>
         <?php endforeach; ?>
       </ul>
-      <p><a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a></p>
+      <p class="botoes-link"><a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a></p>
     <?php
 }
 
@@ -388,8 +445,55 @@ function contratos_tela_config(): void
         <label>CPF do representante <input name="representante_cpf" value="<?= e(dh_cpf_formatar($c['config']['representante_cpf'] ?? '')) ?>" required inputmode="numeric" placeholder="000.000.000-00"></label>
         <label>E-mails que recebem cópia dos contratos <small>(um por linha)</small>
           <textarea name="emails_copia" rows="4" autocapitalize="none" spellcheck="false" placeholder="financeiro@exemplo.com.br"><?= e(implode("\n", $_POST ? (array) preg_split('/[\s,;]+/', trim((string) ($_POST['emails_copia'] ?? ''))) : ($c['config']['emails_copia'] ?? []))) ?></textarea></label>
-        <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato assinado e os avisos de pedido preenchido, frete para calcular e cliente que assinou.</p>
+        <label>Dados para pagamento <small>(aparecem no pedido do cliente, ex.: chave Pix e nome de quem recebe)</small>
+          <textarea name="pagamento_instrucoes" rows="3" maxlength="500" placeholder="Pix (CNPJ): 00.000.000/0000-00 · Nome de quem recebe"><?= e($_POST ? (string) ($_POST['pagamento_instrucoes'] ?? '') : ($c['config']['pagamento_instrucoes'] ?? '')) ?></textarea></label>
+        <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato assinado e os avisos de pedido preenchido e de cliente que assinou.</p>
         <?php if ($usuario['papel'] === 'admin'): ?><div class="barra-salvar"><button class="btn primario">Salvar</button></div><?php else: ?><p class="aviso">Só o administrador altera estes dados.</p><?php endif; ?>
+      </form>
+    <?php
+}
+
+function contratos_tela_cupons(): void
+{
+    global $csrf;
+    $cupons = dh_contratos()['cupons'] ?? [];
+    $p = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : [];
+    ?>
+      <p><a class="voltar" href="./?acao=contratos">‹ Voltar para Contratos</a></p>
+      <h1>Cupons de desconto</h1>
+      <p class="dica">Crie um código e passe para o cliente. Ele digita o código no pedido de chope e o desconto sai do valor do chope (o frete não muda).</p>
+      <?php if ($cupons): ?>
+        <ul class="lista cupons">
+          <?php foreach ($cupons as $cp): $vencido = $cp['validade'] !== '' && $cp['validade'] < date('Y-m-d'); $esgotado = (int) $cp['limite'] > 0 && (int) $cp['usos'] >= (int) $cp['limite']; ?>
+            <li class="cupom-item">
+              <span class="info">
+                <strong><?= e($cp['codigo']) ?></strong>
+                <span><?= e(dh_cupom_rotulo($cp)) ?> · usos: <?= (int) $cp['usos'] ?><?= (int) $cp['limite'] > 0 ? ' de ' . (int) $cp['limite'] : '' ?><?= $cp['validade'] !== '' ? ' · até ' . e(dh_data_br($cp['validade'])) : '' ?></span>
+                <span class="tags"><?php if (empty($cp['ativo'])): ?><em class="tag cinza">Pausado</em><?php elseif ($vencido): ?><em class="tag cinza">Vencido</em><?php elseif ($esgotado): ?><em class="tag cinza">Esgotado</em><?php else: ?><em class="tag ct-ok">Valendo</em><?php endif; ?></span>
+              </span>
+              <span class="cupom-botoes">
+                <form method="post" action="./?acao=cupom-ativo"><?= $csrf ?><input type="hidden" name="codigo" value="<?= e($cp['codigo']) ?>"><button class="btn secundario"><?= empty($cp['ativo']) ? 'Reativar' : 'Pausar' ?></button></form>
+                <form method="post" action="./?acao=cupom-apagar" onsubmit="return confirm('Apagar o cupom <?= e($cp['codigo']) ?>?');"><?= $csrf ?><input type="hidden" name="codigo" value="<?= e($cp['codigo']) ?>"><button class="btn perigo">Apagar</button></form>
+              </span>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php else: ?>
+        <p class="dica">Nenhum cupom ainda.</p>
+      <?php endif; ?>
+      <h2>Novo cupom</h2>
+      <form method="post" action="./?acao=cupom-salvar" class="form-cerveja">
+        <?= $csrf ?>
+        <label>Código <small>(o que o cliente digita; para mudar um cupom, use o mesmo código)</small><input name="codigo" required maxlength="30" autocapitalize="characters" placeholder="Ex.: FESTA10" value="<?= e($p['codigo'] ?? '') ?>"></label>
+        <span class="rotulo">Tipo de desconto</span>
+        <span class="escolhas">
+          <label class="escolha"><input type="radio" name="tipo" value="pct" <?= ($p['tipo'] ?? 'pct') === 'pct' ? 'checked' : '' ?>><span>Porcentagem (%)</span></label>
+          <label class="escolha"><input type="radio" name="tipo" value="valor" <?= ($p['tipo'] ?? '') === 'valor' ? 'checked' : '' ?>><span>Valor (R$)</span></label>
+        </span>
+        <label>Desconto <small>(ex.: 10 para 10% ou 50,00 para R$ 50)</small><input name="valor" required inputmode="decimal" value="<?= e($p['valor'] ?? '') ?>"></label>
+        <label>Vale até <small>(opcional)</small><input type="date" name="validade" value="<?= e($p['validade'] ?? '') ?>"></label>
+        <label>Quantas vezes pode ser usado <small>(opcional; vazio = sem limite)</small><input name="limite" inputmode="numeric" value="<?= e($p['limite'] ?? '') ?>"></label>
+        <div class="barra-salvar"><button class="btn primario">Salvar cupom</button></div>
       </form>
     <?php
 }
@@ -431,7 +535,7 @@ function contratos_tela_contrato(): void
         ?>
           <p class="dica">O cliente abre o link, escolhe os rótulos e a litragem, preenche os dados dele e já assina. Você recebe um e-mail quando ele terminar; depois é só assinar pela Donkey aqui.</p>
           <?php if (!empty($k['referencia'])): ?><p>Referência: <strong><?= e($k['referencia']) ?></strong></p><?php endif; ?>
-          <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?> em Fortaleza</strong>; outras cidades, você define quando o cliente enviar.</p>
+          <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?> em Fortaleza</strong>; em outras cidades, o cliente digita o valor combinado com o vendedor. O cliente anexa o comprovante de pagamento no pedido.</p>
           <h2>Enviar ao cliente</h2>
           <input class="link-banda" value="<?= e($link) ?>" readonly onclick="this.select()">
           <p class="botoes-link">
@@ -469,6 +573,14 @@ function contratos_tela_contrato(): void
         <p class="<?= $donkey ? 'feito' : '' ?>"><?= $donkey ? '✓' : '○' ?> <strong>Donkey Head Cervejaria</strong><br><?= $donkey ? 'Assinado por ' . e($donkey['nome']) . ' em ' . e(date('d/m/Y H:i', strtotime($donkey['em']))) : 'Aguardando assinatura do administrador' ?></p>
         <p class="<?= $cliente ? 'feito' : '' ?>"><?= $cliente ? '✓' : '○' ?> <strong><?= e($k['campos']['contratante_nome']) ?></strong><br><?= $cliente ? 'Assinado por ' . e($cliente['nome']) . ' em ' . e(date('d/m/Y H:i', strtotime($cliente['em']))) : 'Aguardando assinatura do cliente' ?></p>
       </div>
+
+      <?php $f = $k['campos']; if (!empty($f['comprovante']) || !empty($f['cupom'])): ?>
+        <p class="botoes-link">
+          <?php if (!empty($f['comprovante'])): ?><a class="btn primario" href="./?acao=contrato-comprovante&amp;id=<?= e($k['id']) ?>" target="_blank">📎 Ver comprovante de pagamento</a><?php endif; ?>
+          <?php if (!empty($f['cupom'])): ?><span class="tag">Cupom <?= e($f['cupom']) ?> · − <?= e(dh_moeda($f['desconto'])) ?></span><?php endif; ?>
+        </p>
+        <p class="dica">Total do pedido: <strong><?= e(dh_moeda(dh_contrato_total($k))) ?></strong>. Confira se o valor do comprovante caiu na conta antes de assinar.</p>
+      <?php endif; ?>
 
       <?php if ($k['status'] === 'enviado'): ?>
         <?php if (!$donkey && $usuario['papel'] === 'admin'): ?>
@@ -667,7 +779,7 @@ function contratos_form_pedido(): void
         <label>Referência <small>(só para você achar na lista, ex.: nome do cliente ou do evento)</small><input name="referencia" maxlength="80"></label>
         <p class="rotulo">Forma de pagamento</p>
         <span class="escolhas"><?php foreach (DH_PAGAMENTOS as $p => $rot): ?><label class="escolha"><input type="radio" name="pagamento" value="<?= $p ?>" <?= $p === 'pix' ? 'checked' : '' ?>><span><?= e($rot) ?></span></label><?php endforeach; ?></span>
-        <p class="dica">Frete: em Fortaleza entra sozinho (<?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?>, instalação e retirada). Se o cliente for de outra cidade, o pedido volta para você definir o frete antes de ele assinar.</p>
+        <p class="dica">Frete: em Fortaleza entra sozinho (<?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?>, instalação e retirada). Se for em outra cidade, o cliente digita o valor do frete combinado com o vendedor. Para dar desconto, crie um cupom em Contratos → 🏷 Cupons e passe o código para o cliente.</p>
         <label>Observações para o contrato <small>(opcional)</small><textarea name="observacoes" rows="3"></textarea></label>
         <div class="barra-salvar"><button class="btn primario">Criar pedido e gerar o link</button></div>
       </form>

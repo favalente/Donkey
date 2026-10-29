@@ -11,6 +11,10 @@ const DH_CONTRATO_TIPOS = [
 ];
 // Frete de instalação e retirada em Fortaleza; outras cidades, sob consulta (a Donkey define no painel)
 const DH_FRETE_FORTALEZA = 40;
+// Comprovante de pagamento que o cliente anexa ao pedido (fica em dados/, sem acesso direto pela web)
+const DH_DIR_COMPROVANTES = DH_RAIZ . '/dados/comprovantes';
+const DH_COMPROVANTE_TIPOS = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/heic' => 'heic', 'image/heif' => 'heif', 'application/pdf' => 'pdf'];
+const DH_COMPROVANTE_MAX = 15 * 1024 * 1024;
 const DH_CONTRATO_STATUS = ['rascunho' => 'Rascunho', 'preenchimento' => 'Aguardando o cliente preencher', 'consulta' => 'Aguardando valor do frete', 'enviado' => 'Aguardando assinatura', 'assinado' => 'Assinado', 'cancelado' => 'Cancelado'];
 const DH_EMPRESA = [
     'razao' => 'DONKEY HEAD BREWPUB CERVEJARIA LTDA',
@@ -236,8 +240,8 @@ function dh_cervejas_evento(): array
     return $lista;
 }
 
-// Total a pagar: só o chope comprado (o chope em comodato não entra) + frete
-function dh_comodato_total(array $f): float
+// Valor do chope comprado (o chope em comodato não entra)
+function dh_comodato_chope(array $f): float
 {
     $t = 0.0;
     foreach ($f['itens'] ?? [] as $it) {
@@ -245,7 +249,105 @@ function dh_comodato_total(array $f): float
             $t += (float) ($it['litros'] ?: 0) * (float) ($it['valor_litro'] ?: 0);
         }
     }
-    return $t + (float) ($f['frete'] ?: 0);
+    return $t;
+}
+
+// Total a pagar: chope comprado − desconto do cupom + frete
+function dh_comodato_total(array $f): float
+{
+    $chope = dh_comodato_chope($f);
+    return $chope - min($chope, (float) (($f['desconto'] ?? '') ?: 0)) + (float) ($f['frete'] ?: 0);
+}
+
+// ---- Cupons de desconto (valem sobre o chope, não sobre o frete) ----
+
+function dh_cupom_codigo(string $s): string
+{
+    return mb_substr(strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $s)), 0, 30);
+}
+
+// Devolve o cupom se ele pode ser usado hoje; senão, explica o motivo
+function dh_cupom_valido(array $c, string $codigo): array
+{
+    $cp = $c['cupons'][dh_cupom_codigo($codigo)] ?? null;
+    if (!$cp || empty($cp['ativo'])) {
+        throw new RuntimeException('Cupom não encontrado. Confira o código.');
+    }
+    if ($cp['validade'] !== '' && $cp['validade'] < date('Y-m-d')) {
+        throw new RuntimeException('Este cupom venceu em ' . dh_data_br($cp['validade']) . '.');
+    }
+    if ((int) $cp['limite'] > 0 && (int) $cp['usos'] >= (int) $cp['limite']) {
+        throw new RuntimeException('Este cupom já foi usado o máximo de vezes.');
+    }
+    return $cp;
+}
+
+function dh_cupom_desconto(array $cp, float $chope): float
+{
+    $d = $cp['tipo'] === 'pct' ? $chope * (float) $cp['valor'] / 100 : (float) $cp['valor'];
+    return round(min($chope, max(0, $d)), 2);
+}
+
+function dh_cupom_rotulo(array $cp): string
+{
+    return $cp['tipo'] === 'pct' ? dh_num((float) $cp['valor']) . '% no chope' : dh_moeda($cp['valor']) . ' no chope';
+}
+
+// ---- Comprovante de pagamento ----
+
+// Confere e grava o arquivo enviado; devolve os dados que vão para o contrato
+function dh_comprovante_salvar(string $id, array $arq): array
+{
+    if (($arq['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_INI_SIZE || ($arq['error'] ?? 0) === UPLOAD_ERR_FORM_SIZE || ($arq['size'] ?? 0) > DH_COMPROVANTE_MAX) {
+        throw new RuntimeException('O comprovante passou de 15 MB. Envie um print ou o PDF do comprovante.');
+    }
+    if (($arq['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($arq['tmp_name'])) {
+        throw new RuntimeException('Não foi possível receber o comprovante. Tente de novo.');
+    }
+    $tipo = class_exists('finfo') ? (string) (new finfo(FILEINFO_MIME_TYPE))->file($arq['tmp_name']) : (string) mime_content_type($arq['tmp_name']);
+    if (!isset(DH_COMPROVANTE_TIPOS[$tipo])) {
+        throw new RuntimeException('O comprovante precisa ser uma foto (JPG, PNG) ou um PDF.');
+    }
+    if (!is_dir(DH_DIR_COMPROVANTES) && !@mkdir(DH_DIR_COMPROVANTES, 0755, true)) {
+        throw new RuntimeException('Não foi possível guardar o comprovante agora. Fale com a Donkey Head Cervejaria.');
+    }
+    $nome = preg_replace('/[^a-z0-9]/', '', $id) . '-' . bin2hex(random_bytes(6)) . '.' . DH_COMPROVANTE_TIPOS[$tipo];
+    if (!move_uploaded_file($arq['tmp_name'], DH_DIR_COMPROVANTES . '/' . $nome)) {
+        throw new RuntimeException('Não foi possível guardar o comprovante agora. Tente de novo.');
+    }
+    return [
+        'arquivo' => $nome,
+        'nome' => mb_substr(preg_replace('/[^\p{L}\p{N} ._()-]/u', '', (string) $arq['name']), 0, 80) ?: 'comprovante.' . DH_COMPROVANTE_TIPOS[$tipo],
+        'tipo' => $tipo,
+        'tamanho' => (int) filesize(DH_DIR_COMPROVANTES . '/' . $nome),
+        'sha256' => hash_file('sha256', DH_DIR_COMPROVANTES . '/' . $nome),
+        'em' => date('Y-m-d H:i:s'),
+    ];
+}
+
+function dh_comprovante_apagar(?array $cp): void
+{
+    if (!empty($cp['arquivo']) && preg_match('/^[a-z0-9-]+\.[a-z]+$/', $cp['arquivo'])) {
+        @unlink(DH_DIR_COMPROVANTES . '/' . $cp['arquivo']);
+    }
+}
+
+// Mostra o comprovante no navegador (imagem/PDF) ou baixa (HEIC)
+function dh_comprovante_mostrar(?array $cp): void
+{
+    $arq = !empty($cp['arquivo']) && preg_match('/^[a-z0-9-]+\.[a-z]+$/', $cp['arquivo']) ? DH_DIR_COMPROVANTES . '/' . $cp['arquivo'] : '';
+    if ($arq === '' || !is_file($arq)) {
+        http_response_code(404);
+        exit('Comprovante não encontrado.');
+    }
+    $ver = in_array($cp['tipo'], ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], true);
+    header('Content-Type: ' . $cp['tipo']);
+    header('Content-Length: ' . filesize($arq));
+    header('Content-Disposition: ' . ($ver ? 'inline' : 'attachment') . '; filename="' . str_replace('"', '', $cp['nome']) . '"');
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: private, no-store');
+    readfile($arq);
+    exit;
 }
 
 function dh_contrato_total(array $k): float
@@ -366,15 +468,24 @@ function dh_contrato_comodato(array $f, callable $linha): string
     $h = '<h2>SEÇÃO II – CONDIÇÕES COMERCIAIS</h2><table class="quadro">';
     $cidade = trim($f['cidade'] ?? '');
     $h .= $linha('Endereço de entrega:', $f['entrega_endereco'] . ($cidade !== '' && mb_stripos($f['entrega_endereco'], $cidade) === false ? ' – ' . $cidade : ''))
-        . $linha('Entrega dos equipamentos:', trim(dh_data_br($f['entrega_data']) . ' ' . ($f['entrega_hora'] !== '' ? 'às ' . $f['entrega_hora'] : '')))
+        . $linha('Entrega dos equipamentos:', !empty($f['entrega_hora_estimada'])
+            ? dh_data_br($f['entrega_data']) . ', previsão por volta das ' . $f['entrega_hora'] . ' (horário estimado; o horário exato é combinado diretamente com o entregador)'
+            : trim(dh_data_br($f['entrega_data']) . ' ' . ($f['entrega_hora'] !== '' ? 'às ' . $f['entrega_hora'] : '')))
         . $linha('Devolução (coleta) dos equipamentos:', trim(dh_data_br($f['devolucao_data']) . ' ' . ($f['devolucao_hora'] !== '' ? 'às ' . $f['devolucao_hora'] : '')))
         . $linha('Forma de pagamento:', DH_PAGAMENTOS[$f['pagamento']] ?? '');
+    if (!empty($f['comprovante'])) {
+        $cp = $f['comprovante'];
+        $h .= $linha('Comprovante de pagamento:', 'Anexado pelo CONTRATANTE em ' . date('d/m/Y \à\s H:i', strtotime($cp['em'])) . ' (arquivo "' . $cp['nome'] . '", código SHA-256 ' . $cp['sha256'] . ')');
+    }
     $comprado = array_filter($f['itens'], fn($it) => empty($it['comodato']));
     $emComodato = array_filter($f['itens'], fn($it) => !empty($it['comodato']));
     $h .= '</table><h3>Chope comprado</h3><table class="itens"><tr><th>Item</th><th>Valor do litro</th><th>Quantidade</th><th>Valor total</th></tr>';
     foreach ($comprado as $it) {
         $h .= '<tr><td>' . e($it['descricao']) . '</td><td>' . e(dh_moeda($it['valor_litro'])) . '</td><td>' . e(dh_litros($it['litros'])) . ' L</td><td>'
             . e(dh_moeda((float) $it['litros'] * (float) $it['valor_litro'])) . '</td></tr>';
+    }
+    if ((float) (($f['desconto'] ?? '') ?: 0) > 0) {
+        $h .= '<tr><td colspan="3">Desconto' . (($f['cupom'] ?? '') !== '' ? ' (cupom ' . e($f['cupom']) . ')' : '') . '</td><td>− ' . e(dh_moeda(min(dh_comodato_chope($f), (float) $f['desconto']))) . '</td></tr>';
     }
     $frete = $f['frete'] !== '' && (float) $f['frete'] > 0;
     $h .= '<tr><td colspan="3">Frete (instalação e retirada)</td><td>' . ($frete ? e(dh_moeda($f['frete'])) : 'Incluso') . '</td></tr>';
@@ -403,12 +514,14 @@ function dh_contrato_comodato(array $f, callable $linha): string
 <h3>II | DO PAGAMENTO</h3>
 <p>2.1. O valor total indicado na Seção II será pago na forma ali informada, até a data da entrega, salvo condição diferente registrada nas observações.</p>
 <p>2.2. Em caso de atraso no pagamento, o valor devido será corrigido pelo IPCA (IBGE), acrescido de multa de 10% e juros de 1% ao mês.</p>
+<!--2.3-->
 <h3>III | DA ENTREGA, DO USO E DA CONSERVAÇÃO</h3>
 <p>3.1. O CONTRATANTE declara receber os equipamentos em perfeitas condições de uso e obriga-se a conservá-los da mesma forma, sendo responsável por qualquer dano aos equipamentos, independentemente de culpa, fato atípico ou fato natural.</p>
 <p>3.2. Os equipamentos devem permanecer no endereço de entrega, sendo vedado ao CONTRATANTE cedê-los, emprestá-los ou sublocá-los a terceiros, bem como abri-los, desmontá-los ou alterar suas características.</p>
 <h3>IV | DA DEVOLUÇÃO</h3>
 <p>4.1. Os equipamentos e os barris serão coletados pela CONTRATADA no endereço de entrega, na data e no horário de devolução indicados na Seção II, cabendo ao CONTRATANTE garantir o acesso e a presença de um responsável no momento da coleta.</p>
-<p>4.2. Não sendo possível a coleta na data combinada por motivo atribuível ao CONTRATANTE, as despesas de nova coleta correrão por conta do CONTRATANTE.</p>
+<p>4.2. Os equipamentos devem ser devolvidos, no máximo, no dia seguinte ao evento, exceto quando acordado de forma diferente com a CONTRATADA.</p>
+<p>4.3. Não sendo possível a coleta na data combinada por motivo atribuível ao CONTRATANTE, as despesas de nova coleta correrão por conta do CONTRATANTE.</p>
 <h3>V | DOS DANOS, DA PERDA E DA NÃO DEVOLUÇÃO</h3>
 <p>5.1. Em caso de dano, perda, furto, roubo ou não devolução de qualquer equipamento ou barril, o CONTRATANTE pagará à CONTRATADA o valor de reposição indicado na Seção II, ou o custo do reparo, se este for menor, até o décimo dia útil após receber notificação da CONTRATADA detalhando os danos e o valor devido.</p>
 <h3>VI | DO CONSUMO RESPONSÁVEL</h3>
@@ -416,12 +529,16 @@ function dh_contrato_comodato(array $f, callable $linha): string
 <h3>VII | DO CANCELAMENTO</h3>
 <p>7.1. O cancelamento pelo CONTRATANTE deverá ser comunicado por escrito com antecedência mínima de 48 (quarenta e oito) horas da data de entrega. Após esse prazo, poderão ser cobradas as despesas já realizadas pela CONTRATADA, como frete e chope separado para o pedido.</p>
 <h3>VIII | DOS DADOS PESSOAIS</h3>
-<p>8.1. Os dados pessoais informados neste contrato serão utilizados pela CONTRATADA para a sua execução, cobrança, cumprimento de obrigações legais e para facilitar pedidos futuros do CONTRATANTE, nos termos da Lei nº 13.709/2018 (LGPD). O envio de novidades e promoções depende de autorização expressa do CONTRATANTE, que pode ser retirada a qualquer momento.</p>
+<p>8.1. Os dados pessoais informados neste contrato serão utilizados pela CONTRATADA para a sua execução, cobrança, cumprimento de obrigações legais e para facilitar pedidos futuros do CONTRATANTE e para análises internas de vendas, nos termos da Lei nº 13.709/2018 (LGPD).</p>
 <h3>IX | DAS DISPOSIÇÕES FINAIS</h3>
 <p>9.1. Para dirimir quaisquer controvérsias oriundas do presente contrato, as partes elegem o foro da comarca de Fortaleza/CE.</p>
 <p>9.2. E assim, por estarem de pleno acordo e ajustadas, as partes assinam o presente instrumento eletronicamente, de livre vontade, reconhecendo a validade e a eficácia da assinatura eletrônica, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020, e dispensando a assinatura de testemunhas, conforme o art. 784, § 4º, do Código de Processo Civil.</p>
 HTML;
-    return $h;
+    // O comprovante anexado faz parte do contrato
+    if (!empty($f['comprovante'])) {
+        $h = str_replace('<!--2.3-->', '<p>2.3. O comprovante de pagamento anexado pelo CONTRATANTE e identificado na Seção II integra este contrato.</p>', $h);
+    }
+    return str_replace("<!--2.3-->\n", '', $h);
 }
 
 // Relatório de assinaturas (vai junto do documento, como o da ZapSign)

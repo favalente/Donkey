@@ -20,17 +20,43 @@ if (!$k || $k['status'] === 'rascunho') {
     http_response_code(404);
     $k = null;
 }
-$erro = '';
 $aviso = $_SESSION['contrato_aviso'] ?? '';
 unset($_SESSION['contrato_aviso']);
 $pend = $_SESSION['contrato_codigo'] ?? null;
 if ($k && ($pend['id'] ?? '') !== $k['id']) {
     $pend = null;
 }
+$erro = '';
 $podeAssinar = $k && $k['status'] === 'enviado' && empty($k['assinaturas']['contratante']);
 $preencher = $k && $k['status'] === 'preenchimento';
 $consulta = $k && $k['status'] === 'consulta';
 $cervejas = $preencher ? dh_cervejas_evento() : [];
+
+// Cupom de desconto: o formulário confere o código antes de enviar (limite de tentativas por sessão)
+if ($preencher && isset($_GET['cupom'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    $_SESSION['cupom_tentativas'] = ($_SESSION['cupom_tentativas'] ?? 0) + 1;
+    try {
+        if ($_SESSION['cupom_tentativas'] > 15) {
+            throw new RuntimeException('Muitas tentativas. Fale com a Donkey Head Cervejaria.');
+        }
+        $cp = dh_cupom_valido($c, (string) $_GET['cupom']);
+        echo json_encode(['ok' => true, 'codigo' => $cp['codigo'], 'tipo' => $cp['tipo'], 'valor' => (float) $cp['valor'], 'msg' => 'Cupom ' . $cp['codigo'] . ' aplicado: ' . dh_cupom_rotulo($cp) . '.']);
+    } catch (RuntimeException $e) {
+        echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Comprovante de pagamento (quem tem o link do contrato pode ver)
+if ($k && isset($_GET['comprovante'])) {
+    dh_comprovante_mostrar($k['campos']['comprovante'] ?? null);
+}
+
+// Arquivo maior que o limite do servidor: o PHP descarta o formulário inteiro
+if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && !$_POST && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    $erro = 'O comprovante é grande demais. Envie um print ou o PDF do comprovante.';
+}
 
 // Pedido de chope: o cliente preenche os dados do cabeçalho, escolhe rótulos e litragem e o contrato é gerado
 if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'preencher') {
@@ -48,10 +74,27 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         $f['contratante_endereco'] = $f['entrega_endereco'];
         $f['entrega_data'] = (string) ($_POST['entrega_data'] ?? '');
         $f['devolucao_data'] = (string) ($_POST['devolucao_data'] ?? '');
-        // Fortaleza: frete fixo; outra cidade: a Donkey calcula e libera o contrato depois
+        $f['entrega_hora'] = (string) ($_POST['entrega_hora'] ?? '');
+        $f['entrega_hora_estimada'] = true;
+        // Fortaleza: frete fixo; outra cidade: o cliente digita o valor combinado com o vendedor
         $foraDeFortaleza = ($_POST['local'] ?? '') === 'outra';
         $f['cidade'] = $foraDeFortaleza ? $txt('cidade', 80) : 'Fortaleza/CE';
-        $f['frete'] = $foraDeFortaleza ? '' : number_format(DH_FRETE_FORTALEZA, 2, '.', '');
+        $f['frete'] = $foraDeFortaleza ? dh_valor($_POST['frete_outra'] ?? '') : number_format(DH_FRETE_FORTALEZA, 2, '.', '');
+        // O comprovante é guardado assim que chega, para o cliente não ter de anexar de novo se algo no formulário estiver errado
+        if (($_FILES['comprovante']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $cp = dh_comprovante_salvar($k['id'], $_FILES['comprovante']);
+            $c = dh_contratos();
+            $i = dh_contrato_por_token($c, $token);
+            if ($c['contratos'][$i]['status'] !== 'preenchimento') {
+                dh_comprovante_apagar($cp);
+                throw new RuntimeException('Este pedido já foi enviado.');
+            }
+            dh_comprovante_apagar($c['contratos'][$i]['campos']['comprovante'] ?? null);
+            $c['contratos'][$i]['campos']['comprovante'] = $cp;
+            dh_contratos_salvar($c);
+            $k = $c['contratos'][$i];
+            $f['comprovante'] = $cp;
+        }
         $porId = array_column($cervejas, null, 'id');
         $f['itens'] = [];
         foreach (['itens' => false, 'comodato' => true] as $campo => $emComodato) {
@@ -97,8 +140,24 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         if (!in_array($_POST['local'] ?? '', ['fortaleza', 'outra'], true)) {
             throw new RuntimeException('Responda se a entrega é em Fortaleza.');
         }
+        if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $f['entrega_hora'])) {
+            throw new RuntimeException('Informe o horário de entrega estimado.');
+        }
         if ($foraDeFortaleza && mb_strlen($f['cidade']) < 3) {
             throw new RuntimeException('Informe a cidade da entrega.');
+        }
+        if ($foraDeFortaleza && ($f['frete'] === '' || (float) $f['frete'] > 20000)) {
+            throw new RuntimeException('Digite o valor do frete combinado com o vendedor (use 0 se for grátis).');
+        }
+        $f['cupom'] = '';
+        $f['desconto'] = '';
+        if (trim((string) ($_POST['cupom'] ?? '')) !== '') {
+            $cp = dh_cupom_valido(dh_contratos(), (string) $_POST['cupom']);
+            $f['cupom'] = $cp['codigo'];
+            $f['desconto'] = number_format(dh_cupom_desconto($cp, dh_comodato_chope($f)), 2, '.', '');
+        }
+        if (empty($f['comprovante'])) {
+            throw new RuntimeException('Anexe o comprovante de pagamento. O contrato só vale com ele.');
         }
         $c = dh_contratos();
         $i = dh_contrato_por_token($c, $token);
@@ -108,26 +167,24 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         if (empty($c['config']['representante_cpf'])) {
             throw new RuntimeException('Não foi possível gerar o contrato agora. Fale com a Donkey Head Cervejaria.');
         }
-        $k = $c['contratos'][$i];
-        $k['campos'] = $f;
-        dh_cliente_registrar($k, !empty($_POST['novidades']));
-        if ($foraDeFortaleza) {
-            $k['status'] = 'consulta';
-            $c['contratos'][$i] = $k;
-            dh_contratos_salvar($c);
-            dh_email_equipe('Pedido de chope fora de Fortaleza: defina o frete',
-                '<p>' . e($f['contratante_nome']) . ' fez um pedido de chope com entrega em <b>' . e($f['cidade']) . '</b> (' . e(dh_data_br($f['entrega_data'])) . ', chope ' . e(dh_moeda(dh_comodato_total($f))) . ').</p>'
-                . '<p>Abra o pedido no painel (Contratos), informe o valor do frete e libere para o cliente assinar.</p>');
-            $_SESSION['contrato_aviso'] = 'Pedido recebido! Como a entrega é em ' . $f['cidade'] . ', vamos calcular o frete e avisar você por e-mail e WhatsApp. Depois é só voltar neste mesmo link para conferir e assinar o contrato.';
-            header('Location: ./?t=' . $token, true, 303);
-            exit;
+        if ($f['cupom'] !== '') {
+            // Confere de novo (outro pedido pode ter usado o último cupom) e conta o uso
+            dh_cupom_valido($c, $f['cupom']);
+            $c['cupons'][$f['cupom']]['usos'] = (int) $c['cupons'][$f['cupom']]['usos'] + 1;
         }
+        $k = $c['contratos'][$i];
+        $f['comprovante'] = $k['campos']['comprovante'] ?? $f['comprovante'];
+        $k['campos'] = $f;
+        dh_cliente_registrar($k);
         $k['numero'] = dh_contrato_numero($c);
         dh_contrato_congelar($k, $c['config']);
         $c['contratos'][$i] = $k;
         dh_contratos_salvar($c);
         dh_email_equipe('Pedido de chope preenchido nº ' . $k['numero'],
-            '<p>' . e($f['contratante_nome']) . ' preencheu o pedido de chope nº <b>' . e($k['numero']) . '</b> (entrega em ' . e(dh_data_br($f['entrega_data'])) . ', total ' . e(dh_moeda(dh_comodato_total($f))) . ').</p><p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>');
+            '<p>' . e($f['contratante_nome']) . ' preencheu o pedido de chope nº <b>' . e($k['numero']) . '</b> (entrega em ' . e($f['cidade']) . ', ' . e(dh_data_br($f['entrega_data'])) . ', total ' . e(dh_moeda(dh_comodato_total($f)))
+            . ($f['cupom'] !== '' ? ', com o cupom ' . e($f['cupom']) . ' (− ' . e(dh_moeda($f['desconto'])) . ')' : '') . ($foraDeFortaleza ? ', frete combinado de ' . e(dh_moeda($f['frete'])) : '') . ').</p>'
+            . '<p><a href="' . e(dh_url_site() . 'admin/?acao=contrato-comprovante&id=' . $k['id']) . '">Ver o comprovante de pagamento</a> (entre no painel) e confira se o valor caiu.</p>'
+            . '<p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>');
         $_SESSION['contrato_aviso'] = 'Pedido registrado! Confira o contrato abaixo e assine no final da página.';
         header('Location: ./?t=' . $token . '#assinar', true, 303);
         exit;
@@ -224,7 +281,7 @@ $f = $k['campos'] ?? [];
   <meta name="referrer" content="no-referrer">
   <title><?= $k ? 'Contrato nº ' . e($k['numero']) . ' · ' : '' ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=5">
+  <link rel="stylesheet" href="contrato.css?v=6">
 </head>
 <body>
   <div class="barra no-print">
@@ -259,6 +316,8 @@ $f = $k['campos'] ?? [];
         </div>
         <footer class="rodape-doc"><?= e(DH_EMPRESA['razao']) ?> · CNPJ <?= e(DH_EMPRESA['cnpj']) ?> · <?= e(DH_EMPRESA['endereco']) ?> · <?= e(DH_EMPRESA['telefone']) ?><br>Contrato nº <?= e($k['numero']) ?> · Código de integridade: <?= e($k['hash']) ?></footer>
       </article>
+
+      <?php if (!empty($f['comprovante'])): ?><p class="no-print"><a class="btn" href="./?t=<?= e($token) ?>&amp;comprovante=1" target="_blank">📎 Ver o comprovante de pagamento</a></p><?php endif; ?>
 
       <article class="papel quebra"><?= dh_contrato_relatorio($k) ?></article>
 
