@@ -249,3 +249,43 @@ a.filtro { text-decoration: none; color: var(--text); }
 .beer-preco { color: var(--amber); font-size: .82rem; font-weight: 600; }
 .beer-preco[hidden] { display: none; }
 .filtro .contagem { opacity: .7; font-weight: 500; }
+
+/* Agenda em calendário (estilo Google Agenda) */
+.cal-legenda { display: flex; gap: 16px; margin-bottom: 10px; font-size: .88rem; color: var(--muted); }
+.cal-legenda span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; background: var(--cal-cor); }
+.cal-u-aldeota { --cal-cor: var(--amber); }
+.cal-u-maraponga { --cal-cor: #5fb7a4; }
+.calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--line); gap: 1px; }
+.cal-semana { background: var(--surface); text-align: center; padding: 8px 2px; font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cal-vazio, .cal-dia { background: var(--bg, #16110d); min-height: 104px; }
+.cal-dia { padding: 6px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cal-num { font-size: .85rem; font-weight: 600; color: var(--muted); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+.cal-dia.hoje .cal-num { background: var(--amber); color: #1a120a; }
+.cal-dia.passado { opacity: .45; }
+.cal-abrir { flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; min-width: 0; }
+.cal-show { display: block; background: var(--cal-cor); color: #1a120a; font-size: .74rem; font-weight: 600; line-height: 1.25; padding: 3px 6px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-abrir:hover .cal-show { filter: brightness(1.12); }
+.cal-dica { margin-top: 10px; }
+.cal-lista-titulo { font-size: clamp(1.8rem, 4vw, 2.4rem); margin: 48px 0 18px; }
+.cal-modal { width: min(440px, calc(100% - 32px)); padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+.cal-modal::backdrop { background: rgba(0, 0, 0, .7); }
+.cal-modal .fechar { position: absolute; top: 8px; right: 8px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .6); color: #fff; font-size: 1.6rem; cursor: pointer; }
+.cal-modal .show { border: 0; border-radius: 0; }
+.cal-modal .show + .show { border-top: 1px solid var(--line); }
+@media (max-width: 600px) {
+  .cal-vazio, .cal-dia { min-height: 72px; }
+  .cal-dia { padding: 3px; gap: 2px; }
+  .cal-num { font-size: .75rem; width: 22px; height: 22px; }
+  .cal-semana { font-size: .62rem; letter-spacing: 0; }
+  .cal-show { font-size: .58rem; padding: 2px 3px; border-radius: 3px; white-space: normal; overflow-wrap: anywhere; max-height: 3.9em; }
+}
+.cal-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cal-linha { width: 100%; flex-direction: row; align-items: center; gap: 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); transition: border-color .2s; }
+.cal-linha:hover { border-color: var(--amber); }
+.cal-linha-data { flex: none; width: 48px; text-align: center; font-size: .72rem; font-weight: 600; text-transform: uppercase; color: var(--muted); line-height: 1.1; }
+.cal-linha-data strong { display: block; font-family: var(--display); font-size: 1.9rem; font-weight: 400; color: var(--cream); }
+.cal-linha-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cal-linha-info strong { font-family: var(--display); font-size: 1.35rem; font-weight: 400; line-height: 1.1; }
+.cal-linha-info span { color: var(--muted); font-size: .88rem; }
+.cal-linha-onde { flex: none; text-align: right; color: var(--cal-cor); font-weight: 600; font-size: .85rem; }
+.cal-linha-onde small { display: block; color: var(--muted); font-weight: 500; }

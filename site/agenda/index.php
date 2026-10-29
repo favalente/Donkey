@@ -10,7 +10,14 @@ $ini = $mes . '-01';
 $fim = date('Y-m-t', strtotime($ini));
 // No mês atual, mostra a partir de hoje
 $de = $mes === date('Y-m') ? date('Y-m-d') : $ini;
-$shows = dh_shows_publicos($a, $de, $fim, $unidade);
+// O calendário mostra o mês inteiro; a lista embaixo, só o que ainda vai acontecer
+$doMes = dh_shows_publicos($a, $ini, $fim, $unidade);
+$shows = array_values(array_filter($doMes, fn($s) => $s['data'] >= $de));
+$porDia = [];
+foreach ($doMes as $s) {
+    $porDia[$s['data']][] = $s;
+}
+$hoje = date('Y-m-d');
 $anterior = date('Y-m', strtotime($ini . ' -1 month'));
 $proximo = date('Y-m', strtotime($ini . ' +1 month'));
 $nomeMes = DH_MESES[(int) substr($mes, 5, 2)] . ' ' . substr($mes, 0, 4);
@@ -29,7 +36,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=9">
+  <link rel="stylesheet" href="../assets/css/style.css?v=10">
   <script type="application/ld+json">
   <?= json_encode(array_map(fn($s) => [
       '@context' => 'https://schema.org',
@@ -74,16 +81,71 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
           <?php endforeach; ?>
         </div>
       </div>
+      <div class="cal-legenda">
+        <?php foreach (DH_UNIDADES as $u => $nomeU): if ($unidade && $unidade !== $u) continue; ?><span class="cal-u-<?= $u ?>"><?= e($nomeU) ?></span><?php endforeach; ?>
+      </div>
+      <div class="calendario" role="grid" aria-label="Shows de <?= e($nomeMes) ?>">
+        <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana" role="columnheader"><?= $d ?></div><?php endforeach; ?>
+        <?php for ($i = 0; $i < (int) date('w', strtotime($ini)); $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
+        <?php for ($t = strtotime($ini); $t <= strtotime($fim); $t = strtotime('+1 day', $t)): $dia = date('Y-m-d', $t); $doDia = $porDia[$dia] ?? []; ?>
+          <div class="cal-dia<?= $dia < $hoje ? ' passado' : '' ?><?= $dia === $hoje ? ' hoje' : '' ?>" role="gridcell">
+            <span class="cal-num"><?= date('j', $t) ?></span>
+            <?php if ($doDia): ?>
+              <button class="cal-abrir" data-dia="<?= $dia ?>" aria-label="Shows de <?= e(dh_data_curta($dia)) ?>">
+                <?php foreach ($doDia as $sh): ?><span class="cal-show cal-u-<?= $sh['unidade'] ?>"><?= e($sh['banda']) ?></span><?php endforeach; ?>
+              </button>
+              <div class="cal-detalhe" id="dia-<?= $dia ?>" hidden>
+                <?php foreach ($doDia as $sh) echo dh_cartao_show($sh, '../'); ?>
+              </div>
+            <?php endif; ?>
+          </div>
+        <?php endfor; ?>
+        <?php for ($i = (int) date('w', strtotime($fim)); $i < 6; $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
+      </div>
+      <p class="note cal-dica">Toque no dia para ver a banda, o tributo e o horário.</p>
+
+      <h2 class="cal-lista-titulo"><?= $mes === date('Y-m') ? 'Próximos shows do mês' : 'Shows do mês' ?></h2>
       <?php if ($shows): ?>
-        <div class="shows-grid">
-          <?php foreach ($shows as $s) echo dh_cartao_show($s, '../'); ?>
-        </div>
+        <ul class="cal-lista">
+          <?php foreach ($shows as $s): $t = strtotime($s['data']); ?>
+            <li>
+              <button class="cal-abrir cal-linha" data-dia="<?= $s['data'] ?>">
+                <span class="cal-linha-data"><strong><?= date('d', $t) ?></strong><?= e(mb_substr(DH_DIAS_SEMANA[(int) date('w', $t)], 0, 3)) ?></span>
+                <span class="cal-linha-info">
+                  <strong><?= e($s['banda']) ?></strong>
+                  <?php if ($s['tributo'] !== ''): ?><span><?= e($s['tributo']) ?></span><?php endif; ?>
+                </span>
+                <span class="cal-linha-onde cal-u-<?= $s['unidade'] ?>"><?= e(DH_UNIDADES[$s['unidade']]) ?><small><?= e(str_replace(':', 'h', $s['hora'])) ?></small></span>
+              </button>
+            </li>
+          <?php endforeach; ?>
+        </ul>
       <?php else: ?>
-        <p class="agenda-vazia">A programação de <?= e($nomeMes) ?> ainda não foi divulgada. Volte em breve!</p>
+        <p class="agenda-vazia"><?= $doMes ? 'Os shows deste mês já aconteceram. Veja o próximo mês!' : 'A programação de ' . e($nomeMes) . ' ainda não foi divulgada. Volte em breve!' ?></p>
       <?php endif; ?>
       <p class="note">Quer a agenda no seu celular? <a href="ics.php">Adicione ao seu calendário</a>.</p>
     </div>
   </main>
+
+  <dialog class="cal-modal" id="cal-modal" aria-label="Shows do dia">
+    <button class="fechar" aria-label="Fechar">×</button>
+    <div class="cal-modal-corpo"></div>
+  </dialog>
+  <script>
+    (function () {
+      var modal = document.getElementById('cal-modal');
+      var corpo = modal.querySelector('.cal-modal-corpo');
+      document.querySelectorAll('.cal-abrir').forEach(function (b) {
+        b.addEventListener('click', function () {
+          corpo.innerHTML = document.getElementById('dia-' + b.getAttribute('data-dia')).innerHTML;
+          modal.showModal();
+        });
+      });
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal || e.target.classList.contains('fechar')) modal.close();
+      });
+    })();
+  </script>
 
   <footer class="site-footer">
     <div class="container legal">
