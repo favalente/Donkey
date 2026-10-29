@@ -500,8 +500,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=15">
-  <script src="../assets/js/arrastar-mes.js?v=1"></script>
+  <link rel="stylesheet" href="admin.css?v=16">
+  <script src="../assets/js/arrastar-mes.js?v=2"></script>
 </head>
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>

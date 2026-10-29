@@ -252,3 +252,4 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .cal-menu-pix .pix-valor { font-weight: 700; }
 .cal-menu-pix .btn { width: 100%; margin-top: 4px; }
 .cal-menu-pix [hidden] { display: none; }
+.cal-nav { margin: 10px 0 8px; }

@@ -36,8 +36,8 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=11">
-  <script src="../assets/js/arrastar-mes.js?v=1"></script>
+  <link rel="stylesheet" href="../assets/css/style.css?v=12">
+  <script src="../assets/js/arrastar-mes.js?v=2"></script>
   <script type="application/ld+json">
   <?= json_encode(array_map(fn($s) => [
       '@context' => 'https://schema.org',
@@ -70,11 +70,6 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
         <p>Programação de shows nas unidades Aldeota e Maraponga. Sujeita a alterações: confira também o nosso Instagram.</p>
       </div>
       <div class="agenda-filtros">
-        <div class="agenda-mes">
-          <a href="<?= e($link($anterior, $unidade)) ?>" aria-label="Mês anterior" id="mes-anterior">‹</a>
-          <strong><?= e($nomeMes) ?></strong>
-          <a href="<?= e($link($proximo, $unidade)) ?>" aria-label="Próximo mês" id="mes-proximo">›</a>
-        </div>
         <div class="filtros" role="group" aria-label="Unidade">
           <a class="filtro<?= !$unidade ? ' ativo' : '' ?>" href="<?= e($link($mes, null)) ?>">Todas</a>
           <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
@@ -84,6 +79,11 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
       </div>
       <div class="cal-legenda">
         <?php foreach (DH_UNIDADES as $u => $nomeU): if ($unidade && $unidade !== $u) continue; ?><span class="cal-u-<?= $u ?>"><?= e($nomeU) ?></span><?php endforeach; ?>
+      </div>
+      <div class="agenda-mes cal-mes-perto">
+        <a href="<?= e($link($anterior, $unidade)) ?>" aria-label="Mês anterior" id="mes-anterior">‹</a>
+        <strong><?= e($nomeMes) ?></strong>
+        <a href="<?= e($link($proximo, $unidade)) ?>" aria-label="Próximo mês" id="mes-proximo">›</a>
       </div>
       <div class="calendario" role="grid" aria-label="Shows de <?= e($nomeMes) ?>">
         <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana" role="columnheader"><?= $d ?></div><?php endforeach; ?>
