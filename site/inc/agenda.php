@@ -359,3 +359,92 @@ function dh_cartao_show(array $s, string $raiz = ''): string
     }
     return $html . '</div></article>';
 }
+
+// ---- Fotos das bandas (painel e link da banda) ----
+
+// Guarda a foto original (sem perder qualidade, para o designer) e versões reduzidas para o site
+function dh_banda_foto_salvar(array $arq, string $bandaId): array
+{
+    if ($arq['error'] !== UPLOAD_ERR_OK) {
+        $max = ini_get('upload_max_filesize');
+        throw new RuntimeException('Falha no envio de "' . $arq['name'] . '" (código ' . $arq['error'] . '). O limite do servidor é ' . $max . ' por foto.');
+    }
+    return dh_banda_foto_de_arquivo($arq['tmp_name'], $bandaId, true);
+}
+
+function dh_banda_foto_de_arquivo(string $caminho, string $bandaId, bool $upload = false): array
+{
+    $info = @getimagesize($caminho);
+    $tipos = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+    if (!$info || !isset($tipos[$info[2]])) {
+        throw new RuntimeException('A foto precisa ser JPG, PNG ou WEBP.');
+    }
+    $img = @imagecreatefromstring((string) file_get_contents($caminho));
+    if (!$img) {
+        throw new RuntimeException('Não foi possível ler a foto.');
+    }
+    if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+        $giro = [3 => 180, 6 => -90, 8 => 90][(@exif_read_data($caminho)['Orientation'] ?? 1)] ?? 0;
+        if ($giro) {
+            $img = imagerotate($img, $giro, 0);
+        }
+    }
+    $fid = dh_id_novo('f');
+    $dir = DH_DIR_BANDAS . '/' . $bandaId;
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    $original = $dir . '/original-' . $fid . '.' . $tipos[$info[2]];
+    $ok = $upload ? move_uploaded_file($caminho, $original) : copy($caminho, $original);
+    if (!$ok) {
+        throw new RuntimeException('Não foi possível gravar a foto. Verifique a permissão da pasta "uploads".');
+    }
+    dh_gravar_jpeg($img, $dir . '/media-' . $fid . '.jpg', 1200, 82);
+    dh_gravar_jpeg($img, $dir . '/mini-' . $fid . '.jpg', 420, 74);
+    $rel = 'uploads/bandas/' . $bandaId . '/';
+    return ['id' => $fid, 'original' => $rel . basename($original), 'media' => $rel . 'media-' . $fid . '.jpg',
+        'mini' => $rel . 'mini-' . $fid . '.jpg', 'largura' => $info[0], 'altura' => $info[1]];
+}
+
+function dh_banda_foto_apagar(array $f): void
+{
+    foreach (['original', 'media', 'mini'] as $k) {
+        if (strpos($f[$k] ?? '', 'uploads/bandas/') === 0) {
+            @unlink(DH_RAIZ . '/' . $f[$k]);
+        }
+    }
+}
+
+// "@banda", "instagram.com/banda/" ou "banda" -> "banda"
+function dh_instagram(string $v): string
+{
+    $v = trim($v);
+    if (preg_match('~instagram\.com/([a-z0-9_.]+)~i', $v, $m)) {
+        $v = $m[1];
+    }
+    $v = ltrim($v, '@ ');
+    return preg_match('/^[a-z0-9_.]{1,30}$/i', $v) ? $v : '';
+}
+
+// Endereço do site (para montar links enviados por WhatsApp)
+function dh_url_site(): string
+{
+    $host = preg_match('/^[a-z0-9.:-]+$/i', $_SERVER['HTTP_HOST'] ?? '') ? $_SERVER['HTTP_HOST'] : 'www.donkeyheadcervejaria.com.br';
+    $https = ($_SERVER['HTTPS'] ?? '') !== '' && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    $local = in_array(explode(':', $host)[0], ['localhost', '127.0.0.1'], true);
+    return ($https || !$local ? 'https://' : 'http://') . $host . '/';
+}
+
+// Banda dona do link secreto (ou null)
+function dh_banda_por_token(array $a, string $token): ?int
+{
+    if (!preg_match('/^[a-f0-9]{32}$/', $token)) {
+        return null;
+    }
+    foreach ($a['bandas'] as $i => $b) {
+        if (!empty($b['token']) && hash_equals($b['token'], $token)) {
+            return $i;
+        }
+    }
+    return null;
+}

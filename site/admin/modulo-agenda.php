@@ -39,59 +39,6 @@ function dh_tributos_texto(string $t): array
     return array_values(array_unique(array_filter($l, fn($x) => $x !== '')));
 }
 
-// Guarda a foto original (sem perder qualidade, para o designer) e versões reduzidas para o site
-function dh_banda_foto_salvar(array $arq, string $bandaId): array
-{
-    if ($arq['error'] !== UPLOAD_ERR_OK) {
-        $max = ini_get('upload_max_filesize');
-        throw new RuntimeException('Falha no envio de "' . $arq['name'] . '" (código ' . $arq['error'] . '). O limite do servidor é ' . $max . ' por foto.');
-    }
-    return dh_banda_foto_de_arquivo($arq['tmp_name'], $bandaId, true);
-}
-
-function dh_banda_foto_de_arquivo(string $caminho, string $bandaId, bool $upload = false): array
-{
-    $info = @getimagesize($caminho);
-    $tipos = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
-    if (!$info || !isset($tipos[$info[2]])) {
-        throw new RuntimeException('A foto precisa ser JPG, PNG ou WEBP.');
-    }
-    $img = @imagecreatefromstring((string) file_get_contents($caminho));
-    if (!$img) {
-        throw new RuntimeException('Não foi possível ler a foto.');
-    }
-    if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
-        $giro = [3 => 180, 6 => -90, 8 => 90][(@exif_read_data($caminho)['Orientation'] ?? 1)] ?? 0;
-        if ($giro) {
-            $img = imagerotate($img, $giro, 0);
-        }
-    }
-    $fid = dh_id_novo('f');
-    $dir = DH_DIR_BANDAS . '/' . $bandaId;
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-    $original = $dir . '/original-' . $fid . '.' . $tipos[$info[2]];
-    $ok = $upload ? move_uploaded_file($caminho, $original) : copy($caminho, $original);
-    if (!$ok) {
-        throw new RuntimeException('Não foi possível gravar a foto. Verifique a permissão da pasta "uploads".');
-    }
-    dh_gravar_jpeg($img, $dir . '/media-' . $fid . '.jpg', 1200, 82);
-    dh_gravar_jpeg($img, $dir . '/mini-' . $fid . '.jpg', 420, 74);
-    $rel = 'uploads/bandas/' . $bandaId . '/';
-    return ['id' => $fid, 'original' => $rel . basename($original), 'media' => $rel . 'media-' . $fid . '.jpg',
-        'mini' => $rel . 'mini-' . $fid . '.jpg', 'largura' => $info[0], 'altura' => $info[1]];
-}
-
-function dh_banda_foto_apagar(array $f): void
-{
-    foreach (['original', 'media', 'mini'] as $k) {
-        if (strpos($f[$k] ?? '', 'uploads/bandas/') === 0) {
-            @unlink(DH_RAIZ . '/' . $f[$k]);
-        }
-    }
-}
-
 function dh_buscar_banda(array &$a, string $id): int
 {
     foreach ($a['bandas'] as $i => $b) {
@@ -665,7 +612,7 @@ function agenda_acao(string $acao): bool
             }
             $b['nome'] = $nome;
             $b['tributos'] = dh_tributos_texto((string) ($_POST['tributos'] ?? ''));
-            $b['instagram'] = mb_substr(ltrim(trim((string) ($_POST['instagram'] ?? '')), '@'), 0, 60);
+            $b['instagram'] = dh_instagram((string) ($_POST['instagram'] ?? ''));
             $b['contato'] = mb_substr(trim((string) ($_POST['contato'] ?? '')), 0, 120);
             $b['obs'] = mb_substr(trim((string) ($_POST['obs'] ?? '')), 0, 1000);
             if (pode('valores')) {
@@ -701,6 +648,18 @@ function agenda_acao(string $acao): bool
             $a['bandas'][$i]['fotos'] = $fotos;
             dh_agenda_salvar($a);
             ir('./?acao=banda&id=' . $a['bandas'][$i]['id'] . '#fotos', 'Fotos atualizadas.');
+
+        case 'banda-link':
+            exigir_post();
+            exigir('bandas');
+            $telaErro = 'banda';
+            $a = dh_agenda();
+            $i = dh_buscar_banda($a, (string) ($_POST['id'] ?? ''));
+            $novo = !empty($a['bandas'][$i]['token']);
+            // Um link novo invalida o anterior
+            $a['bandas'][$i]['token'] = bin2hex(random_bytes(16));
+            dh_agenda_salvar($a);
+            ir('./?acao=banda&id=' . $a['bandas'][$i]['id'] . '#link', $novo ? 'Link novo criado. O anterior não funciona mais.' : 'Link criado. Envie para a banda.');
 
         case 'banda-excluir':
             exigir_post();
@@ -1333,6 +1292,22 @@ function agenda_tela_banda(): void
         </label>
         <div class="barra-salvar"><button class="btn primario">Salvar banda</button></div>
       </form>
+
+      <?php if ($b['id']): $linkBanda = !empty($b['token']) ? dh_url_site() . 'banda/?t=' . $b['token'] : ''; ?>
+        <h2 id="link">Link para a banda</h2>
+        <p class="dica">A banda abre o link no celular e atualiza só as fotos e o Instagram, sem precisar de senha. Ninguém mais vê os outros dados.<?php if (!empty($b['atualizado_pela_banda'])): ?> <strong>Última atualização feita pela banda: <?= e(date('d/m/Y H:i', strtotime($b['atualizado_pela_banda']))) ?>.</strong><?php endif; ?></p>
+        <?php if ($linkBanda): ?>
+          <input class="link-banda" value="<?= e($linkBanda) ?>" readonly onclick="this.select()">
+          <p class="botoes-link">
+            <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($linkBanda) ?>').then(function(){ alert('Link copiado!'); })">Copiar link</button>
+            <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode('Oi! Aqui é a Donkey Head Cervejaria. Por esse link vocês podem enviar as fotos da ' . $b['nome'] . ' e conferir o Instagram que aparece na nossa agenda: ' . $linkBanda)) ?>">Enviar pelo WhatsApp</a>
+          </p>
+        <?php endif; ?>
+        <form method="post" action="./?acao=banda-link"<?= $linkBanda ? ' onsubmit="return confirm(\'Criar um link novo? O link enviado antes para a banda deixa de funcionar.\');"' : '' ?>>
+          <?= $csrf ?><input type="hidden" name="id" value="<?= e($b['id']) ?>">
+          <button class="btn <?= $linkBanda ? 'secundario' : 'primario' ?>"><?= $linkBanda ? 'Criar link novo (cancela o anterior)' : 'Criar link para a banda' ?></button>
+        </form>
+      <?php endif; ?>
 
       <?php if ($b['fotos']): ?>
         <h2 id="fotos">Fotos <small><?= count($b['fotos']) ?></small></h2>

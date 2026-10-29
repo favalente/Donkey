@@ -139,3 +139,5 @@ details.usuario form { padding: 0 10px; }
 .sugestoes a { display: block; padding: 12px; border-radius: 8px; color: var(--text); text-decoration: none; }
 .sugestoes a:hover { background: rgba(233, 162, 59, .15); }
 .sugestoes .dica { margin: 4px 12px; }
+.link-banda { font-size: .85rem; }
+.botoes-link { display: flex; gap: 8px; flex-wrap: wrap; }
