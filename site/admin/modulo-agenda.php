@@ -617,7 +617,7 @@ function agenda_acao(string $acao): bool
 
         case 'banda-salvar':
             exigir_post();
-            exigir('bandas');
+            exigir('bandas_editar');
             $telaErro = 'banda';
             $a = dh_agenda();
             $id = (string) ($_POST['id'] ?? '');
@@ -657,7 +657,7 @@ function agenda_acao(string $acao): bool
 
         case 'banda-foto':
             exigir_post();
-            exigir('bandas');
+            exigir('bandas_editar');
             $telaErro = 'banda';
             $a = dh_agenda();
             $i = dh_buscar_banda($a, (string) ($_POST['id'] ?? ''));
@@ -676,7 +676,7 @@ function agenda_acao(string $acao): bool
 
         case 'banda-link':
             exigir_post();
-            exigir('bandas');
+            exigir('bandas_editar');
             $telaErro = 'banda';
             $a = dh_agenda();
             $i = dh_buscar_banda($a, (string) ($_POST['id'] ?? ''));
@@ -993,6 +993,7 @@ function agenda_status_tag(string $st): string
 function agenda_calendario(array $a, string $mes, string $un, bool $escolher, string $selecionado = '', string $extra = ''): void
 {
     global $csrf;
+    $editar = pode('agenda_editar');
     $bandas = dh_bandas_por_id($a);
     $ini = $mes . '-01';
     $fim = date('Y-m-t', strtotime($ini));
@@ -1005,9 +1006,9 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
     $hoje = date('Y-m-d');
     $nav = './?acao=' . ($escolher ? 'show' : 'agenda') . ($un ? '&unidade=' . $un : '') . $extra . '&mes=';
     ?>
-      <div class="cal-admin" data-escolher="<?= $escolher ? '1' : '' ?>">
+      <div class="cal-admin" data-escolher="<?= $escolher ? '1' : '' ?>" data-editar="<?= $editar ? '1' : '' ?>">
         <p class="cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-cancelado">Cancelado</span> <b class="leg-pago"><span class="flag-pago">✓</span> Pago</b></p>
-        <p class="dica cal-ajuda">👆 <?= $escolher ? 'Toque no dia do show.' : 'Toque num dia para marcar um show.' ?> Toque no nome da banda para editar ou duplicar. Arraste o calendário para o lado para trocar de mês.</p>
+        <p class="dica cal-ajuda">👆 <?= !$editar ? 'Toque no nome da banda para ver o tributo, o Instagram e as fotos.' : ($escolher ? 'Toque no dia do show.' : 'Toque num dia para marcar um show.') . ' Toque no nome da banda para editar ou duplicar.' ?> Arraste o calendário para o lado para trocar de mês.</p>
         <?php if ($mes !== date('Y-m')): ?><p class="centro"><a class="btn secundario hoje-btn" data-manter-posicao href="<?= e($nav . date('Y-m')) ?>">Voltar para o mês atual</a></p><?php endif; ?>
         <?php $ant = dh_mes_somar($mes, -1); $prox = dh_mes_somar($mes, 1); ?>
         <div class="mes-nav cal-nav">
@@ -1019,11 +1020,12 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
           <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana"><?= $d ?></div><?php endforeach; ?>
           <?php for ($i = 0; $i < (int) date('w', strtotime($ini)); $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
           <?php for ($t = strtotime($ini); $t <= strtotime($fim); $t = strtotime('+1 day', $t)): $dia = date('Y-m-d', $t); ?>
-            <div class="cal-dia<?= $dia < $hoje ? ' passado' : '' ?><?= $dia === $hoje ? ' hoje' : '' ?><?= $dia === $selecionado ? ' escolhido' : '' ?>" data-dia="<?= $dia ?>" role="button" tabindex="0" aria-label="<?= e(dh_data_curta($dia)) ?>">
+            <div class="cal-dia<?= $dia < $hoje ? ' passado' : '' ?><?= $dia === $hoje ? ' hoje' : '' ?><?= $dia === $selecionado ? ' escolhido' : '' ?><?= $editar ? '' : ' so-ver' ?>" data-dia="<?= $dia ?>"<?= $editar ? ' role="button" tabindex="0"' : '' ?> aria-label="<?= e(dh_data_curta($dia)) ?>">
               <span class="cal-num"><?= date('j', $t) ?></span>
               <?php foreach ($porDia[$dia] ?? [] as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
                 <button type="button" class="cal-show u-<?= e($s['unidade']) ?> st-<?= e($s['status']) ?>" data-show="<?= e($s['id']) ?>"
-                  data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? '', 'status' => $s['status']]
+                  data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? '', 'status' => $s['status'],
+                    'banda_id' => $s['banda_id'], 'instagram' => $b['instagram'] ?? '', 'tributos_banda' => implode(' / ', $b['tributos'] ?? []), 'fotos' => count($b['fotos'] ?? []), 'drive' => $b['drive'][0] ?? '']
                     + (pode('valores') ? ['pix' => $b['pix'] ?? '', 'pix_nome' => $b['pix_nome'] ?? '', 'cache' => dh_moeda($s['cache'])] : []), JSON_UNESCAPED_UNICODE)) ?>"><?php if ($s['status'] === 'pago'): ?><span class="flag-pago" title="Pago">✓</span><?php endif; ?><?= e($b['nome'] ?? '—') ?></button>
               <?php endforeach; ?>
             </div>
@@ -1051,16 +1053,24 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
               <button class="btn secundario" name="op" value="desfazer" onclick="return confirm('Desfazer o pagamento deste show?');">Desfazer pagamento</button>
             </form>
           <?php endif; ?>
-          <a class="btn primario" data-op="editar">Editar</a>
-          <a class="btn secundario" data-op="duplicar">Duplicar</a>
+          <?php if ($editar): ?>
+            <a class="btn primario" data-op="editar">Editar</a>
+            <a class="btn secundario" data-op="duplicar">Duplicar</a>
+          <?php else: ?>
+            <a class="btn secundario" data-op="instagram" target="_blank" rel="noopener">Abrir Instagram</a>
+            <a class="btn primario" data-op="fotos">Baixar fotos da banda</a>
+            <a class="btn secundario" data-op="drive" target="_blank" rel="noopener">Abrir pasta no Google Drive</a>
+            <a class="btn secundario" data-op="banda">Ver banda</a>
+          <?php endif; ?>
           <button type="button" class="btn secundario" data-op="fechar">Fechar</button>
         </div>
       </dialog>
       <script>
         (function () {
           var cal = document.querySelector('.cal-admin'), menu = document.getElementById('cal-menu');
-          var escolher = cal.dataset.escolher === '1';
+          var escolher = cal.dataset.escolher === '1', editar = cal.dataset.editar === '1';
           function dia(el) {
+            if (!editar) return;
             if (!escolher) { location.href = './?acao=show&data=' + el.dataset.dia; return; }
             var campo = document.querySelector('#form-show [name=data]');
             campo.value = el.dataset.dia;
@@ -1081,8 +1091,14 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
               menu.querySelector('.cal-menu-banda').textContent = i.banda;
               menu.querySelector('.cal-menu-tributo').textContent = i.tributo || 'Sem tributo definido';
               menu.querySelector('.cal-menu-situacao').textContent = i.situacao;
-              menu.querySelector('[data-op=editar]').href = './?acao=show&id=' + encodeURIComponent(bt.dataset.show);
-              menu.querySelector('[data-op=duplicar]').href = './?acao=show&duplicar=' + encodeURIComponent(bt.dataset.show);
+              function link(op, href) { var a = menu.querySelector('[data-op=' + op + ']'); if (a) { a.href = href || '#'; a.hidden = !href; } }
+              link('editar', './?acao=show&id=' + encodeURIComponent(bt.dataset.show));
+              link('duplicar', './?acao=show&duplicar=' + encodeURIComponent(bt.dataset.show));
+              link('instagram', i.instagram ? 'https://www.instagram.com/' + encodeURIComponent(i.instagram) + '/' : '');
+              link('fotos', i.fotos ? './?acao=banda-zip&id=' + encodeURIComponent(i.banda_id) : '');
+              link('drive', i.drive ? 'https://drive.google.com/drive/folders/' + encodeURIComponent(i.drive) : '');
+              link('banda', './?acao=banda&id=' + encodeURIComponent(i.banda_id));
+              if (!editar) menu.querySelector('.cal-menu-tributo').textContent = (i.tributo || i.tributos_banda || 'Sem tributo cadastrado') + (i.instagram ? ' · @' + i.instagram : '');
               var pago = menu.querySelector('.cal-menu-pago');
               if (pago) {
                 pago.querySelector('[name=id]').value = bt.dataset.show;
@@ -1130,20 +1146,13 @@ function agenda_tela_lista(): void
         <h1>Agenda</h1>
         <?php if (pode('agenda_editar')): ?><a class="btn primario" href="./?acao=show">+ Novo show</a><?php endif; ?>
       </div>
-      <?php if (!pode('agenda_editar')): ?>
-      <div class="mes-nav">
-        <a class="btn mini" href="<?= e($base . '&mes=' . dh_mes_somar($mes, -1)) ?>">‹</a>
-        <strong><?= e(dh_mes_nome($mes)) ?></strong>
-        <a class="btn mini" href="<?= e($base . '&mes=' . dh_mes_somar($mes, 1)) ?>">›</a>
-      </div>
-      <?php endif; ?>
       <div class="abas">
         <a href="./?acao=agenda&mes=<?= e($mes) ?>" class="<?= !$un ? 'ativo' : '' ?>">Todas</a>
         <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
           <a href="./?acao=agenda&mes=<?= e($mes) ?>&unidade=<?= $u ?>" class="<?= $un === $u ? 'ativo' : '' ?>"><?= e($nomeU) ?></a>
         <?php endforeach; ?>
       </div>
-      <?php if (pode('agenda_editar')) agenda_calendario($a, $mes, $un, false); ?>
+      <?php agenda_calendario($a, $mes, $un, false); ?>
       <?php if (!$shows): ?><p class="dica">Nenhum show neste mês.</p><?php endif; ?>
       <ul class="lista shows">
         <?php foreach ($shows as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
@@ -1389,6 +1398,7 @@ function agenda_tela_bandas(): void
               <span class="info">
                 <strong><?= e($b['nome']) ?></strong>
                 <span><?= e(implode(' · ', $b['tributos']) ?: 'Sem tributo cadastrado') ?></span>
+                <?php if ($b['instagram'] !== ''): ?><span>@<?= e($b['instagram']) ?></span><?php endif; ?>
                 <span class="tags">
                   <em class="tag cinza"><?= count($b['fotos']) ?> foto<?= count($b['fotos']) === 1 ? '' : 's' ?></em>
                   <?php if ($p): ?><em class="tag">Próximo: <?= e(dh_data_curta($p['data'])) ?> · <?= e(DH_UNIDADES[$p['unidade']]) ?></em><?php endif; ?>
@@ -1415,6 +1425,10 @@ function agenda_tela_banda(): void
     }
     if (!$b && !pode('agenda_editar')) {
         echo '<p class="erro">Banda não encontrada.</p>';
+        return;
+    }
+    if (!pode('bandas_editar')) {
+        agenda_tela_banda_ver($b);
         return;
     }
     $b = $b ?? ['id' => '', 'nome' => '', 'tributos' => [], 'cache' => '', 'consumacao' => '', 'instagram' => '', 'contato' => '', 'obs' => '', 'fotos' => []];
@@ -1527,6 +1541,31 @@ function agenda_tela_banda(): void
           <button class="btn perigo">Excluir banda</button>
         </form>
       <?php endif; ?>
+    <?php
+}
+
+// Banda para quem só visualiza (designer): nome, tributos, Instagram e fotos para baixar
+function agenda_tela_banda_ver(array $b): void
+{
+    ?>
+      <p><a class="voltar" href="./?acao=bandas">‹ Voltar para Bandas</a></p>
+      <h1><?= e($b['nome']) ?></h1>
+      <dl class="ficha-ver">
+        <dt>Tributo</dt>
+        <dd><?= $b['tributos'] ? implode('<br>', array_map('e', $b['tributos'])) : 'Sem tributo cadastrado' ?></dd>
+        <dt>Instagram</dt>
+        <dd><?php if ($b['instagram'] !== ''): ?><a href="https://www.instagram.com/<?= e(rawurlencode($b['instagram'])) ?>/" target="_blank" rel="noopener">@<?= e($b['instagram']) ?> ↗</a><?php else: ?>Não informado<?php endif; ?></dd>
+        <dt>Fotos</dt>
+        <dd>
+          <?php if ($b['fotos']): ?>
+            <a class="btn primario largo" href="./?acao=banda-zip&id=<?= e($b['id']) ?>">⬇ Baixar as <?= count($b['fotos']) ?> foto<?= count($b['fotos']) === 1 ? '' : 's' ?> (originais)</a>
+          <?php endif; ?>
+          <?php foreach ($b['drive'] ?? [] as $n => $pasta): ?>
+            <a class="btn secundario largo" href="https://drive.google.com/drive/folders/<?= e(rawurlencode($pasta)) ?>" target="_blank" rel="noopener">Abrir pasta no Google Drive<?= count($b['drive']) > 1 ? ' ' . ($n + 1) : '' ?> ↗</a>
+          <?php endforeach; ?>
+          <?php if (!$b['fotos'] && empty($b['drive'])): ?>Nenhuma foto ainda.<?php endif; ?>
+        </dd>
+      </dl>
     <?php
 }
 

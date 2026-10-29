@@ -26,7 +26,7 @@ site/                         tudo que vai para public_html
 
 Endereço: `/admin/`
 
-- **Usuários e funções:** cada pessoa tem login próprio. Funções: **Administrador** (tudo, inclusive usuários e importação), **Financeiro** (agenda e bandas com cachê/consumação, relatório), **Designer** (agenda, bandas e fotos, sem valores; galeria) e **Barman** (tap list e cervejas). A senha única antiga virou o usuário `admin`.
+- **Usuários e funções:** cada pessoa tem login próprio. Funções: **Administrador** (tudo, inclusive usuários e importação), **Financeiro** (agenda e bandas com cachê/consumação, relatório), **Designer** (só visualiza: calendário da agenda e bandas com nome, tributo, Instagram e fotos para baixar; não edita nada) e **Barman** (tap list e cervejas). A senha única antiga virou o usuário `admin`.
 - **Tap List:** escolha a cerveja de cada torneira, separado por unidade (Aldeota e Maraponga), e toque em Salvar. O site atualiza na hora.
 - **Cervejas:** cadastre, edite ou exclua rótulos. Dá para mandar a foto do rótulo direto do celular, porque ela é reduzida automaticamente. Para tirar um rótulo do catálogo sem apagá-lo, desmarque "Mostrar no catálogo".
 - **Galeria:** envie várias fotos de uma vez pelo celular, com legenda opcional (ex.: o nome do prato). As fotos novas entram no início, e as 12 primeiras aparecem direto no site. Dá para reordenar, editar a legenda e excluir. As fotos são reduzidas no próprio celular antes do envio.

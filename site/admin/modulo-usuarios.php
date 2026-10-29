@@ -67,7 +67,7 @@ function usuarios_tela(string $tela): bool
     $acessos = [
         'admin' => 'Tudo, inclusive usuários e importação',
         'financeiro' => 'Agenda e bandas com cachê e consumação, relatório financeiro',
-        'designer' => 'Agenda, bandas e fotos (sem valores), galeria',
+        'designer' => 'Só visualiza: agenda do mês e bandas (nome, tributo, Instagram e fotos para baixar)',
         'barman' => 'Tap list e cervejas',
     ];
     ?>

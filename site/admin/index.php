@@ -11,9 +11,11 @@ const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'de
 const DH_PERMISSOES = [
     'taplist' => ['admin', 'barman'],
     'cervejas' => ['admin', 'barman'],
-    'galeria' => ['admin', 'designer'],
+    'galeria' => ['admin'],
     'agenda' => ['admin', 'financeiro', 'designer'],
     'bandas' => ['admin', 'financeiro', 'designer'],
+    // Designer só vê: editar banda, fotos e link é para admin e financeiro
+    'bandas_editar' => ['admin', 'financeiro'],
     'agenda_editar' => ['admin', 'financeiro'],
     'valores' => ['admin', 'financeiro'],
     'relatorio' => ['admin', 'financeiro'],
@@ -500,7 +502,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=16">
+  <link rel="stylesheet" href="admin.css?v=17">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
 </head>
 <body>
