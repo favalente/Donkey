@@ -22,6 +22,119 @@ function dh_agenda(): array
         $a['config']['hora_padrao'] = '20:30';
     }
     $a = dh_agenda_bandas_iniciais($a);
+    $a = dh_agenda_limpar_nomes($a);
+    return $a;
+}
+
+// Nome da banda sem a palavra "banda": "Banda Silverside" -> "Silverside", "Iago Vital e Banda" -> "Iago Vital"
+function dh_nome_sem_banda(string $nome): string
+{
+    $n = preg_replace('/^\s*a\s+banda\b/iu', '', $nome);
+    $n = preg_replace('/\bbanda\b/iu', ' ', $n);
+    $n = preg_replace('/\s+(e|&)\s*$/iu', '', trim($n));
+    $n = trim(preg_replace('/\s+/u', ' ', $n), " -–:,");
+    return $n !== '' ? $n : trim($nome);
+}
+
+// Nomes que são, na verdade, um tributo (erro da importação): "Tributo Divas Miss Rock"
+function dh_nome_e_tributo(string $nome): bool
+{
+    return preg_match('/^\s*(tributo|tributos|trib\.?|cover|homenagem)\b/iu', $nome) === 1;
+}
+
+// Uma vez só: tira "banda" dos nomes, junta bandas que ficaram com o mesmo nome e apaga as
+// "bandas" que eram tributo. Se uma delas tiver show, o show passa para a banda citada no nome;
+// sem banda reconhecível, ela fica para ser revista no painel. Guarda uma cópia antes.
+function dh_agenda_limpar_nomes(array $a): array
+{
+    if (!empty($a['config']['nomes_limpos']) || !$a['bandas']) {
+        return $a;
+    }
+    $dir = dirname(DH_ARQ_AGENDA) . '/backup';
+    if (is_file(DH_ARQ_AGENDA)) {
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        @copy(DH_ARQ_AGENDA, $dir . '/agenda-antes-limpeza-nomes.json');
+    }
+    $comShow = [];
+    foreach ($a['shows'] as $s) {
+        $comShow[$s['banda_id']] = true;
+    }
+    foreach ($a['bandas'] as &$b) {
+        if (!dh_nome_e_tributo($b['nome'])) {
+            $b['nome'] = dh_nome_sem_banda($b['nome']);
+        }
+    }
+    unset($b);
+    // Bandas com o mesmo nome viram uma só (a que tem mais dados fica)
+    $peso = fn($b) => count($b['fotos'] ?? []) * 10 + count($b['drive'] ?? []) * 5 + count($b['tributos'] ?? []) + ($b['cache'] !== '' ? 1 : 0);
+    $porChave = [];
+    $trocar = [];
+    foreach ($a['bandas'] as $i => $b) {
+        $k = dh_chave_banda($b['nome']);
+        if (dh_nome_e_tributo($b['nome']) || $k === '') {
+            continue;
+        }
+        if (!isset($porChave[$k])) {
+            $porChave[$k] = $i;
+            continue;
+        }
+        $j = $porChave[$k];
+        [$fica, $sai] = $peso($a['bandas'][$i]) > $peso($a['bandas'][$j]) ? [$i, $j] : [$j, $i];
+        $f = &$a['bandas'][$fica];
+        $o = $a['bandas'][$sai];
+        $f['tributos'] = array_values(array_unique(array_merge($f['tributos'] ?? [], $o['tributos'] ?? [])));
+        $f['fotos'] = array_merge($f['fotos'] ?? [], $o['fotos'] ?? []);
+        $f['drive'] = array_values(array_unique(array_merge($f['drive'] ?? [], $o['drive'] ?? [])));
+        foreach (['cache', 'consumacao', 'instagram', 'contato', 'obs'] as $c) {
+            if (($f[$c] ?? '') === '' && ($o[$c] ?? '') !== '') {
+                $f[$c] = $o[$c];
+            }
+        }
+        unset($f);
+        $trocar[$a['bandas'][$sai]['id']] = $a['bandas'][$fica]['id'];
+        $a['bandas'][$sai]['_sai'] = true;
+        $porChave[$k] = $fica;
+    }
+    // "Bandas" que eram tributo
+    foreach ($a['bandas'] as $i => $b) {
+        if (!dh_nome_e_tributo($b['nome'])) {
+            continue;
+        }
+        if (empty($comShow[$b['id']])) {
+            $a['bandas'][$i]['_sai'] = true;
+            continue;
+        }
+        // "Tributo Guns e Kiss, Fets Domino": a banda de verdade está no fim do nome
+        $pal = preg_split('/[\s,]+/u', trim($b['nome']));
+        for ($n = 1; $n < count($pal); $n++) {
+            $k = dh_chave_banda(implode(' ', array_slice($pal, $n)));
+            if (strlen($k) >= 4 && isset($porChave[$k])) {
+                $trocar[$b['id']] = $a['bandas'][$porChave[$k]]['id'];
+                $a['bandas'][$i]['_sai'] = true;
+                $tributo = trim(implode(' ', array_slice($pal, 0, $n)), ' ,');
+                foreach ($a['shows'] as &$s) {
+                    if ($s['banda_id'] === $b['id'] && $s['tributo'] === '') {
+                        $s['tributo'] = $tributo;
+                    }
+                }
+                unset($s);
+                break;
+            }
+        }
+    }
+    foreach ($a['shows'] as &$s) {
+        $s['banda_id'] = $trocar[$s['banda_id']] ?? $s['banda_id'];
+    }
+    unset($s);
+    $a['bandas'] = array_values(array_filter($a['bandas'], fn($b) => empty($b['_sai'])));
+    $a['config']['nomes_limpos'] = date('Y-m-d H:i');
+    try {
+        dh_agenda_salvar($a);
+    } catch (RuntimeException $e) {
+        // Sem permissão de gravar: tenta de novo na próxima vez
+    }
     return $a;
 }
 

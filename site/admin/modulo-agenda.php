@@ -520,7 +520,7 @@ function dh_ics_historico(array $linhas, array $bandas): array
         $nomes = array_keys($b['nomes']);
         $caixaAlta = fn($n) => (int) ($n === mb_strtoupper($n));
         usort($nomes, fn($x, $y) => [$b['nomes'][$y], $caixaAlta($x), mb_strlen($y)] <=> [$b['nomes'][$x], $caixaAlta($y), mb_strlen($x)]);
-        $b['nome'] = $cadastro[$k]['nome'] ?? $nomes[0];
+        $b['nome'] = $cadastro[$k]['nome'] ?? dh_nome_sem_banda($nomes[0]);
         $b['nova'] = !isset($cadastro[$k]);
         // Só vira cadastro o que parece banda mesmo: já cadastrada, com cachê ou tributo, ou que se repete
         $b['confiavel'] = !$b['nova'] || $b['forte'] || $b['eventos'] >= 3;
@@ -573,7 +573,7 @@ function agenda_acao(string $acao): bool
             if (!isset(DH_UNIDADES[$unidade])) {
                 throw new RuntimeException('Escolha a unidade.');
             }
-            $nomeNovo = mb_substr(trim((string) ($_POST['banda_nova'] ?? '')), 0, 80);
+            $nomeNovo = dh_nome_sem_banda(mb_substr(trim((string) ($_POST['banda_nova'] ?? '')), 0, 80));
             if (!isset($bandas[$bandaId]) && $nomeNovo !== '') {
                 // Banda digitada no show que ainda não existe: cadastra na hora (ou usa a de mesmo nome)
                 foreach ($a['bandas'] as $b) {
@@ -883,7 +883,7 @@ function agenda_acao(string $acao): bool
             // Primeiro o cadastro das bandas aprendido com o histórico
             $bandasHist = json_decode((string) ($_POST['json_bandas'] ?? ''), true);
             foreach (is_array($bandasHist) ? $bandasHist : [] as $hb) {
-                $nome = mb_substr(trim((string) ($hb['nome'] ?? '')), 0, 80);
+                $nome = dh_nome_sem_banda(mb_substr(trim((string) ($hb['nome'] ?? '')), 0, 80));
                 $chave = dh_chave_banda($nome);
                 if (empty($hb['incluir']) || $chave === '') {
                     continue;
@@ -922,6 +922,7 @@ function agenda_acao(string $acao): bool
                     continue;
                 }
                 $nome = mb_substr(trim((string) ($l['banda'] ?? '')), 0, 80);
+                $nome = isset($porNome[dh_chave_banda($nome)]) ? $nome : dh_nome_sem_banda($nome);
                 $data = (string) ($l['data'] ?? '');
                 $hora = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string) ($l['hora'] ?? '')) ? $l['hora'] : $a['config']['hora_padrao'];
                 $unidade = isset(DH_UNIDADES[$l['unidade'] ?? '']) ? $l['unidade'] : 'aldeota';
@@ -1288,7 +1289,32 @@ function agenda_tela_banda(): void
       <form method="post" action="./?acao=banda-salvar" enctype="multipart/form-data" class="form-cerveja">
         <?= $csrf ?>
         <input type="hidden" name="id" value="<?= e($b['id']) ?>">
-        <label>Nome da banda <input name="nome" value="<?= e($b['nome']) ?>" required maxlength="80"></label>
+        <label>Nome da banda <input name="nome" id="nome-banda" value="<?= e($b['nome']) ?>" required maxlength="80" autocomplete="off"></label>
+        <?php if (!$b['id']): ?>
+          <div class="sugestoes" id="ja-cadastradas" hidden></div>
+          <script>
+            // Ao digitar o nome, mostra as bandas já cadastradas parecidas (para não cadastrar repetida)
+            (function () {
+              var bandas = <?= json_encode(array_map(fn($x) => ['id' => $x['id'], 'nome' => $x['nome']], $a['bandas']), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+              var campo = document.getElementById('nome-banda'), caixa = document.getElementById('ja-cadastradas');
+              function chave(t) {
+                return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(banda|the|os|as)\b/g, '').replace(/[^a-z0-9]/g, '');
+              }
+              campo.addEventListener('input', function () {
+                var k = chave(campo.value);
+                var achadas = k ? bandas.filter(function (b) { return chave(b.nome).indexOf(k) >= 0; }).slice(0, 8) : [];
+                caixa.innerHTML = '';
+                if (achadas.length) {
+                  var p = document.createElement('p'); p.className = 'dica'; p.textContent = 'Já cadastradas (toque para abrir):'; caixa.appendChild(p);
+                }
+                achadas.forEach(function (b) {
+                  var a = document.createElement('a'); a.href = './?acao=banda&id=' + encodeURIComponent(b.id); a.textContent = b.nome; caixa.appendChild(a);
+                });
+                caixa.hidden = !achadas.length;
+              });
+            })();
+          </script>
+        <?php endif; ?>
         <label>Tributos que ela toca <small>(um por linha)</small>
           <textarea name="tributos" rows="3" placeholder="Tributo ao Legião Urbana&#10;Tributo ao Barão Vermelho"><?= e(implode("\n", $b['tributos'])) ?></textarea>
         </label>
@@ -1460,7 +1486,7 @@ function agenda_tela_importar(): void
               <summary>Ver e editar as <?= count($bandas) ?> bandas</summary>
               <?php foreach ($bandas as $n => $b): ?>
                 <fieldset data-tipo="banda">
-                  <label class="check"><input type="checkbox" name="b[<?= $n ?>][incluir]" value="1" checked> <strong><?= $b['nova'] ? 'Nova' : 'Completar' ?></strong>
+                  <label class="check"><input type="checkbox" name="b[<?= $n ?>][incluir]" value="1" <?= dh_nome_e_tributo($b['nome']) ? '' : 'checked' ?>> <strong><?= $b['nova'] ? 'Nova' : 'Completar' ?></strong>
                     <span class="original"><?= $b['shows'] ? e($b['shows'] . ($b['shows'] > 1 ? ' shows' : ' show') . ', o último em ' . dh_data_curta($b['ultimo']) . '/' . substr($b['ultimo'], 0, 4)) : 'só shows futuros' ?></span></label>
                   <label>Banda <input name="b[<?= $n ?>][nome]" value="<?= e($b['nome']) ?>" <?= $b['nova'] ? '' : 'readonly' ?>></label>
                   <label>Tributos <textarea name="b[<?= $n ?>][tributos]" rows="<?= max(1, count($b['tributos'])) ?>"><?= e(implode("\n", $b['tributos'])) ?></textarea></label>

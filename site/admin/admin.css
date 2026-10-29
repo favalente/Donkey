@@ -136,3 +136,6 @@ details.usuario form { padding: 0 10px; }
 .sugestoes button { width: 100%; text-align: left; padding: 12px; border: 0; border-radius: 8px; background: none; color: inherit; font: inherit; cursor: pointer; }
 .sugestoes button:hover, .sugestoes button:focus { background: rgba(233, 162, 59, .15); }
 .sugestoes .nova { color: var(--amber); font-weight: 600; }
+.sugestoes a { display: block; padding: 12px; border-radius: 8px; color: var(--text); text-decoration: none; }
+.sugestoes a:hover { background: rgba(233, 162, 59, .15); }
+.sugestoes .dica { margin: 4px 12px; }

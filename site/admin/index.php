@@ -432,7 +432,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=7">
+  <link rel="stylesheet" href="admin.css?v=8">
 </head>
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
