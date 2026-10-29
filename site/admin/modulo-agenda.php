@@ -577,6 +577,29 @@ function agenda_acao(string $acao): bool
             dh_agenda_salvar($a);
             ir('./?acao=agenda&mes=' . substr($data, 0, 7), 'Show de ' . $bandas[$bandaId]['nome'] . ' em ' . dh_data_curta($data) . ' salvo.');
 
+        case 'show-pago':
+            exigir_post();
+            exigir('valores');
+            $a = dh_agenda();
+            $id = (string) ($_POST['id'] ?? '');
+            $pagar = ($_POST['op'] ?? '') !== 'desfazer';
+            $achou = null;
+            foreach ($a['shows'] as &$s) {
+                if ($s['id'] === $id) {
+                    $s['status'] = $pagar ? 'pago' : 'confirmado';
+                    $s['alterado_por'] = $usuario['nome'];
+                    $s['alterado_em'] = date('Y-m-d H:i');
+                    $achou = $s;
+                }
+            }
+            unset($s);
+            if (!$achou) {
+                throw new RuntimeException('Show não encontrado.');
+            }
+            dh_agenda_salvar($a);
+            $nome = dh_bandas_por_id($a)[$achou['banda_id']]['nome'] ?? 'show';
+            ir('./?acao=agenda&mes=' . substr($achou['data'], 0, 7), $pagar ? $nome . ' (' . dh_data_curta($achou['data']) . ') marcado como PAGO.' : 'Pagamento desfeito: ' . $nome . ' voltou para Confirmado.');
+
         case 'show-excluir':
             exigir_post();
             exigir('agenda_editar');
@@ -966,6 +989,7 @@ function agenda_status_tag(string $st): string
 // $escolher: tocar no dia preenche a data do formulário; senão abre um show novo naquele dia.
 function agenda_calendario(array $a, string $mes, string $un, bool $escolher, string $selecionado = '', string $extra = ''): void
 {
+    global $csrf;
     $bandas = dh_bandas_por_id($a);
     $ini = $mes . '-01';
     $fim = date('Y-m-t', strtotime($ini));
@@ -986,7 +1010,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
           <a class="btn mes-btn" data-mes="proximo" href="<?= e($nav . $prox) ?>"><?= e(DH_MESES[(int) substr($prox, 5, 2)]) ?> ›</a>
         </div>
         <?php if ($mes !== date('Y-m')): ?><p class="centro"><a class="btn secundario hoje-btn" href="<?= e($nav . date('Y-m')) ?>">Voltar para o mês atual</a></p><?php endif; ?>
-        <p class="cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-confirmar">A confirmar</span></p>
+        <p class="cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-confirmar">A confirmar</span> <b class="leg-pago"><span class="flag-pago">✓</span> Pago</b></p>
         <p class="dica cal-ajuda">👆 <?= $escolher ? 'Toque no dia do show.' : 'Toque num dia para marcar um show.' ?> Toque no nome da banda para editar ou duplicar. Arraste o calendário para o lado para trocar de mês.</p>
         <div class="calendario">
           <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana"><?= $d ?></div><?php endforeach; ?>
@@ -996,7 +1020,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
               <span class="cal-num"><?= date('j', $t) ?></span>
               <?php foreach ($porDia[$dia] ?? [] as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
                 <button type="button" class="cal-show u-<?= e($s['unidade']) ?> st-<?= e($s['status']) ?>" data-show="<?= e($s['id']) ?>"
-                  data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? ''], JSON_UNESCAPED_UNICODE)) ?>"><?= e($b['nome'] ?? '—') ?></button>
+                  data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? '', 'status' => $s['status']], JSON_UNESCAPED_UNICODE)) ?>"><?php if ($s['status'] === 'pago'): ?><span class="flag-pago" title="Pago">✓</span><?php endif; ?><?= e($b['nome'] ?? '—') ?></button>
               <?php endforeach; ?>
             </div>
           <?php endfor; ?>
@@ -1009,6 +1033,13 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
         <p class="cal-menu-tributo"></p>
         <p class="cal-menu-situacao"></p>
         <div class="cal-menu-botoes">
+          <?php if (pode('valores')): ?>
+            <form method="post" action="./?acao=show-pago" class="cal-menu-pago">
+              <?= $csrf ?><input type="hidden" name="id" value="">
+              <button class="btn pagar" name="op" value="pagar">✓ Marcar como pago</button>
+              <button class="btn secundario" name="op" value="desfazer" onclick="return confirm('Desfazer o pagamento deste show?');">Desfazer pagamento</button>
+            </form>
+          <?php endif; ?>
           <a class="btn primario" data-op="editar">Editar</a>
           <a class="btn secundario" data-op="duplicar">Duplicar</a>
           <button type="button" class="btn secundario" data-op="fechar">Fechar</button>
@@ -1041,6 +1072,14 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
               menu.querySelector('.cal-menu-situacao').textContent = i.situacao;
               menu.querySelector('[data-op=editar]').href = './?acao=show&id=' + encodeURIComponent(bt.dataset.show);
               menu.querySelector('[data-op=duplicar]').href = './?acao=show&duplicar=' + encodeURIComponent(bt.dataset.show);
+              var pago = menu.querySelector('.cal-menu-pago');
+              if (pago) {
+                pago.querySelector('[name=id]').value = bt.dataset.show;
+                pago.querySelector('[value=pagar]').hidden = i.status === 'pago' || i.status === 'cancelado';
+                pago.querySelector('[value=desfazer]').hidden = i.status !== 'pago';
+              }
+              menu.querySelector('.cal-menu-situacao').className = 'cal-menu-situacao sit-' + i.status;
+              menu.querySelector('.cal-menu-situacao').textContent = (i.status === 'pago' ? '✓ ' : '') + i.situacao;
               menu.showModal();
             });
           });
@@ -1095,7 +1134,12 @@ function agenda_tela_lista(): void
               </span>
               <span class="seta">›</span>
             </a>
-            <?php if (pode('agenda_editar')): ?><a class="duplicar" href="./?acao=show&duplicar=<?= e($s['id']) ?>" title="Duplicar show">⧉ Duplicar</a><?php endif; ?>
+            <div class="acoes-show">
+              <?php if (pode('agenda_editar')): ?><a class="duplicar" href="./?acao=show&duplicar=<?= e($s['id']) ?>" title="Duplicar show">⧉ Duplicar</a><?php endif; ?>
+              <?php if (pode('valores') && in_array($s['status'], ['a_confirmar', 'confirmado'], true)): ?>
+                <form method="post" action="./?acao=show-pago"><?= $csrf ?><input type="hidden" name="id" value="<?= e($s['id']) ?>"><button class="btn pagar mini-pagar" name="op" value="pagar">✓ Marcar como pago</button></form>
+              <?php endif; ?>
+            </div>
           </li>
         <?php endforeach; ?>
       </ul>

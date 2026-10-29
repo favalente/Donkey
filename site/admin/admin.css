@@ -227,3 +227,25 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .cal-menu h3 { font-size: 1.5rem; }
 .cal-menu p { font-size: 1.05rem; }
 @media (min-width: 700px) { .cal-show { font-size: .85rem; } }
+
+/* Pago = verde (com ✓); Confirmado = azul */
+.btn.pagar { background: #2e9d4a; color: #fff; border: 0; }
+.btn.pagar:hover { background: #37b257; }
+.cal-menu-pago { display: grid; gap: 8px; margin: 0; }
+.cal-menu-pago [hidden] { display: none; }
+.cal-menu .sit-pago { color: #8fdc93; font-weight: 700; }
+.cal-menu .sit-confirmado { color: #8cbcff; font-weight: 600; }
+.flag-pago { display: inline-grid; place-items: center; width: 1.35em; height: 1.35em; margin-right: 3px; border-radius: 50%; background: #2e9d4a; color: #fff; font-size: .95em; font-weight: 800; line-height: 1; vertical-align: -.15em; box-shadow: 0 0 0 1.5px #fff; }
+.cal-show.st-pago { border-color: #2e9d4a; box-shadow: inset 0 0 0 1px #2e9d4a; }
+.leg-pago { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #8fdc93; }
+.tag.st-confirmado { background: rgba(106, 169, 255, .18); color: #8cbcff; }
+.tag.st-pago { background: #2e9d4a; color: #fff; }
+.tag.st-pago::before { content: "✓ "; }
+.escolha.st-confirmado input:checked + span { border-color: #6aa9ff; background: rgba(106, 169, 255, .16); color: #8cbcff; }
+.escolha.st-pago input:checked + span { border-color: #2e9d4a; background: rgba(46, 157, 74, .22); color: #8fdc93; }
+.acoes-show { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 0 10px 12px 80px; }
+.acoes-show form { margin: 0; }
+.acoes-show .duplicar { padding: 0; }
+.mini-pagar { min-height: 42px; padding: 8px 16px; font-size: .95rem; }
+.cal-show { max-height: none; }
+.cal-show .flag-pago { width: 1.25em; height: 1.25em; font-size: .9em; margin: 0 2px 1px 0; }
