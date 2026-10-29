@@ -348,3 +348,8 @@ a.filtro { text-decoration: none; color: var(--text); }
 .delivery-legal { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 14px; }
 .delivery-nota { color: var(--muted); margin: -8px 0 16px; }
 .delivery-onde { font-size: .82rem; color: var(--muted); }
+.delivery-ver { position: relative; flex: none; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
+.delivery-ver img { display: block; }
+.delivery-mais { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 0; border-radius: 0 0 12px 12px; background: rgba(0, 0, 0, .72); color: var(--amber); font-size: .7rem; font-weight: 700; text-align: center; }
+.link-cerveja { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.link-cerveja:hover, .delivery-ver:hover + .detalhe + .delivery-info .link-cerveja { color: var(--amber); }

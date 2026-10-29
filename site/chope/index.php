@@ -6,6 +6,26 @@ require __DIR__ . '/../inc/dados.php';
 $cervejas = dh_cervejas_evento();
 $whats = 'https://wa.me/5585982124149?text=' . rawurlencode("Olá! Vim pelo site e quero fazer um pedido de chope para o meu evento.");
 $equipamentos = array_map(fn($eq) => $eq[0], DH_EQUIPAMENTOS);
+
+// Ficha da cerveja (a mesma da página inicial), só com as informações da cerveja
+function detalhe_delivery(array $c): string
+{
+    $paras = array_filter(array_map('trim', preg_split('/\n\s*\n/', (string) ($c['descricao'] ?? ''))));
+    $ficha = '';
+    foreach (['abv' => 'ABV', 'ibu' => 'IBU'] as $k => $rot) {
+        if (($c[$k] ?? '') !== '') {
+            $ficha .= '<div><dt>' . $rot . '</dt><dd>' . e(dh_num($c[$k])) . ($k === 'abv' ? '%' : '') . '</dd></div>';
+        }
+    }
+    $h = '<img src="../' . e($c['imagem']) . '" alt="Rótulo da ' . e($c['nome']) . '" loading="lazy">';
+    $h .= '<div class="detalhe-texto"><h3>' . e($c['nome']) . '</h3>';
+    $h .= '<p class="estilo">' . e($c['estilo'] ?? '') . (!empty($c['pais']) ? ' · ' . e($c['pais']) : '') . '</p>';
+    $h .= $ficha !== '' ? '<dl class="ficha">' . $ficha . '</dl>' : '';
+    foreach ($paras as $p) {
+        $h .= '<p>' . nl2br(e($p)) . '</p>';
+    }
+    return $h . '</div>';
+}
 ?>
 <!doctype html>
 <html lang="pt-BR">
@@ -20,7 +40,7 @@ $equipamentos = array_map(fn($eq) => $eq[0], DH_EQUIPAMENTOS);
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=18">
+  <link rel="stylesheet" href="../assets/css/style.css?v=19">
 </head>
 <body>
   <header class="site-header">
@@ -49,9 +69,15 @@ $equipamentos = array_map(fn($eq) => $eq[0], DH_EQUIPAMENTOS);
         <div class="delivery-tabela">
           <?php foreach ($cervejas as $c): $l = (float) $c['preco_evento']; ?>
             <article class="delivery-rotulo">
-              <?php if (!empty($c['imagem'])): ?><img src="../<?= e($c['imagem']) ?>" alt="Rótulo da <?= e($c['nome']) ?>" width="96" height="96" loading="lazy"><?php endif; ?>
+              <button type="button" class="delivery-ver" data-cerveja="<?= e($c['id']) ?>" aria-label="Ver detalhes da <?= e($c['nome']) ?>">
+                <?php if (!empty($c['imagem'])): ?><img src="../<?= e($c['imagem']) ?>" alt="Rótulo da <?= e($c['nome']) ?>" width="96" height="96" loading="lazy"><?php endif; ?>
+                <span class="delivery-mais">Saiba mais</span>
+              </button>
+              <div class="detalhe" id="cerveja-<?= e($c['id']) ?>" hidden>
+                <?= detalhe_delivery($c) ?>
+              </div>
               <div class="delivery-info">
-                <h3><?= e($c['nome']) ?></h3>
+                <h3><button type="button" class="link-cerveja" data-cerveja="<?= e($c['id']) ?>"><?= e($c['nome']) ?></button></h3>
                 <?php if ($c['estilo'] !== ''): ?><p class="delivery-estilo"><?= e($c['estilo']) ?><?= ($c['abv'] ?? '') !== '' ? ' · ' . e(dh_num($c['abv'])) . '%' : '' ?></p><?php endif; ?>
                 <p class="delivery-litro"><strong><?= e(dh_moeda($l)) ?></strong> o litro</p>
                 <p class="delivery-onde">Engatada na <?= e(implode(' e na ', array_map(fn($u) => DH_UNIDADES[$u], $c['unidades']))) ?></p>
@@ -99,6 +125,29 @@ $equipamentos = array_map(fn($eq) => $eq[0], DH_EQUIPAMENTOS);
       <p class="delivery-legal">Valores sujeitos a alteração. Venda proibida para menores de 18 anos.</p>
     </div>
   </main>
+
+  <dialog class="modal" id="modal-cerveja" aria-label="Detalhes da cerveja">
+    <button class="fechar" aria-label="Fechar">×</button>
+    <div class="modal-corpo"></div>
+  </dialog>
+  <script>
+    // Tocar no rótulo ou no nome abre a ficha da cerveja
+    (function () {
+      var modal = document.getElementById('modal-cerveja'), corpo = modal.querySelector('.modal-corpo');
+      document.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-cerveja]');
+        if (!b) return;
+        var origem = document.getElementById('cerveja-' + b.getAttribute('data-cerveja'));
+        if (!origem) return;
+        corpo.innerHTML = origem.innerHTML;
+        modal.showModal();
+        modal.scrollTop = 0;
+      });
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal || e.target.classList.contains('fechar')) modal.close();
+      });
+    })();
+  </script>
 
   <footer class="site-footer">
     <div class="container legal">
