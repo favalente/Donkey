@@ -556,7 +556,7 @@ function agenda_acao(string $acao): bool
                 'tributo' => mb_substr($tributo, 0, 120),
                 'cache' => dh_valor($_POST['cache'] ?? ''),
                 'consumacao' => dh_valor($_POST['consumacao'] ?? ''),
-                'status' => isset(DH_STATUS_SHOW[$_POST['status'] ?? '']) ? $_POST['status'] : 'a_confirmar',
+                'status' => isset(DH_STATUS_SHOW[$_POST['status'] ?? '']) ? $_POST['status'] : 'confirmado',
                 'criado_por' => '',
                 'alterado_por' => $usuario['nome'],
                 'alterado_em' => date('Y-m-d H:i'),
@@ -982,7 +982,8 @@ function agenda_tela(string $tela): bool
 
 function agenda_status_tag(string $st): string
 {
-    return '<em class="tag st-' . e($st) . '">' . e(DH_STATUS_SHOW[$st] ?? $st) . '</em>';
+    // Confirmado é o normal: só pago e cancelado ganham etiqueta
+    return $st === 'confirmado' ? '' : '<em class="tag st-' . e($st) . '">' . e(DH_STATUS_SHOW[$st] ?? $st) . '</em>';
 }
 
 // Calendário do mês no painel (igual ao do site, com todos os shows e a situação de cada um).
@@ -1010,7 +1011,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
           <a class="btn mes-btn" data-mes="proximo" href="<?= e($nav . $prox) ?>"><?= e(DH_MESES[(int) substr($prox, 5, 2)]) ?> ›</a>
         </div>
         <?php if ($mes !== date('Y-m')): ?><p class="centro"><a class="btn secundario hoje-btn" href="<?= e($nav . date('Y-m')) ?>">Voltar para o mês atual</a></p><?php endif; ?>
-        <p class="cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-confirmar">A confirmar</span> <b class="leg-pago"><span class="flag-pago">✓</span> Pago</b></p>
+        <p class="cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-cancelado">Cancelado</span> <b class="leg-pago"><span class="flag-pago">✓</span> Pago</b></p>
         <p class="dica cal-ajuda">👆 <?= $escolher ? 'Toque no dia do show.' : 'Toque num dia para marcar um show.' ?> Toque no nome da banda para editar ou duplicar. Arraste o calendário para o lado para trocar de mês.</p>
         <div class="calendario">
           <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana"><?= $d ?></div><?php endforeach; ?>
@@ -1079,7 +1080,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
                 pago.querySelector('[value=desfazer]').hidden = i.status !== 'pago';
               }
               menu.querySelector('.cal-menu-situacao').className = 'cal-menu-situacao sit-' + i.status;
-              menu.querySelector('.cal-menu-situacao').textContent = (i.status === 'pago' ? '✓ ' : '') + i.situacao;
+              menu.querySelector('.cal-menu-situacao').textContent = i.status === 'pago' ? '✓ Pago' : (i.status === 'cancelado' ? 'Cancelado' : '');
               menu.showModal();
             });
           });
@@ -1136,7 +1137,7 @@ function agenda_tela_lista(): void
             </a>
             <div class="acoes-show">
               <?php if (pode('agenda_editar')): ?><a class="duplicar" href="./?acao=show&duplicar=<?= e($s['id']) ?>" title="Duplicar show">⧉ Duplicar</a><?php endif; ?>
-              <?php if (pode('valores') && in_array($s['status'], ['a_confirmar', 'confirmado'], true)): ?>
+              <?php if (pode('valores') && $s['status'] === 'confirmado'): ?>
                 <form method="post" action="./?acao=show-pago"><?= $csrf ?><input type="hidden" name="id" value="<?= e($s['id']) ?>"><button class="btn pagar mini-pagar" name="op" value="pagar">✓ Marcar como pago</button></form>
               <?php endif; ?>
             </div>
@@ -1184,7 +1185,7 @@ function agenda_tela_show(): void
         }
     }
     $s = $s ?? ['id' => '', 'data' => (string) ($_GET['data'] ?? ''), 'hora' => $a['config']['hora_padrao'], 'unidade' => $usuario['unidade'] ?? '' ?: 'aldeota', 'banda_id' => '',
-        'tributo' => '', 'cache' => '', 'consumacao' => '', 'status' => 'a_confirmar', 'obs' => ''];
+        'tributo' => '', 'cache' => '', 'consumacao' => '', 'status' => 'confirmado', 'obs' => ''];
     if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $s = array_merge($s, array_intersect_key($_POST, $s));
     }
@@ -1242,7 +1243,7 @@ function agenda_tela_show(): void
         <label>Situação
           <span class="escolhas"><?php foreach (DH_STATUS_SHOW as $k => $rot): ?><label class="escolha st-<?= $k ?>"><input type="radio" name="status" value="<?= $k ?>" <?= $k === $s['status'] ? 'checked' : '' ?>><span><?= e($rot) ?></span></label><?php endforeach; ?></span>
         </label>
-        <p class="dica">"A confirmar" e "Cancelado" não aparecem no site.</p>
+        <p class="dica">Show cancelado sai do site.</p>
         <label>Observações internas <textarea name="obs" rows="3" maxlength="500"><?= e($s['obs']) ?></textarea></label>
         <?php if (!empty($s['criado_por']) || !empty($s['alterado_por'])): ?>
           <p class="dica">Cadastrado por <?= e(($s['criado_por'] ?? '') ?: '—') ?><?php if (!empty($s['alterado_por'])): ?> · última alteração por <?= e($s['alterado_por']) ?> em <?= e(date('d/m/Y H:i', strtotime($s['alterado_em']))) ?><?php endif; ?></p>

@@ -5,7 +5,8 @@
 
 const DH_ARQ_AGENDA = DH_RAIZ . '/dados/agenda.json';
 const DH_DIR_BANDAS = DH_RAIZ . '/uploads/bandas';
-const DH_STATUS_SHOW = ['a_confirmar' => 'A confirmar', 'confirmado' => 'Confirmado', 'pago' => 'Pago', 'cancelado' => 'Cancelado'];
+// Show só entra na agenda quando está fechado: por isso não existe mais "a confirmar"
+const DH_STATUS_SHOW = ['confirmado' => 'Confirmado', 'pago' => 'Pago', 'cancelado' => 'Cancelado'];
 // Só estes aparecem para o público
 const DH_STATUS_PUBLICOS = ['confirmado', 'pago'];
 const DH_DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -17,6 +18,13 @@ function dh_agenda(): array
     $a = is_array($a) ? $a : [];
     $a += ['bandas' => [], 'shows' => [], 'config' => []];
     $a['config'] += ['hora_padrao' => '20:30', 'token_equipe' => ''];
+    // Shows antigos "a confirmar" contam como confirmados
+    foreach ($a['shows'] as &$s) {
+        if (!isset(DH_STATUS_SHOW[$s['status'] ?? ''])) {
+            $s['status'] = 'confirmado';
+        }
+    }
+    unset($s);
     // O padrão antigo (21:00) vira 20:30, a não ser que alguém tenha escolhido o horário no painel
     if ($a['config']['hora_padrao'] === '21:00' && empty($a['config']['hora_escolhida'])) {
         $a['config']['hora_padrao'] = '20:30';
@@ -313,7 +321,7 @@ function dh_agenda_ics(array $a, bool $equipe): string
         if ($equipe) {
             $desc .= "\nCachê: " . dh_moeda($s['cache']) . "\nConsumação: " . dh_moeda($s['consumacao'])
                 . "\nSituação: " . DH_STATUS_SHOW[$s['status']] . ($s['obs'] !== '' ? "\n" . $s['obs'] : '');
-            $titulo = ($s['status'] === 'a_confirmar' ? '[a confirmar] ' : '') . $titulo;
+            $titulo = ($s['status'] === 'pago' ? '[pago] ' : ($s['status'] === 'cancelado' ? '[cancelado] ' : '')) . $titulo;
         }
         $linhas[] = 'BEGIN:VEVENT';
         $linhas[] = 'UID:' . $s['id'] . '@donkeyheadcervejaria.com.br';
