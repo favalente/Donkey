@@ -27,6 +27,48 @@ function dh_carregar(): array
     foreach (DH_UNIDADES as $u => $_) {
         $dados['torneiras'][$u] = array_values($dados['torneiras'][$u] ?? []);
     }
+    if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['precos_evento_2026'])) {
+        $dados = dh_precos_evento_2026($dados);
+    }
+    return $dados;
+}
+
+// Tabela do chope delivery 2026 (uma vez só): litro da tap list da Aldeota com 30% de desconto na
+// Premium Lager e 35% nas especiais, arredondado para cima até o próximo R$ 0,50.
+const DH_PRECOS_EVENTO_2026 = [
+    'dh premium lager puro m' => 21.00, // bar R$ 30
+    'velas do mucuripe' => 22.50,       // bar R$ 34
+    'galo campina' => 24.50,            // bar R$ 37
+    'miolo de pote' => 25.00,           // bar R$ 38
+    'asa branca' => 26.00,              // bar R$ 40
+    'vixebier' => 26.00,                // bar R$ 40
+    'mel da goiaba' => 26.00,           // bar R$ 40
+    'soft hop' => 26.00,                // bar R$ 40
+    'stigmapa' => 27.50,                // bar R$ 42
+    'mandacaripa' => 29.50,             // bar R$ 45
+];
+
+function dh_precos_evento_2026(array $dados): array
+{
+    $chave = function (string $nome): string {
+        $t = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $nome);
+        return trim(preg_replace('/[^a-z0-9]+/', ' ', strtolower($t === false ? $nome : $t)));
+    };
+    $aplicados = [];
+    foreach ($dados['cervejas'] as $i => $c) {
+        $k = $chave((string) $c['nome']);
+        $k = $k === 'softhop' ? 'soft hop' : $k;
+        if (isset(DH_PRECOS_EVENTO_2026[$k])) {
+            $dados['cervejas'][$i]['preco_evento'] = number_format(DH_PRECOS_EVENTO_2026[$k], 2, '.', '');
+            $aplicados[] = $c['nome'];
+        }
+    }
+    $dados['migracoes']['precos_evento_2026'] = ['em' => date('c'), 'cervejas' => $aplicados];
+    try {
+        dh_salvar($dados);
+    } catch (RuntimeException $e) {
+        // Sem permissão de gravar agora: tenta de novo na próxima leitura
+    }
     return $dados;
 }
 
