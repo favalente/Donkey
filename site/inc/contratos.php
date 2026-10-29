@@ -237,14 +237,14 @@ function dh_evento_valores(array $f): array
 // Cervejas oferecidas para evento (com valor do litro cadastrado em Cervejas), por nome
 // Chope delivery: só as cervejas engatadas agora (tap list do xMenu), com o valor do litro calculado
 // pela regra: litro da ALDEOTA com 30% de desconto na Premium Lager e 35% nas especiais, arredondado
-// para cima até o próximo R$ 0,50. Nunca usa o preço da Maraponga: cerveja engatada só lá usa o
-// último preço visto na Aldeota ou, se nunca foi vista, a planilha de produtos da Aldeota (out/2026).
+// para cima até o próximo R$ 0,50. A base é o "Preço 1 litro" do cadastro da cerveja, que se atualiza
+// sozinho com o preço da tap list da Aldeota sempre que ela está engatada lá. Nunca usa a Maraponga.
 const DH_DELIVERY_DESCONTO_LAGER = 0.30;
 const DH_DELIVERY_DESCONTO_ESPECIAIS = 0.35;
 // Variações da lager que não entram no delivery
 const DH_DELIVERY_FORA = ['green', 'socio', 'falae', 'aniversariante', 'evento', 'viagem'];
-const DH_ARQ_PRECOS_ALDEOTA = DH_RAIZ . '/dados/precos-aldeota.json';
-// Litro na Aldeota pela planilha de produtos do xMenu (out/2026), para quem não está engatado lá
+// Litro na Aldeota pela planilha de produtos do xMenu (out/2026): preenche, uma vez, o "Preço 1 litro"
+// das cervejas que estavam com ele vazio no cadastro
 const DH_PRECOS_ALDEOTA_PLANILHA = [
     'PREMIUM LAGER' => 30, 'STIGMAPA' => 42, 'MANDACARIPA' => 45, 'GALO CAMPINA' => 37, 'ASA BRANCA' => 40,
     'SEVERINA SOUR (CAJU)' => 40, 'SEVERINA SOUR (ACEROLA)' => 40, 'SEVERINA SOUR (MANGA)' => 40, 'SEVERINA SOUR MANGA' => 40,
@@ -271,6 +271,17 @@ function dh_chave_preco(string $nome): string
     return str_replace('-', '', preg_replace('/^dh-/', '', dh_slug($nome)));
 }
 
+function dh_preco_planilha_aldeota(string $nome): ?float
+{
+    static $mapa = null;
+    if ($mapa === null) {
+        foreach (DH_PRECOS_ALDEOTA_PLANILHA as $n => $v) {
+            $mapa[dh_chave_preco($n)] = (float) $v;
+        }
+    }
+    return $nome === '' ? null : ($mapa[dh_chave_preco($nome)] ?? null);
+}
+
 function dh_cervejas_evento(): array
 {
     static $cache = null;
@@ -287,27 +298,28 @@ function dh_cervejas_evento(): array
         }
         return null;
     };
-    $chaves = fn(array $it) => array_values(array_unique(array_filter(array_map('dh_chave_preco', [$it['nome'] ?? '', $it['nome_xmenu'] ?? '', $it['id'] ?? '']))));
-    // Referência da Aldeota: planilha < último preço visto < preço de agora
-    $ref = [];
-    foreach (DH_PRECOS_ALDEOTA_PLANILHA as $n => $v) {
-        $ref[dh_chave_preco($n)] = (float) $v;
-    }
-    $visto = json_decode((string) @file_get_contents(DH_ARQ_PRECOS_ALDEOTA), true);
-    $ref = array_merge($ref, is_array($visto) ? $visto : []);
     $tapAldeota = dh_xmenu_taplist('aldeota', $dados['cervejas']) ?? [];
-    $mudou = false;
+    // Engatada na Aldeota: o preço de agora vai para o cadastro (só grava se mudou)
+    $novos = [];
     foreach ($tapAldeota as $it) {
-        if ($l = $litro($it)) {
-            foreach ($chaves($it) as $k) {
-                $mudou = $mudou || ($visto[$k] ?? null) !== $l;
-                $visto[$k] = $l;
-                $ref[$k] = $l;
-            }
+        $l = $litro($it);
+        if ($l && $it['id'] && isset($porId[$it['id']]) && (float) ($porId[$it['id']]['preco_1l'] ?? 0) !== $l) {
+            $novos[$it['id']] = $l;
+            $porId[$it['id']]['preco_1l'] = number_format($l, 2, '.', '');
         }
     }
-    if ($mudou && is_dir(dirname(DH_ARQ_PRECOS_ALDEOTA))) {
-        @file_put_contents(DH_ARQ_PRECOS_ALDEOTA, json_encode($visto, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    if ($novos) {
+        try {
+            $atual = dh_carregar();
+            foreach ($atual['cervejas'] as $i => $c) {
+                if (isset($novos[$c['id']])) {
+                    $atual['cervejas'][$i]['preco_1l'] = number_format($novos[$c['id']], 2, '.', '');
+                }
+            }
+            dh_salvar($atual);
+        } catch (RuntimeException $e) {
+            // Sem permissão de gravar agora: usa o preço de agora mesmo assim
+        }
     }
     $lista = [];
     foreach (['aldeota' => $tapAldeota, 'maraponga' => dh_xmenu_taplist('maraponga', $dados['cervejas']) ?? []] as $u => $tap) {
@@ -320,14 +332,15 @@ function dh_cervejas_evento(): array
             if (!$litro($it) || array_filter(DH_DELIVERY_FORA, fn($x) => strpos(dh_slug($it['nome']), $x) !== false)) {
                 continue;
             }
-            $bar = null;
-            foreach ($chaves($it) as $k) {
-                $bar ??= $ref[$k] ?? null;
+            $c = ($it['id'] && isset($porId[$it['id']]) ? $porId[$it['id']] : $it) + ['estilo' => '', 'abv' => '', 'imagem' => 'assets/img/rotulo-padrao.png'];
+            // Base: "Preço 1 litro" do cadastro (preço da Aldeota). Sem cadastro, a planilha da Aldeota.
+            $bar = is_numeric($c['preco_1l'] ?? '') && (float) $c['preco_1l'] > 0 ? (float) $c['preco_1l'] : null;
+            foreach ([$c['nome'] ?? '', $c['nome_xmenu'] ?? '', $it['nome'] ?? ''] as $n) {
+                $bar ??= dh_preco_planilha_aldeota($n);
             }
             if (!$bar) {
-                continue; // sem preço de referência da Aldeota, não entra
+                continue; // sem preço da Aldeota, não entra
             }
-            $c = ($it['id'] && isset($porId[$it['id']]) ? $porId[$it['id']] : $it) + ['estilo' => '', 'abv' => '', 'imagem' => 'assets/img/rotulo-padrao.png'];
             $c['id'] = $chave;
             $c['preco_bar'] = $bar;
             $c['preco_evento'] = number_format(dh_preco_delivery($c['nome'], $bar), 2, '.', '');

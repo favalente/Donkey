@@ -685,9 +685,9 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         </div>
         <div class="duas">
           <label>Preço 300 ml (R$) <input name="preco_300" value="<?= e(dh_num($c['preco_300'] ?? '')) ?>" inputmode="decimal" maxlength="8" placeholder="Ex.: 16,00"></label>
-          <label>Preço 1 litro (R$) <input name="preco_1l" value="<?= e(dh_num($c['preco_1l'] ?? '')) ?>" inputmode="decimal" maxlength="8" placeholder="Ex.: 42,00"></label>
+          <label>Preço 1 litro na Aldeota (R$) <small>(base do chope delivery; atualiza sozinho quando está engatada na Aldeota)</small><input name="preco_1l" value="<?= e(dh_num($c['preco_1l'] ?? '')) ?>" inputmode="decimal" maxlength="8" placeholder="Ex.: 42,00"></label>
         </div>
-        <p class="dica">Chope delivery: o valor do litro para evento é calculado sozinho a partir do litro na tap list (Premium Lager com 30% de desconto, especiais com 35%, arredondado para cima até o próximo R$ 0,50). Só entram as cervejas engatadas.</p>
+        <p class="dica">Chope delivery: o valor do litro para evento é calculado sozinho a partir do "Preço 1 litro na Aldeota" acima (Premium Lager com 30% de desconto, especiais com 35%, arredondado para cima até o próximo R$ 0,50). Só entram as cervejas engatadas.</p>
         <label>Descrição <small>(deixe uma linha em branco entre os parágrafos)</small>
           <textarea name="descricao" rows="9"><?= e($c['descricao']) ?></textarea>
         </label>
