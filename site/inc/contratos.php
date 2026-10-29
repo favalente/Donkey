@@ -625,12 +625,19 @@ function dh_contrato_concluir(array &$k): bool
 function dh_contrato_enviar_copia(array $k, array $para): array
 {
     $link = dh_url_site() . 'contrato/?t=' . $k['token'];
+    // O contrato vai em PDF anexo; se o PDF não puder ser gerado, o texto completo vai no corpo do e-mail
+    try {
+        $anexos = [['nome' => dh_contrato_pdf_nome($k), 'tipo' => 'application/pdf', 'dados' => dh_contrato_pdf($k)]];
+    } catch (\Throwable $ex) {
+        $anexos = [];
+    }
     $texto = '<p>O contrato nº <b>' . e($k['numero']) . '</b> (' . e(DH_CONTRATO_TIPOS[$k['tipo']]) . ') foi assinado pelas duas partes.</p>'
+        . ($anexos ? '<p>📎 <b>O contrato assinado segue em PDF, anexo a este e-mail</b>, com o relatório de assinaturas.</p>' : '')
         . '<p>Código de integridade: <span style="font-family:monospace;font-size:12px">' . e($k['hash']) . '</span></p>'
-        . '<p><a href="' . e($link) . '">Abrir o contrato assinado</a> (dá para baixar em PDF pela própria página).</p>';
+        . '<p><a href="' . e($link) . '">Abrir o contrato assinado</a> (a página também confere a autenticidade).</p>';
     $falhas = [];
     foreach (array_unique(array_filter($para)) as $email) {
-        if (!dh_email($email, 'Contrato assinado nº ' . $k['numero'] . ' · Donkey Head Cervejaria', $texto . '<hr>' . $k['documento'] . dh_contrato_relatorio($k), $erro)) {
+        if (!dh_email($email, 'Contrato assinado nº ' . $k['numero'] . ' · Donkey Head Cervejaria', $texto . ($anexos ? '' : '<hr>' . $k['documento'] . dh_contrato_relatorio($k)), $erro, $anexos)) {
             $falhas[$email] = $erro;
         }
     }
@@ -761,7 +768,8 @@ function dh_smtp_enviar(string $usuario, string $senha, string $para, string $me
     }
 }
 
-function dh_email(string $para, string $assunto, string $html, ?string &$erro = null): bool
+// $anexos: [['nome' => 'arquivo.pdf', 'tipo' => 'application/pdf', 'dados' => '...'], ...]
+function dh_email(string $para, string $assunto, string $html, ?string &$erro = null, array $anexos = []): bool
 {
     $erro = '';
     if (!filter_var($para, FILTER_VALIDATE_EMAIL)) {
@@ -774,30 +782,120 @@ function dh_email(string $para, string $assunto, string $html, ?string &$erro = 
         . '<p style="color:#777;font-size:12px;margin-top:24px">Donkey Head Cervejaria · ' . e(DH_EMPRESA['endereco']) . ' · ' . e(DH_EMPRESA['telefone']) . '</p></body></html>';
     $cab = [
         'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'Content-Transfer-Encoding: base64',
         'From: =?UTF-8?B?' . base64_encode('Donkey Head Cervejaria') . '?= <' . $de . '>',
         'Reply-To: ' . $de,
     ];
+    $htmlCod = rtrim(chunk_split(base64_encode($corpo)));
+    if (!$anexos) {
+        $cab[] = 'Content-Type: text/html; charset=UTF-8';
+        $cab[] = 'Content-Transfer-Encoding: base64';
+        $corpoCod = $htmlCod;
+    } else {
+        // Com anexo: mensagem em partes (o texto em HTML + cada arquivo)
+        $b = 'dh-' . bin2hex(random_bytes(12));
+        $cab[] = 'Content-Type: multipart/mixed; boundary="' . $b . '"';
+        $corpoCod = "--$b\nContent-Type: text/html; charset=UTF-8\nContent-Transfer-Encoding: base64\n\n" . $htmlCod . "\n";
+        foreach ($anexos as $a) {
+            $nome = str_replace('"', '', $a['nome']);
+            $corpoCod .= "--$b\nContent-Type: " . $a['tipo'] . '; name="' . $nome . "\"\nContent-Transfer-Encoding: base64\nContent-Disposition: attachment; filename=\"" . $nome . "\"\n\n"
+                . rtrim(chunk_split(base64_encode($a['dados']))) . "\n";
+        }
+        $corpoCod .= "--$b--";
+    }
     $assuntoCod = '=?UTF-8?B?' . base64_encode($assunto) . '?=';
-    $corpoCod = chunk_split(base64_encode($corpo));
     if (getenv('DH_EMAIL_TESTE')) {
-        // Ambiente de teste: grava o e-mail num arquivo em vez de enviar
-        @file_put_contents(getenv('DH_EMAIL_TESTE'), "PARA: $para\nASSUNTO: $assunto\n$html\n----\n", FILE_APPEND);
+        // Ambiente de teste: grava o e-mail num arquivo em vez de enviar (e os anexos ao lado)
+        foreach ($anexos as $a) {
+            @file_put_contents(dirname(getenv('DH_EMAIL_TESTE')) . '/' . basename($a['nome']), $a['dados']);
+        }
+        @file_put_contents(getenv('DH_EMAIL_TESTE'), "PARA: $para\nASSUNTO: $assunto\nANEXOS: " . implode(', ', array_column($anexos, 'nome')) . "\n$html\n----\n", FILE_APPEND);
         return true;
     }
     $senha = (string) (dh_email_config()['senha'] ?? '');
     if ($senha !== '') {
         $msg = implode("\r\n", array_merge(['Date: ' . date('r'), 'To: <' . $para . '>', 'Subject: ' . $assuntoCod,
-            'Message-ID: <' . bin2hex(random_bytes(12)) . '@donkeyheadcervejaria.com.br>'], $cab)) . "\r\n\r\n" . str_replace("\n", "\r\n", rtrim($corpoCod));
+            'Message-ID: <' . bin2hex(random_bytes(12)) . '@donkeyheadcervejaria.com.br>'], $cab)) . "\r\n\r\n" . str_replace(["\r\n", "\n"], ["\n", "\r\n"], $corpoCod);
         $erro = dh_smtp_enviar($de, $senha, $para, $msg);
-        dh_email_registrar($para, $assunto, 'SMTP', $erro === '', $erro);
+        dh_email_registrar($para, $assunto . ($anexos ? ' (com PDF)' : ''), 'SMTP', $erro === '', $erro);
         return $erro === '';
     }
     $ok = @mail($para, $assuntoCod, $corpoCod, implode("\r\n", $cab), '-f' . $de);
     $erro = $ok ? '' : 'O servidor recusou o envio pelo mail() do PHP. Cadastre a senha do e-mail em Contratos → Configurações.';
-    dh_email_registrar($para, $assunto, 'mail() do PHP (sem senha)', $ok, $erro);
+    dh_email_registrar($para, $assunto . ($anexos ? ' (com PDF)' : ''), 'mail() do PHP (sem senha)', $ok, $erro);
     return $ok;
+}
+
+// ---- PDF do contrato (Dompdf, em inc/vendor; instalado pelo composer.json da raiz do repositório) ----
+
+function dh_contrato_pdf_nome(array $k): string
+{
+    return 'Contrato-' . preg_replace('/[^A-Za-z0-9-]/', '', $k['numero']) . '-Donkey-Head-Cervejaria.pdf';
+}
+
+// O mesmo conteúdo da página do contrato: timbre, texto, assinaturas, rodapé e relatório de assinaturas
+function dh_contrato_pdf(array $k): string
+{
+    require_once __DIR__ . '/vendor/autoload.php';
+    $cache = DH_RAIZ . '/dados/cache-pdf';
+    if (!is_dir($cache)) {
+        @mkdir($cache, 0755, true);
+    }
+    $op = new \Dompdf\Options();
+    $op->setDefaultFont('DejaVu Sans');
+    $op->setIsRemoteEnabled(false);
+    $op->setChroot([realpath(DH_RAIZ)]);
+    $op->setFontCache($cache);
+    $op->setTempDir($cache);
+    $assinam = '';
+    foreach (['contratada' => 'CONTRATADA', 'contratante' => 'CONTRATANTE'] as $parte => $rot) {
+        $a = $k['assinaturas'][$parte] ?? null;
+        $assinam .= '<td><div class="traco">' . ($a ? 'Assinado eletronicamente por ' . e($a['nome']) . '<br>em ' . e(date('d/m/Y H:i', strtotime($a['em']))) : '&nbsp;') . '</div><strong>' . $rot . '</strong></td>';
+    }
+    $css = <<<'CSS'
+@page { margin: 18mm 16mm 20mm; }
+body { font-family: "DejaVu Sans", sans-serif; font-size: 9.5pt; line-height: 1.45; color: #1f1a16; }
+.timbre { border-bottom: 2px solid #1f1a16; padding-bottom: 6px; margin-bottom: 12px; font-size: 8pt; color: #5f564e; }
+.timbre img { width: 34px; vertical-align: middle; margin-right: 8px; }
+h1 { font-size: 13pt; text-align: center; margin: 4px 0; }
+.numero { text-align: center; color: #5f564e; margin: 0 0 10px; }
+h2 { font-size: 10pt; margin: 14px 0 6px; padding: 4px 8px; background: #f3ede6; border-left: 3px solid #e9a23b; }
+h3 { font-size: 9.5pt; margin: 10px 0 4px; }
+p { margin: 0 0 6px; text-align: justify; }
+table.quadro, table.itens { width: 100%; border-collapse: collapse; margin: 0 0 8px; }
+.quadro th, .quadro td, .itens th, .itens td { border: 1px solid #d9cfc4; padding: 4px 6px; vertical-align: top; text-align: left; font-size: 8.5pt; }
+.quadro th { width: 38%; background: #faf7f3; }
+.itens th { background: #faf7f3; }
+.itens .total td { font-weight: bold; background: #fff7e8; }
+.hash { font-size: 7pt; word-wrap: break-word; }
+.local-data { margin-top: 14px; }
+table.assinam { width: 100%; margin-top: 28px; }
+table.assinam td { width: 50%; padding: 0 14px; text-align: center; vertical-align: bottom; }
+.traco { border-top: 1px solid #1f1a16; padding-top: 4px; min-height: 28px; font-size: 8pt; color: #5f564e; }
+.rodape-doc { margin-top: 18px; padding-top: 6px; border-top: 1px solid #d9cfc4; font-size: 7pt; color: #5f564e; }
+.relatorio { page-break-before: always; }
+.assinatura { border: 1px solid #d9cfc4; padding: 8px 10px; margin: 8px 0; page-break-inside: avoid; }
+.assinatura.feita { border-color: #2e9d4a; }
+.assinatura p { margin: 0 0 2px; text-align: left; }
+.assinatura .parte { font-weight: bold; color: #5f564e; font-size: 8pt; }
+.assinatura .nome { font-weight: bold; }
+.assinatura .agente { color: #5f564e; font-size: 7pt; }
+.legal { font-size: 7.5pt; color: #5f564e; }
+CSS;
+    $html = '<!doctype html><html><head><meta charset="utf-8"><style>' . $css . '</style></head><body>'
+        . '<div class="timbre"><img src="' . e(realpath(DH_RAIZ . '/assets/img/logo-donkey-head.png')) . '">' . e(DH_EMPRESA['razao']) . ' · CNPJ ' . e(DH_EMPRESA['cnpj']) . '</div>'
+        . $k['documento']
+        . '<table class="assinam"><tr>' . $assinam . '</tr></table>'
+        . '<div class="rodape-doc">' . e(DH_EMPRESA['razao']) . ' · CNPJ ' . e(DH_EMPRESA['cnpj']) . ' · ' . e(DH_EMPRESA['endereco']) . ' · ' . e(DH_EMPRESA['telefone'])
+        . '<br>Contrato nº ' . e($k['numero']) . ' · Código de integridade: <span class="hash">' . e($k['hash']) . '</span></div>'
+        . dh_contrato_relatorio($k)
+        . '</body></html>';
+    $pdf = new \Dompdf\Dompdf($op);
+    $pdf->loadHtml($html, 'UTF-8');
+    $pdf->setPaper('A4');
+    $pdf->render();
+    $fonte = $pdf->getFontMetrics()->getFont('DejaVu Sans');
+    $pdf->getCanvas()->page_text(42, 815, 'Contrato nº ' . $k['numero'] . ' · Donkey Head Cervejaria · página {PAGE_NUM} de {PAGE_COUNT}', $fonte, 7, [0.37, 0.34, 0.31]);
+    return (string) $pdf->output();
 }
 
 function dh_contrato_campos_padrao(string $tipo): array

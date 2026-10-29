@@ -51,6 +51,17 @@ if ($preencher && isset($_GET['cupom'])) {
     exit;
 }
 
+// PDF do contrato (o mesmo que vai anexado no e-mail)
+if ($k && isset($_GET['pdf']) && in_array($k['status'], ['enviado', 'assinado', 'cancelado'], true)) {
+    $arquivo = dh_contrato_pdf($k);
+    header('Content-Type: application/pdf');
+    header('Content-Length: ' . strlen($arquivo));
+    header('Content-Disposition: attachment; filename="' . dh_contrato_pdf_nome($k) . '"');
+    header('Cache-Control: private, no-store');
+    echo $arquivo;
+    exit;
+}
+
 // Comprovante de pagamento (quem tem o link do contrato pode ver)
 if ($k && isset($_GET['comprovante'])) {
     dh_comprovante_mostrar($k['campos']['comprovante'] ?? null);
@@ -291,7 +302,7 @@ $f = $k['campos'] ?? [];
 <body>
   <div class="barra no-print">
     <img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong>
-    <?php if ($k && !$preencher && !$consulta): ?><button type="button" class="btn" onclick="window.print()">⬇ Baixar PDF / Imprimir</button><?php endif; ?>
+    <?php if ($k && !$preencher && !$consulta): ?><a class="btn" href="./?t=<?= e($token) ?>&amp;pdf=1">⬇ Baixar PDF</a><?php endif; ?>
   </div>
   <main>
     <?php if (!$k): ?>
