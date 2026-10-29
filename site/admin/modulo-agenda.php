@@ -1493,7 +1493,7 @@ function agenda_tela_banda(): void
           <input class="link-banda" value="<?= e($linkBanda) ?>" readonly onclick="this.select()">
           <p class="botoes-link">
             <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($linkBanda) ?>').then(function(){ alert('Link copiado!'); })">Copiar link</button>
-            <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode('Oi! Aqui é a Donkey Head Cervejaria. Por esse link vocês podem enviar as fotos da ' . $b['nome'] . ', conferir o Instagram que aparece na nossa agenda e informar a chave Pix para o pagamento do cachê: ' . $linkBanda)) ?>">Enviar pelo WhatsApp</a>
+            <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá, " . $b['nome'] . ", aqui é a Donkey Head Cervejaria.\n\nAcesse este link para enviar/atualizar as fotos, o Instagram e os dados bancários:\n" . $linkBanda)) ?>">Enviar pelo WhatsApp</a>
           </p>
         <?php endif; ?>
         <form method="post" action="./?acao=banda-link"<?= $linkBanda ? ' onsubmit="return confirm(\'Criar um link novo? O link enviado antes para a banda deixa de funcionar.\');"' : '' ?>>
