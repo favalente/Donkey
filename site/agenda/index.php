@@ -117,7 +117,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
                 <ul class="cal-lista">
                   <?php foreach ($daSede as $s): $t = strtotime($s['data']); ?>
                     <li>
-                      <button class="cal-abrir cal-linha" data-dia="<?= $s['data'] ?>">
+                      <button class="cal-abrir cal-linha" data-show="<?= e($s['id']) ?>">
                         <span class="cal-linha-data"><strong><?= date('d', $t) ?></strong><?= e(mb_substr(DH_DIAS_SEMANA[(int) date('w', $t)], 0, 3)) ?></span>
                         <span class="cal-linha-info">
                           <strong><?= e($s['banda']) ?></strong>
@@ -125,6 +125,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
                         </span>
                         <span class="cal-linha-onde"><small><?= e(str_replace(':', 'h', $s['hora'])) ?></small></span>
                       </button>
+                      <div class="cal-detalhe" id="show-<?= e($s['id']) ?>" hidden><?= dh_cartao_show($s, '../') ?></div>
                     </li>
                   <?php endforeach; ?>
                 </ul>
@@ -149,7 +150,9 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
       var corpo = modal.querySelector('.cal-modal-corpo');
       document.querySelectorAll('.cal-abrir').forEach(function (b) {
         b.addEventListener('click', function () {
-          corpo.innerHTML = document.getElementById('dia-' + b.getAttribute('data-dia')).innerHTML;
+          // Na lista abre só o show tocado; no calendário, todos os shows do dia
+          var id = b.hasAttribute('data-show') ? 'show-' + b.getAttribute('data-show') : 'dia-' + b.getAttribute('data-dia');
+          corpo.innerHTML = document.getElementById(id).innerHTML;
           modal.showModal();
         });
       });
