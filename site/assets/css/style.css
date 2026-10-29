@@ -293,3 +293,9 @@ a.filtro { text-decoration: none; color: var(--text); }
 .cal-mes-perto { justify-content: space-between; margin: 14px 0 10px; }
 .historia-foto img { height: auto; }
 .historia-foto figcaption { margin-top: .6rem; color: var(--muted); font-size: .9rem; }
+
+/* Foto no meio do texto da história, como em matéria de jornal */
+.foto-jornal { margin: 1.6rem 0; padding: 10px 10px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.foto-jornal img { display: block; width: 100%; height: auto; border-radius: calc(var(--radius) - 6px); }
+.foto-jornal figcaption { padding: 10px 4px 12px; color: var(--muted); font-size: .9rem; font-style: italic; border-top: 0; }
+.foto-jornal figcaption::before { content: "▲ "; color: var(--amber); font-style: normal; font-size: .75em; }

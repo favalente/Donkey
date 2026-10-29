@@ -90,7 +90,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=13">
+  <link rel="stylesheet" href="assets/css/style.css?v=14">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -172,6 +172,10 @@ function detalhe(array $c): string
           <p>Tudo começou com três amigos, uma paixão por cerveja e uma ideia meio maluca: fazer a própria cerveja no quintal de casa.</p>
           <p>A primeira leva ficou boa. Boa até demais! Os amigos provaram, elogiaram e logo veio aquela pergunta: por que não vender essa cerveja?</p>
           <p>Resolvemos testar a ideia produzindo nossas primeiras cervejas na estrutura de outra cervejaria, a Patt Lou, em Recife. Foi lá que encontramos o cervejeiro Luiz, que deu uma força danada nesse começo.</p>
+          <figure class="foto-jornal">
+            <img src="assets/img/historia-pattlou.jpg" alt="Fermentador com o adesivo da Donkey Head, os sócios ao lado dele e a brassagem com saco de malte na Patt Lou" width="1200" height="915" loading="lazy">
+            <figcaption>Nossa primeira brassagem na Patt Lou, em Recife, com o nosso fermentador.</figcaption>
+          </figure>
           <p>A aceitação foi tão boa que a brincadeira começou a ficar séria. Queríamos produzir nossa própria cerveja aqui, bem fresquinha, sem precisar viajar quilômetros até chegar ao copo.</p>
           <p>Mas faltava uma coisa. Porque, pra gente, cerveja boa merece comida boa também.</p>
           <p>Foi assim que nasceu a Donkey Head. Uma cervejaria com produção própria, cozinha caprichada e um lugar pra reunir os amigos.</p>
