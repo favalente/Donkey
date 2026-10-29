@@ -328,11 +328,15 @@ function contratos_acao(string $acao): bool
             if ($i === null || $c['contratos'][$i]['status'] !== 'enviado') {
                 throw new RuntimeException('Contrato não disponível.');
             }
+            $telaErro = ($_POST['volta'] ?? '') === 'lista' ? 'contratos' : 'contrato';
             $k = $c['contratos'][$i];
             $ok = dh_email($k['campos']['contratante_email'], 'Contrato para assinatura nº ' . $k['numero'] . ' · Donkey Head Cervejaria',
                 '<p>Olá, ' . e($k['campos']['contratante_nome']) . '!</p><p>Segue o contrato nº <b>' . e($k['numero']) . '</b> (' . e(DH_CONTRATO_TIPOS[$k['tipo']]) . ') para leitura e assinatura eletrônica:</p>'
-                . '<p><a href="' . e(dh_url_site() . 'contrato/?t=' . $k['token']) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:bold">Ler e assinar o contrato</a></p>');
-            ir('./?acao=contrato&id=' . $k['id'], $ok ? 'Convite enviado para ' . $k['campos']['contratante_email'] . '.' : 'Não foi possível enviar o e-mail. Mande o link pelo WhatsApp.');
+                . '<p><a href="' . e(dh_url_site() . 'contrato/?t=' . $k['token']) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:bold">Ler e assinar o contrato</a></p>', $erroEmail);
+            if (!$ok) {
+                throw new RuntimeException('O e-mail para ' . $k['campos']['contratante_email'] . ' não saiu: ' . $erroEmail . ' Mande o link pelo WhatsApp e confira em Contratos → Configurações.');
+            }
+            ir(($_POST['volta'] ?? '') === 'lista' ? './?acao=contratos' : './?acao=contrato&id=' . $k['id'], '✉️ E-mail com o link do contrato nº ' . $k['numero'] . ' enviado para ' . $k['campos']['contratante_email'] . '. Peça para o cliente conferir também o spam.');
 
         case 'contrato-cancelar':
             exigir_post();
@@ -511,6 +515,7 @@ function contratos_card(array $k): void
             <a class="btn secundario" href="../contrato/?t=<?= e($k['token']) ?>" target="_blank">📄 Ver contrato</a>
             <?php if ($k['status'] === 'enviado' && !$cliente): ?>
               <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($f['contratante_telefone'])) ?>?text=<?= e(rawurlencode('Olá, ' . $f['contratante_nome'] . ", aqui é a Donkey Head Cervejaria.\n\nSegue o contrato nº " . $k['numero'] . " para leitura e assinatura eletrônica:\n" . $link)) ?>">📲 Enviar</a>
+              <form method="post" action="./?acao=contrato-convite" onsubmit="return confirm('Reenviar o e-mail de assinatura para <?= e(addslashes($f['contratante_email'])) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><input type="hidden" name="volta" value="lista"><button class="btn secundario">✉️ Reenviar e-mail</button></form>
               <?= $post('contrato-editar', '✏️ Editar', 'secundario', 'Editar o contrato nº ' . $k['numero'] . '?' . ($donkey ? ' A assinatura da Donkey será descartada e você assina de novo depois.' : '') . ' O cliente continua usando o mesmo link.') ?>
             <?php endif; ?>
             <?= $post('contrato-duplicar', '⧉ Duplicar') ?>
@@ -750,7 +755,7 @@ function contratos_tela_contrato(): void
             <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($k['campos']['contratante_telefone'])) ?>?text=<?= e(rawurlencode('Olá, ' . $k['campos']['contratante_nome'] . ", aqui é a Donkey Head Cervejaria.\n\nSegue o contrato nº " . $k['numero'] . " para leitura e assinatura eletrônica:\n" . $link)) ?>">Enviar pelo WhatsApp</a>
             <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($link) ?>').then(function(){ alert('Link copiado!'); })">Copiar link</button>
           </p>
-          <form method="post" action="./?acao=contrato-convite"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">Enviar convite por e-mail (<?= e($k['campos']['contratante_email']) ?>)</button></form>
+          <form method="post" action="./?acao=contrato-convite"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">✉️ Reenviar e-mail para assinatura (<?= e($k['campos']['contratante_email']) ?>)</button></form>
         <?php endif; ?>
       <?php endif; ?>
 
