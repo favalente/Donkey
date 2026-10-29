@@ -573,8 +573,23 @@ function agenda_acao(string $acao): bool
             if (!isset(DH_UNIDADES[$unidade])) {
                 throw new RuntimeException('Escolha a unidade.');
             }
+            $nomeNovo = mb_substr(trim((string) ($_POST['banda_nova'] ?? '')), 0, 80);
+            if (!isset($bandas[$bandaId]) && $nomeNovo !== '') {
+                // Banda digitada no show que ainda não existe: cadastra na hora (ou usa a de mesmo nome)
+                foreach ($a['bandas'] as $b) {
+                    if (dh_chave_banda($b['nome']) === dh_chave_banda($nomeNovo)) {
+                        $bandaId = $b['id'];
+                    }
+                }
+                if (!isset($bandas[$bandaId])) {
+                    $bandaId = dh_id_novo('b');
+                    $a['bandas'][] = ['id' => $bandaId, 'nome' => $nomeNovo, 'tributos' => [], 'cache' => dh_valor($_POST['cache'] ?? ''),
+                        'consumacao' => dh_valor($_POST['consumacao'] ?? ''), 'instagram' => '', 'contato' => '', 'obs' => 'Cadastrada pela agenda', 'fotos' => []];
+                }
+                $bandas = dh_bandas_por_id($a);
+            }
             if (!isset($bandas[$bandaId])) {
-                throw new RuntimeException('Escolha a banda (cadastre-a antes em "Bandas", se for nova).');
+                throw new RuntimeException('Digite o nome da banda e escolha na lista (ou toque em "Cadastrar nova banda").');
             }
             $tributo = trim((string) ($_POST['tributo'] ?? ''));
             if ($tributo === '__outro') {
@@ -1075,7 +1090,6 @@ function agenda_tela_show(): void
     ?>
       <p><a href="./?acao=agenda<?= $s['data'] ? '&mes=' . e(substr($s['data'], 0, 7)) : '' ?>">‹ Voltar para a Agenda</a></p>
       <h1><?= $s['id'] ? 'Editar show' : 'Novo show' ?></h1>
-      <?php if (!$bandas): ?><p class="aviso">Cadastre a banda antes, em <a href="./?acao=banda">Bandas → Nova banda</a>.</p><?php endif; ?>
       <form method="post" action="./?acao=show-salvar" class="form-cerveja" id="form-show">
         <?= $csrf ?>
         <input type="hidden" name="id" value="<?= e($s['id']) ?>">
@@ -1086,14 +1100,24 @@ function agenda_tela_show(): void
         <label>Unidade
           <select name="unidade"><?php foreach (DH_UNIDADES as $u => $nomeU): ?><option value="<?= $u ?>" <?= $u === $s['unidade'] ? 'selected' : '' ?>><?= e($nomeU) ?></option><?php endforeach; ?></select>
         </label>
-        <label>Banda
-          <select name="banda_id" id="banda" required>
-            <option value="">—</option>
-            <?php foreach ($bandas as $b): ?>
-              <option value="<?= e($b['id']) ?>" data-tributos="<?= e(json_encode($b['tributos'], JSON_UNESCAPED_UNICODE)) ?>" data-cache="<?= e(dh_num($b['cache'])) ?>" data-consumacao="<?= e(dh_num($b['consumacao'])) ?>" <?= $b['id'] === $s['banda_id'] ? 'selected' : '' ?>><?= e($b['nome']) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </label>
+        <?php
+          $atual = null;
+          foreach ($bandas as $b) {
+              if ($b['id'] === $s['banda_id']) {
+                  $atual = $b;
+              }
+          }
+          $listaBandas = array_map(fn($b) => ['id' => $b['id'], 'nome' => $b['nome'], 'tributos' => $b['tributos'],
+              'cache' => dh_num($b['cache']), 'consumacao' => dh_num($b['consumacao'])], $bandas);
+          usort($listaBandas, fn($x, $y) => strcoll(dh_slug($x['nome']), dh_slug($y['nome'])));
+        ?>
+        <div class="busca-banda">
+          <label>Banda <input id="banda-busca" autocomplete="off" placeholder="Digite o nome da banda" value="<?= e($atual['nome'] ?? ($_POST['banda_nova'] ?? '')) ?>" required></label>
+          <input type="hidden" name="banda_id" id="banda" value="<?= e($s['banda_id']) ?>">
+          <input type="hidden" name="banda_nova" id="banda-nova" value="<?= e($_POST['banda_nova'] ?? '') ?>">
+          <ul class="sugestoes" id="sugestoes" hidden></ul>
+          <p class="dica" id="banda-aviso" hidden>Banda nova: será cadastrada ao salvar o show. Depois dá para completar fotos e contato em Bandas.</p>
+        </div>
         <label>Tributo
           <select name="tributo" id="tributo" data-atual="<?= e($s['tributo']) ?>"></select>
         </label>
@@ -1120,25 +1144,72 @@ function agenda_tela_show(): void
       <?php endif; ?>
       <script>
         (function () {
-          var banda = document.getElementById('banda'), trib = document.getElementById('tributo');
+          var bandas = <?= json_encode($listaBandas, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+          var busca = document.getElementById('banda-busca'), idBanda = document.getElementById('banda');
+          var nova = document.getElementById('banda-nova'), aviso = document.getElementById('banda-aviso');
+          var lista = document.getElementById('sugestoes'), trib = document.getElementById('tributo');
           var outro = document.getElementById('tributo-outro'), primeira = true;
+          // Compara sem acento, maiúscula e as palavras "banda"/"the"
+          function chave(t) {
+            return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(banda|the|os|as)\b/g, '').replace(/[^a-z0-9]/g, '');
+          }
+          function porId(id) { return bandas.filter(function (b) { return b.id === id; })[0]; }
           function montar() {
-            var op = banda.options[banda.selectedIndex];
-            var lista = op && op.dataset.tributos ? JSON.parse(op.dataset.tributos) : [];
+            var b = porId(idBanda.value);
+            var tribs = b ? b.tributos.slice() : [];
             var atual = primeira ? trib.dataset.atual : '';
-            if (atual && lista.indexOf(atual) < 0) lista.push(atual);
-            trib.innerHTML = '<option value="">— sem tributo —</option>' + lista.map(function (t) {
-              var o = document.createElement('option'); o.value = o.textContent = t; if (t === atual || (!atual && lista.length === 1)) o.selected = true; return o.outerHTML;
+            if (atual && tribs.indexOf(atual) < 0) tribs.push(atual);
+            trib.innerHTML = '<option value="">— sem tributo —</option>' + tribs.map(function (t) {
+              var o = document.createElement('option'); o.value = o.textContent = t; if (t === atual || (!atual && tribs.length === 1)) o.selected = true; return o.outerHTML;
             }).join('') + '<option value="__outro">+ Outro tributo…</option>';
-            outro.hidden = true;
+            // Banda nova ainda não tem tributo: já abre o campo para digitar
+            if (nova.value && !b) trib.value = '__outro';
+            outro.hidden = trib.value !== '__outro';
             // Ao trocar de banda, traz o cachê e a consumação padrão dela
-            if (!primeira && op && op.value) {
-              document.getElementById('cache').value = op.dataset.cache || '';
-              document.getElementById('consumacao').value = op.dataset.consumacao || '';
+            if (!primeira && b) {
+              document.getElementById('cache').value = b.cache || '';
+              document.getElementById('consumacao').value = b.consumacao || '';
             }
+            aviso.hidden = !nova.value;
             primeira = false;
           }
-          banda.addEventListener('change', montar);
+          function escolher(b) {
+            idBanda.value = b.id; nova.value = ''; busca.value = b.nome; lista.hidden = true; montar();
+          }
+          function criar() {
+            idBanda.value = ''; nova.value = busca.value.trim(); lista.hidden = true; montar();
+          }
+          function sugerir() {
+            var k = chave(busca.value), texto = busca.value.trim();
+            idBanda.value = ''; nova.value = '';
+            lista.innerHTML = '';
+            if (!texto) { lista.hidden = true; montar(); return; }
+            var achadas = bandas.filter(function (b) { return chave(b.nome).indexOf(k) >= 0; }).slice(0, 8);
+            achadas.forEach(function (b) {
+              var li = document.createElement('li'), bt = document.createElement('button');
+              bt.type = 'button'; bt.textContent = b.nome; bt.addEventListener('click', function () { escolher(b); });
+              li.appendChild(bt); lista.appendChild(li);
+            });
+            var igual = achadas.filter(function (b) { return chave(b.nome) === k; })[0];
+            if (!igual) {
+              var li = document.createElement('li'), bt = document.createElement('button');
+              bt.type = 'button'; bt.className = 'nova'; bt.textContent = '+ Cadastrar nova banda "' + texto + '"';
+              bt.addEventListener('click', criar);
+              li.appendChild(bt); lista.appendChild(li);
+            }
+            lista.hidden = false;
+            montar();
+          }
+          busca.addEventListener('input', sugerir);
+          busca.addEventListener('focus', function () { if (!idBanda.value && busca.value) sugerir(); });
+          document.getElementById('form-show').addEventListener('submit', function (e) {
+            if (!idBanda.value && !nova.value) {
+              // Nome digitado igual a uma banda existente vale como escolhida
+              var k = chave(busca.value), igual = bandas.filter(function (b) { return chave(b.nome) === k; })[0];
+              if (igual) { escolher(igual); return; }
+              e.preventDefault(); sugerir(); busca.focus();
+            }
+          });
           trib.addEventListener('change', function () { outro.hidden = trib.value !== '__outro'; });
           montar();
         })();
