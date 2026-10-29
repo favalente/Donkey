@@ -581,7 +581,7 @@ function contratos_tela_config(): void
           <textarea name="emails_copia" rows="4" autocapitalize="none" spellcheck="false" placeholder="financeiro@exemplo.com.br"><?= e(implode("\n", $_POST ? (array) preg_split('/[\s,;]+/', trim((string) ($_POST['emails_copia'] ?? ''))) : ($c['config']['emails_copia'] ?? []))) ?></textarea></label>
         <label>Dados para pagamento <small>(aparecem no pedido do cliente, ex.: chave Pix e nome de quem recebe)</small>
           <textarea name="pagamento_instrucoes" rows="3" maxlength="500" placeholder="Pix (CNPJ): 00.000.000/0000-00 · Nome de quem recebe"><?= e($_POST ? (string) ($_POST['pagamento_instrucoes'] ?? '') : ($c['config']['pagamento_instrucoes'] ?? '')) ?></textarea></label>
-        <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato assinado e os avisos de pedido preenchido e de cliente que assinou.</p>
+        <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato depois que as duas partes assinam. Os avisos do andamento (pedido preenchido, cliente assinou) vão só para <?= e(DH_EMPRESA['email']) ?>.</p>
         <h2>E-mail de envio</h2>
         <?php $ce = dh_email_config(); ?>
         <p class="dica">Os códigos de assinatura e as cópias saem pelo servidor de e-mail da Locaweb, entrando na conta <?= e(DH_EMPRESA['email']) ?>. Para isso o sistema precisa da senha dessa caixa de e-mail (fica guardada só no servidor).</p>

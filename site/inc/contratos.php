@@ -621,11 +621,11 @@ function dh_emails_equipe(): array
     return array_values(array_unique([DH_EMPRESA['email'], ...(array) (dh_contratos()['config']['emails_copia'] ?? [])]));
 }
 
+// Avisos do andamento (pedido preenchido, cliente assinou): só para o e-mail da Donkey.
+// A lista de cópia recebe apenas o contrato final, assinado pelas duas partes.
 function dh_email_equipe(string $assunto, string $html): void
 {
-    foreach (dh_emails_equipe() as $email) {
-        dh_email($email, $assunto, $html);
-    }
+    dh_email(DH_EMPRESA['email'], $assunto, $html);
 }
 
 // Lista de e-mails digitada no painel (um por linha, ou separados por vírgula)
