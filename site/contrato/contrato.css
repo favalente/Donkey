@@ -59,3 +59,15 @@ p, li { font-size: .95rem; text-align: justify; }
   h2, h3 { break-after: avoid; }
   .assinam, .assinatura { break-inside: avoid; }
 }
+/* Pedido de chope (o cliente preenche) */
+.pedido label { display: block; font-weight: 600; margin-bottom: 14px; }
+.pedido input:not([type=checkbox]), .pedido select { display: block; width: 100%; margin-top: 4px; padding: 13px; font: inherit; font-size: 1.05rem; border: 2px solid var(--linha); border-radius: 10px; background: #fff; color: var(--tinta); }
+.pedido .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pedido .check { display: flex; gap: 10px; align-items: center; }
+.pedido .check input { width: 26px; height: 26px; accent-color: var(--ambar); }
+.linha-chope { display: grid; grid-template-columns: 2.2fr 1fr; gap: 10px; }
+.caixa-comodato { margin: 18px 0; padding: 14px; border: 2px dashed var(--ambar); border-radius: 12px; background: #fffaf1; }
+.caixa-comodato .legal { margin: 0 0 10px; }
+.resumo { margin-top: 16px; }
+.resumo td:last-child { text-align: right; white-space: nowrap; }
+@media (max-width: 560px) { .pedido .duas { grid-template-columns: 1fr; gap: 0; } .linha-chope { grid-template-columns: 1.6fr 1fr; } }

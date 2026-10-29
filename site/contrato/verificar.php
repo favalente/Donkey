@@ -21,7 +21,7 @@ if ($q !== '') {
   <meta name="robots" content="noindex, nofollow">
   <title>Verificar contrato · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=1">
+  <link rel="stylesheet" href="contrato.css?v=2">
 </head>
 <body>
   <div class="barra"><img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong></div>

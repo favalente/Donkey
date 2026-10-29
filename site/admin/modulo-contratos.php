@@ -3,19 +3,6 @@
 // Rascunho pode ser editado; ao enviar, o texto é congelado. A Donkey assina com a senha do
 // administrador e o cliente pelo link (código por e-mail). Ver inc/contratos.php.
 
-function dh_contrato_campos_padrao(string $tipo): array
-{
-    $base = ['contratante_nome' => '', 'contratante_doc' => '', 'contratante_endereco' => '', 'contratante_telefone' => '', 'contratante_email' => '', 'pagamento' => 'pix'];
-    if ($tipo === 'evento') {
-        return $base + ['espaco' => '', 'data' => '', 'hora_inicio' => '', 'hora_fim' => '', 'valor_pessoa' => '', 'valor_adicional' => '', 'atracao' => 'Banda de POP Rock Nacional',
-            'convidados' => '', 'max_participantes' => '', 'adicionais' => [], 'total' => '', 'responsavel_nome' => '', 'responsavel_telefone' => '', 'responsavel_email' => '',
-            'cardapio' => DH_ANEXO_EVENTO];
-    }
-    return $base + ['entrega_endereco' => '', 'entrega_data' => '', 'entrega_hora' => '', 'devolucao_data' => '', 'devolucao_hora' => '', 'frete' => '', 'observacoes' => '',
-        'itens' => [['descricao' => 'DH Premium Lager', 'litros' => '50', 'valor_litro' => '13']],
-        'equipamentos' => array_map(fn($eq) => ['descricao' => $eq[0], 'valor' => (string) $eq[1], 'quantidade' => 1], DH_EQUIPAMENTOS)];
-}
-
 // Lê o formulário do contrato (só os campos do tipo)
 function dh_contrato_ler_form(string $tipo, array $p): array
 {
@@ -48,7 +35,7 @@ function dh_contrato_ler_form(string $tipo, array $p): array
     foreach ((array) ($p['itens'] ?? []) as $it) {
         $d = mb_substr(trim((string) ($it['descricao'] ?? '')), 0, 200);
         if ($d !== '') {
-            $f['itens'][] = ['descricao' => $d, 'litros' => dh_valor($it['litros'] ?? ''), 'valor_litro' => dh_valor($it['valor_litro'] ?? '')];
+            $f['itens'][] = ['descricao' => $d, 'litros' => dh_valor($it['litros'] ?? ''), 'valor_litro' => dh_valor($it['valor_litro'] ?? ''), 'comodato' => !empty($it['comodato'])];
         }
     }
     $f['equipamentos'] = [];
@@ -59,48 +46,6 @@ function dh_contrato_ler_form(string $tipo, array $p): array
         }
     }
     return $f;
-}
-
-// O que falta para poder enviar
-function dh_contrato_pendencias(array $k): array
-{
-    $f = $k['campos'];
-    $faltam = [];
-    if ($f['contratante_nome'] === '') {
-        $faltam[] = 'nome do contratante';
-    }
-    if (!dh_cpf_valido($f['contratante_doc']) && !dh_cnpj_valido($f['contratante_doc'])) {
-        $faltam[] = 'CPF ou CNPJ válido do contratante';
-    }
-    if (!filter_var($f['contratante_email'], FILTER_VALIDATE_EMAIL)) {
-        $faltam[] = 'e-mail do contratante (é para onde vai o código de assinatura)';
-    }
-    if ($f['contratante_telefone'] === '') {
-        $faltam[] = 'telefone do contratante';
-    }
-    if ($f['pagamento'] === '') {
-        $faltam[] = 'forma de pagamento';
-    }
-    if ($k['tipo'] === 'evento') {
-        foreach (['espaco' => 'espaço', 'data' => 'data do evento', 'hora_inicio' => 'horário de início', 'hora_fim' => 'horário de término', 'valor_pessoa' => 'valor por pessoa', 'convidados' => 'quantidade de convidados'] as $c => $rot) {
-            if ($f[$c] === '') {
-                $faltam[] = $rot;
-            }
-        }
-    } else {
-        foreach (['entrega_endereco' => 'endereço de entrega', 'entrega_data' => 'data de entrega', 'devolucao_data' => 'data de devolução'] as $c => $rot) {
-            if ($f[$c] === '') {
-                $faltam[] = $rot;
-            }
-        }
-        if (!$f['itens']) {
-            $faltam[] = 'ao menos um item de chope';
-        }
-        if (!$f['equipamentos']) {
-            $faltam[] = 'ao menos um equipamento';
-        }
-    }
-    return $faltam;
 }
 
 function contratos_acao(string $acao): bool
@@ -154,6 +99,21 @@ function contratos_acao(string $acao): bool
             dh_contratos_salvar($c);
             ir('./?acao=contrato&id=' . $k['id'], $enviar ? 'Contrato nº ' . $k['numero'] . ' pronto para assinatura. Assine pela Donkey e envie o link ao cliente.' : 'Rascunho salvo.');
 
+        case 'contrato-pedido':
+            exigir_post();
+            exigir('contratos');
+            $c = dh_contratos();
+            $k = ['id' => dh_id_novo('c'), 'token' => bin2hex(random_bytes(16)), 'numero' => '', 'tipo' => 'comodato', 'status' => 'preenchimento',
+                'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'assinaturas' => [], 'campos' => dh_contrato_campos_padrao('comodato')];
+            $k['campos']['itens'] = [];
+            $k['campos']['pagamento'] = isset(DH_PAGAMENTOS[$_POST['pagamento'] ?? '']) ? $_POST['pagamento'] : 'pix';
+            $k['campos']['frete'] = dh_valor($_POST['frete'] ?? '');
+            $k['campos']['observacoes'] = mb_substr(trim((string) ($_POST['observacoes'] ?? '')), 0, 2000);
+            $k['referencia'] = mb_substr(trim((string) ($_POST['referencia'] ?? '')), 0, 80);
+            $c['contratos'][] = $k;
+            dh_contratos_salvar($c);
+            ir('./?acao=contrato&id=' . $k['id'], 'Pedido criado. Envie o link para o cliente preencher e assinar.');
+
         case 'contrato-assinar':
             exigir_post();
             exigir('contratos');
@@ -201,10 +161,10 @@ function contratos_acao(string $acao): bool
             if ($i === null || $c['contratos'][$i]['status'] === 'assinado') {
                 throw new RuntimeException('Contrato assinado não pode ser cancelado por aqui.');
             }
-            if ($c['contratos'][$i]['status'] === 'rascunho') {
+            if (in_array($c['contratos'][$i]['status'], ['rascunho', 'preenchimento'], true)) {
                 array_splice($c['contratos'], $i, 1);
                 dh_contratos_salvar($c);
-                ir('./?acao=contratos', 'Rascunho excluído.');
+                ir('./?acao=contratos', 'Excluído.');
             }
             $c['contratos'][$i]['status'] = 'cancelado';
             $c['contratos'][$i]['cancelado_em'] = date('Y-m-d H:i:s');
@@ -279,8 +239,9 @@ function contratos_tela_lista(): void
         <p class="aviso">Primeiro passo: <a href="./?acao=contratos-config">informe o nome e o CPF de quem assina pela Donkey</a>.</p>
       <?php endif; ?>
       <div class="novo-contrato">
+        <a class="btn primario largo" href="./?acao=contrato&tipo=pedido">+ Pedido de chope <small>(o cliente preenche)</small></a>
         <?php foreach (DH_CONTRATO_TIPOS as $t => $rot): ?>
-          <a class="btn primario largo" href="./?acao=contrato&tipo=<?= $t ?>">+ <?= e($rot) ?></a>
+          <a class="btn secundario largo" href="./?acao=contrato&tipo=<?= $t ?>">+ <?= e($rot) ?> <small>(eu preencho)</small></a>
         <?php endforeach; ?>
       </div>
       <?php if (!$lista): ?><p class="dica">Nenhum contrato ainda.</p><?php endif; ?>
@@ -289,7 +250,7 @@ function contratos_tela_lista(): void
           <li>
             <a href="./?acao=contrato&id=<?= e($k['id']) ?>">
               <span class="info">
-                <strong><?= e($f['contratante_nome'] ?: 'Sem nome') ?></strong>
+                <strong><?= e($f['contratante_nome'] ?: ($k['referencia'] ?? '') ?: 'Sem nome') ?></strong>
                 <span><?= e($k['numero'] ?: 'Rascunho') ?> · <?= e(DH_CONTRATO_TIPOS[$k['tipo']]) ?><?= $quando ? ' · ' . e(dh_data_br($quando)) : '' ?> · <?= e(dh_moeda(dh_contrato_total($k))) ?></span>
                 <span class="tags"><?= dh_contrato_tag($k['status']) ?>
                   <?php if ($k['status'] === 'enviado'): ?>
@@ -329,6 +290,10 @@ function contratos_tela_contrato(): void
     global $csrf, $erro, $usuario;
     $c = dh_contratos();
     $i = dh_contrato_indice($c, (string) ($_GET['id'] ?? $_POST['id'] ?? ''));
+    if ($i === null && ($_GET['tipo'] ?? '') === 'pedido') {
+        contratos_form_pedido();
+        return;
+    }
     if ($i === null) {
         $tipo = isset(DH_CONTRATO_TIPOS[$_GET['tipo'] ?? $_POST['tipo'] ?? '']) ? ($_GET['tipo'] ?? $_POST['tipo']) : 'evento';
         $k = ['id' => '', 'tipo' => $tipo, 'status' => 'rascunho', 'numero' => '', 'campos' => dh_contrato_campos_padrao($tipo), 'assinaturas' => []];
@@ -353,6 +318,21 @@ function contratos_tela_contrato(): void
         return;
     }
     $link = dh_url_site() . 'contrato/?t=' . $k['token'];
+    if ($k['status'] === 'preenchimento') {
+        ?>
+          <p class="dica">O cliente abre o link, escolhe os rótulos e a litragem, preenche os dados dele e já assina. Você recebe um e-mail quando ele terminar; depois é só assinar pela Donkey aqui.</p>
+          <?php if (!empty($k['referencia'])): ?><p>Referência: <strong><?= e($k['referencia']) ?></strong></p><?php endif; ?>
+          <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= $k['campos']['frete'] !== '' ? e(dh_moeda($k['campos']['frete'])) : 'incluso' ?></strong></p>
+          <h2>Enviar ao cliente</h2>
+          <input class="link-banda" value="<?= e($link) ?>" readonly onclick="this.select()">
+          <p class="botoes-link">
+            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\nPara fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n" . $link)) ?>">Enviar pelo WhatsApp</a>
+            <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($link) ?>').then(function(){ alert('Link copiado!'); })">Copiar link</button>
+          </p>
+          <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('Excluir este pedido? O link deixa de funcionar.');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo">Excluir pedido</button></form>
+        <?php
+        return;
+    }
     $donkey = $k['assinaturas']['contratada'] ?? null;
     $cliente = $k['assinaturas']['contratante'] ?? null;
     ?>
@@ -463,12 +443,13 @@ function contratos_form(array $k): void
             <label>Horário da devolução <input type="time" name="devolucao_hora" value="<?= e($f['devolucao_hora']) ?>"></label>
           </div>
           <h2>Chope</h2>
-          <?php $itens = array_pad($f['itens'], max(3, count($f['itens']) + 1), ['descricao' => '', 'litros' => '', 'valor_litro' => '']); ?>
+          <?php $itens = array_pad($f['itens'], max(3, count($f['itens']) + 1), ['descricao' => '', 'litros' => '', 'valor_litro' => '', 'comodato' => false]); ?>
           <?php foreach ($itens as $n => $it): ?>
             <div class="linha-item">
               <label>Item <input name="itens[<?= $n ?>][descricao]" value="<?= e($it['descricao']) ?>" placeholder="Ex.: DH Premium Lager"></label>
               <label>Litros <input name="itens[<?= $n ?>][litros]" value="<?= $v($it['litros']) ?>" inputmode="decimal" class="calc"></label>
               <label>R$/litro <input name="itens[<?= $n ?>][valor_litro]" value="<?= $v($it['valor_litro']) ?>" inputmode="decimal" class="calc"></label>
+              <label class="check em-comodato"><input type="checkbox" name="itens[<?= $n ?>][comodato]" value="1" class="calc" <?= !empty($it['comodato']) ? 'checked' : '' ?>> Em comodato (não entra no total)</label>
             </div>
           <?php endforeach; ?>
           <label>Frete de ida e volta (R$) <small>(em branco = incluso)</small><input name="frete" value="<?= $v($f['frete']) ?>" inputmode="decimal" class="calc"></label>
@@ -522,7 +503,7 @@ function contratos_form(array $k): void
             if (tc) {
               var s = 0;
               form.querySelectorAll('.linha-item').forEach(function (l) {
-                var i = l.querySelectorAll('input'); s += num(i[1].value) * num(i[2].value);
+                var i = l.querySelectorAll('input'); if (!i[3].checked) s += num(i[1].value) * num(i[2].value);
               });
               s += num(form.frete.value);
               tc.textContent = 'Valor total: ' + brl(s);
@@ -533,5 +514,31 @@ function contratos_form(array $k): void
           calc();
         })();
       </script>
+    <?php
+}
+
+// Novo pedido de chope: a Donkey só define pagamento e frete; o cliente preenche o resto pelo link
+function contratos_form_pedido(): void
+{
+    global $csrf;
+    $cervejas = dh_cervejas_evento();
+    ?>
+      <p><a class="voltar" href="./?acao=contratos">‹ Voltar para Contratos</a></p>
+      <h1>Pedido de chope</h1>
+      <p class="dica">Você cria o pedido e manda o link. O cliente escolhe os rótulos e a litragem, informa se quer chope em comodato, preenche os dados dele (como no cabeçalho do contrato) e assina. Os equipamentos em comodato já vão preenchidos e ele não pode mudar.</p>
+      <?php if (!$cervejas): ?>
+        <p class="aviso">Nenhuma cerveja com valor para evento ainda. Em <a href="./?acao=cervejas">Cervejas</a>, preencha "Valor do litro para evento" nos rótulos que vocês vendem para eventos.</p>
+      <?php else: ?>
+        <p class="dica">Rótulos que o cliente vai ver: <?= e(implode(' · ', array_map(fn($x) => $x['nome'] . ' (' . dh_moeda($x['preco_evento']) . '/L)', $cervejas))) ?></p>
+      <?php endif; ?>
+      <form method="post" action="./?acao=contrato-pedido" class="form-cerveja">
+        <?= $csrf ?>
+        <label>Referência <small>(só para você achar na lista, ex.: nome do cliente ou do evento)</small><input name="referencia" maxlength="80"></label>
+        <p class="rotulo">Forma de pagamento</p>
+        <span class="escolhas"><?php foreach (DH_PAGAMENTOS as $p => $rot): ?><label class="escolha"><input type="radio" name="pagamento" value="<?= $p ?>" <?= $p === 'pix' ? 'checked' : '' ?>><span><?= e($rot) ?></span></label><?php endforeach; ?></span>
+        <label>Frete de ida e volta (R$) <small>(em branco = incluso)</small><input name="frete" inputmode="decimal"></label>
+        <label>Observações para o contrato <small>(opcional)</small><textarea name="observacoes" rows="3"></textarea></label>
+        <div class="barra-salvar"><button class="btn primario">Criar pedido e gerar o link</button></div>
+      </form>
     <?php
 }

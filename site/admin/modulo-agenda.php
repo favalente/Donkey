@@ -2,21 +2,6 @@
 // Painel: agenda de shows, cadastro de bandas (com fotos), relatório financeiro e
 // importação do Google Agenda. Cachê e consumação só aparecem para quem pode ver valores.
 
-// "1.200,50" / "1200.5" / "R$ 800" -> "1200.50"; vazio se não for número
-function dh_valor($v): string
-{
-    $s = preg_replace('/[^\d,.]/', '', (string) $v);
-    if ($s === '') {
-        return '';
-    }
-    if (strpos($s, ',') !== false) {
-        $s = str_replace(['.', ','], ['', '.'], $s);
-    } elseif (substr_count($s, '.') > 1 || preg_match('/\.\d{3}$/', $s)) {
-        $s = str_replace('.', '', $s);
-    }
-    return is_numeric($s) ? number_format((float) $s, 2, '.', '') : '';
-}
-
 function dh_mes_param(): string
 {
     $m = (string) ($_GET['mes'] ?? '');

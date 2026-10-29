@@ -28,6 +28,90 @@ if ($k && ($pend['id'] ?? '') !== $k['id']) {
     $pend = null;
 }
 $podeAssinar = $k && $k['status'] === 'enviado' && empty($k['assinaturas']['contratante']);
+$preencher = $k && $k['status'] === 'preenchimento';
+$cervejas = $preencher ? dh_cervejas_evento() : [];
+
+// Pedido de chope: o cliente preenche os dados do cabeçalho, escolhe rótulos e litragem e o contrato é gerado
+if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'preencher') {
+    try {
+        if (!hash_equals($_SESSION['csrf'], (string) ($_POST['csrf'] ?? ''))) {
+            throw new RuntimeException('A página ficou aberta muito tempo. Tente de novo.');
+        }
+        $txt = fn($n, $max = 200) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($_POST[$n] ?? ''))), 0, $max);
+        $f = $k['campos'];
+        $f['contratante_nome'] = $txt('nome', 120);
+        $f['contratante_doc'] = dh_so_digitos((string) ($_POST['cpf'] ?? ''));
+        $f['contratante_telefone'] = $txt('celular', 30);
+        $f['contratante_email'] = trim((string) ($_POST['email'] ?? ''));
+        $f['entrega_endereco'] = $txt('endereco', 250);
+        $f['contratante_endereco'] = $f['entrega_endereco'];
+        $f['entrega_data'] = (string) ($_POST['entrega_data'] ?? '');
+        $f['devolucao_data'] = (string) ($_POST['devolucao_data'] ?? '');
+        $porId = array_column($cervejas, null, 'id');
+        $f['itens'] = [];
+        foreach (['itens' => false, 'comodato' => true] as $campo => $emComodato) {
+            foreach ((array) ($_POST[$campo] ?? []) as $it) {
+                $cid = (string) ($it['cerveja'] ?? '');
+                $litros = dh_valor($it['litros'] ?? '');
+                if ($cid === '' && $litros === '') {
+                    continue;
+                }
+                if (!isset($porId[$cid]) || $litros === '' || (float) $litros <= 0 || (float) $litros > 5000) {
+                    throw new RuntimeException('Escolha o rótulo e digite a litragem de cada linha' . ($emComodato ? ' do chope em comodato.' : ' do chope.'));
+                }
+                $f['itens'][] = ['descricao' => $porId[$cid]['nome'], 'cerveja' => $cid, 'litros' => $litros, 'valor_litro' => dh_valor($porId[$cid]['preco_evento']), 'comodato' => $emComodato];
+            }
+        }
+        if (mb_strlen($f['contratante_nome']) < 5 || strpos($f['contratante_nome'], ' ') === false) {
+            throw new RuntimeException('Escreva o seu nome completo.');
+        }
+        if (!dh_cpf_valido($f['contratante_doc'])) {
+            throw new RuntimeException('CPF inválido. Confira os números.');
+        }
+        if (strlen(dh_so_digitos($f['contratante_telefone'])) < 10) {
+            throw new RuntimeException('Informe o celular com DDD.');
+        }
+        if (!filter_var($f['contratante_email'], FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('E-mail inválido.');
+        }
+        if ($f['entrega_endereco'] === '') {
+            throw new RuntimeException('Informe o endereço de entrega.');
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $f['entrega_data']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $f['devolucao_data'])) {
+            throw new RuntimeException('Informe as datas de recebimento e de devolução do equipamento.');
+        }
+        if ($f['entrega_data'] < date('Y-m-d')) {
+            throw new RuntimeException('A data de recebimento não pode ser no passado.');
+        }
+        if ($f['devolucao_data'] < $f['entrega_data']) {
+            throw new RuntimeException('A devolução não pode ser antes do recebimento.');
+        }
+        if (!array_filter($f['itens'], fn($it) => !$it['comodato'])) {
+            throw new RuntimeException('Escolha ao menos um rótulo de chope e a litragem.');
+        }
+        $c = dh_contratos();
+        $i = dh_contrato_por_token($c, $token);
+        if ($c['contratos'][$i]['status'] !== 'preenchimento') {
+            throw new RuntimeException('Este pedido já foi enviado.');
+        }
+        if (empty($c['config']['representante_cpf'])) {
+            throw new RuntimeException('Não foi possível gerar o contrato agora. Fale com a Donkey Head Cervejaria.');
+        }
+        $k = $c['contratos'][$i];
+        $k['campos'] = $f;
+        $k['numero'] = dh_contrato_numero($c);
+        dh_contrato_congelar($k, $c['config']);
+        $c['contratos'][$i] = $k;
+        dh_contratos_salvar($c);
+        dh_email(DH_EMPRESA['email'], 'Pedido de chope preenchido nº ' . $k['numero'],
+            '<p>' . e($f['contratante_nome']) . ' preencheu o pedido de chope nº <b>' . e($k['numero']) . '</b> (entrega em ' . e(dh_data_br($f['entrega_data'])) . ', total ' . e(dh_moeda(dh_comodato_total($f))) . ').</p><p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>');
+        $_SESSION['contrato_aviso'] = 'Pedido registrado! Confira o contrato abaixo e assine no final da página.';
+        header('Location: ./?t=' . $token . '#assinar', true, 303);
+        exit;
+    } catch (RuntimeException $e) {
+        $erro = $e->getMessage();
+    }
+}
 
 if ($podeAssinar && $_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -117,12 +201,12 @@ $f = $k['campos'] ?? [];
   <meta name="referrer" content="no-referrer">
   <title><?= $k ? 'Contrato nº ' . e($k['numero']) . ' · ' : '' ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=1">
+  <link rel="stylesheet" href="contrato.css?v=2">
 </head>
 <body>
   <div class="barra no-print">
     <img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong>
-    <?php if ($k): ?><button type="button" class="btn" onclick="window.print()">⬇ Baixar PDF / Imprimir</button><?php endif; ?>
+    <?php if ($k && !$preencher): ?><button type="button" class="btn" onclick="window.print()">⬇ Baixar PDF / Imprimir</button><?php endif; ?>
   </div>
   <main>
     <?php if (!$k): ?>
@@ -130,6 +214,9 @@ $f = $k['campos'] ?? [];
     <?php else: ?>
       <?php if ($aviso): ?><p class="msg ok no-print"><?= e($aviso) ?></p><?php endif; ?>
       <?php if ($erro): ?><p class="msg erro no-print"><?= e($erro) ?></p><?php endif; ?>
+      <?php if ($preencher): ?>
+        <?php include __DIR__ . '/pedido-form.php'; ?>
+      <?php else: ?>
       <?php if ($k['status'] === 'cancelado'): ?><p class="msg erro">Este contrato foi cancelado pela Donkey Head Cervejaria e não vale mais.</p><?php endif; ?>
       <?php if ($podeAssinar): ?><p class="msg no-print">Leia o contrato abaixo. A assinatura fica no final da página.</p><?php endif; ?>
 
@@ -152,8 +239,8 @@ $f = $k['campos'] ?? [];
           <?php if (!$pend): ?>
             <form method="post">
               <?= $csrf ?><input type="hidden" name="op" value="codigo">
-              <label>Seu nome completo <input name="nome" required autocomplete="name" value="<?= e($_POST['nome'] ?? '') ?>"></label>
-              <label>Seu CPF <input name="cpf" required inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" value="<?= e($_POST['cpf'] ?? '') ?>"></label>
+              <label>Seu nome completo <input name="nome" required autocomplete="name" value="<?= e($_POST['nome'] ?? ($k['tipo'] === 'comodato' ? $f['contratante_nome'] : '')) ?>"></label>
+              <label>Seu CPF <input name="cpf" required inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" value="<?= e($_POST['cpf'] ?? (strlen(dh_so_digitos($f['contratante_doc'] ?? '')) === 11 ? dh_cpf_formatar($f['contratante_doc']) : '')) ?>"></label>
               <label>Seu e-mail <small>(o código chega aqui)</small><input type="email" name="email" required autocapitalize="none" value="<?= e($_POST['email'] ?? $f['contratante_email']) ?>"></label>
               <label class="check"><input type="checkbox" name="aceite" value="1" required> Li e concordo com todas as cláusulas do contrato nº <?= e($k['numero']) ?>.</label>
               <button class="btn grande">Receber o código por e-mail</button>
@@ -177,6 +264,7 @@ $f = $k['campos'] ?? [];
           <?php endif; ?>
           <p class="legal">Assinatura eletrônica com validade jurídica (MP 2.200-2/2001, art. 10, § 2º, e Lei 14.063/2020). Ficam registrados nome, CPF, e-mail confirmado, data e hora, IP e aparelho.</p>
         </section>
+      <?php endif; ?>
       <?php endif; ?>
     <?php endif; ?>
   </main>

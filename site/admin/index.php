@@ -363,6 +363,7 @@ if (!$usuarios) {
                     'nome_xmenu' => trim((string) ($_POST['nome_xmenu'] ?? '')),
                     'preco_300' => $num('preco_300'),
                     'preco_1l' => $num('preco_1l'),
+                    'preco_evento' => $num('preco_evento'),
                     'descricao' => trim(str_replace("\r\n", "\n", (string) ($_POST['descricao'] ?? ''))),
                     'ativa' => !empty($_POST['ativa']),
                 ]);
@@ -504,7 +505,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=21">
+  <link rel="stylesheet" href="admin.css?v=22">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
 </head>
 <body>
@@ -680,6 +681,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
           <label>Preço 300 ml (R$) <input name="preco_300" value="<?= e(dh_num($c['preco_300'] ?? '')) ?>" inputmode="decimal" maxlength="8" placeholder="Ex.: 16,00"></label>
           <label>Preço 1 litro (R$) <input name="preco_1l" value="<?= e(dh_num($c['preco_1l'] ?? '')) ?>" inputmode="decimal" maxlength="8" placeholder="Ex.: 42,00"></label>
         </div>
+        <label>Valor do litro para evento (R$) <small>(preenchido = aparece para o cliente escolher no pedido de chope)</small>
+          <input name="preco_evento" value="<?= e(dh_num($c['preco_evento'] ?? '')) ?>" inputmode="decimal" maxlength="8" placeholder="Ex.: 13,00"></label>
         <label>Descrição <small>(deixe uma linha em branco entre os parágrafos)</small>
           <textarea name="descricao" rows="9"><?= e($c['descricao']) ?></textarea>
         </label>

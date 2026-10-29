@@ -9,7 +9,7 @@ const DH_CONTRATO_TIPOS = [
     'evento' => 'Evento corporativo no pub',
     'comodato' => 'Venda de chope com comodato de equipamentos',
 ];
-const DH_CONTRATO_STATUS = ['rascunho' => 'Rascunho', 'enviado' => 'Aguardando assinatura', 'assinado' => 'Assinado', 'cancelado' => 'Cancelado'];
+const DH_CONTRATO_STATUS = ['rascunho' => 'Rascunho', 'preenchimento' => 'Aguardando o cliente preencher', 'enviado' => 'Aguardando assinatura', 'assinado' => 'Assinado', 'cancelado' => 'Cancelado'];
 const DH_EMPRESA = [
     'razao' => 'DONKEY HEAD BREWPUB CERVEJARIA LTDA',
     'cnpj' => '27.454.745/0001-87',
@@ -200,6 +200,12 @@ function dh_data_extenso(string $data): string
     return $t ? date('d', $t) . ' de ' . mb_strtolower(DH_MESES[(int) date('n', $t)]) . ' de ' . date('Y', $t) : '';
 }
 
+// 50.00 -> "50"; 12.50 -> "12,5"
+function dh_litros($v): string
+{
+    return dh_num(rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.'));
+}
+
 function dh_data_br(string $data): string
 {
     $t = strtotime($data);
@@ -220,11 +226,22 @@ function dh_evento_valores(array $f): array
     return ['por_pessoa' => $porPessoa, 'total' => $total];
 }
 
+// Cervejas oferecidas para evento (com valor do litro cadastrado em Cervejas), por nome
+function dh_cervejas_evento(): array
+{
+    $lista = array_values(array_filter(dh_carregar()['cervejas'], fn($c) => is_numeric($c['preco_evento'] ?? '') && (float) $c['preco_evento'] > 0));
+    usort($lista, fn($a, $b) => strcoll(dh_slug($a['nome']), dh_slug($b['nome'])));
+    return $lista;
+}
+
+// Total a pagar: só o chope comprado (o chope em comodato não entra) + frete
 function dh_comodato_total(array $f): float
 {
     $t = 0.0;
     foreach ($f['itens'] ?? [] as $it) {
-        $t += (float) ($it['litros'] ?: 0) * (float) ($it['valor_litro'] ?: 0);
+        if (empty($it['comodato'])) {
+            $t += (float) ($it['litros'] ?: 0) * (float) ($it['valor_litro'] ?: 0);
+        }
     }
     return $t + (float) ($f['frete'] ?: 0);
 }
@@ -349,14 +366,23 @@ function dh_contrato_comodato(array $f, callable $linha): string
         . $linha('Entrega dos equipamentos:', trim(dh_data_br($f['entrega_data']) . ' ' . ($f['entrega_hora'] !== '' ? 'às ' . $f['entrega_hora'] : '')))
         . $linha('Devolução (coleta) dos equipamentos:', trim(dh_data_br($f['devolucao_data']) . ' ' . ($f['devolucao_hora'] !== '' ? 'às ' . $f['devolucao_hora'] : '')))
         . $linha('Forma de pagamento:', DH_PAGAMENTOS[$f['pagamento']] ?? '');
-    $h .= '</table><h3>Chope</h3><table class="itens"><tr><th>Item</th><th>Valor do litro</th><th>Quantidade</th><th>Valor total</th></tr>';
-    foreach ($f['itens'] as $it) {
-        $h .= '<tr><td>' . e($it['descricao']) . '</td><td>' . e(dh_moeda($it['valor_litro'])) . '</td><td>' . e(dh_num($it['litros'])) . ' L</td><td>'
+    $comprado = array_filter($f['itens'], fn($it) => empty($it['comodato']));
+    $emComodato = array_filter($f['itens'], fn($it) => !empty($it['comodato']));
+    $h .= '</table><h3>Chope comprado</h3><table class="itens"><tr><th>Item</th><th>Valor do litro</th><th>Quantidade</th><th>Valor total</th></tr>';
+    foreach ($comprado as $it) {
+        $h .= '<tr><td>' . e($it['descricao']) . '</td><td>' . e(dh_moeda($it['valor_litro'])) . '</td><td>' . e(dh_litros($it['litros'])) . ' L</td><td>'
             . e(dh_moeda((float) $it['litros'] * (float) $it['valor_litro'])) . '</td></tr>';
     }
     $frete = $f['frete'] !== '' && (float) $f['frete'] > 0;
     $h .= '<tr><td colspan="3">Frete de ida e volta</td><td>' . ($frete ? e(dh_moeda($f['frete'])) : 'Incluso') . '</td></tr>';
     $h .= '<tr class="total"><td colspan="3">VALOR TOTAL</td><td>' . e(dh_moeda(dh_comodato_total($f))) . '</td></tr></table>';
+    if ($emComodato) {
+        $h .= '<h3>Chope em comodato (não incluído no valor total)</h3><table class="itens"><tr><th>Item</th><th>Quantidade</th><th>Valor do litro, se consumido</th></tr>';
+        foreach ($emComodato as $it) {
+            $h .= '<tr><td>' . e($it['descricao']) . '</td><td>' . e(dh_litros($it['litros'])) . ' L</td><td>' . e(dh_moeda($it['valor_litro'])) . '</td></tr>';
+        }
+        $h .= '</table>';
+    }
     $h .= '<h3>Equipamentos cedidos em comodato (com valor de reposição)</h3><table class="itens"><tr><th>Equipamento</th><th>Quantidade</th><th>Valor de reposição (unidade)</th></tr>';
     foreach ($f['equipamentos'] as $eq) {
         $h .= '<tr><td>' . e($eq['descricao']) . '</td><td>' . (int) $eq['quantidade'] . '</td><td>' . e(dh_moeda($eq['valor'])) . '</td></tr>';
@@ -370,6 +396,7 @@ function dh_contrato_comodato(array $f, callable $linha): string
 <h3>I | DO OBJETO</h3>
 <p>1.1. Constitui objeto do presente instrumento a venda, pela CONTRATADA ao CONTRATANTE, do chope descrito na Seção II.</p>
 <p>1.2. Em razão da compra, a CONTRATADA cede ao CONTRATANTE, em comodato (empréstimo gratuito), os equipamentos descritos na Seção II, pelo período compreendido entre a entrega e a devolução, exclusivamente para o serviço do chope adquirido.</p>
+<p>1.3. Havendo chope em comodato descrito na Seção II, ele é entregue junto com o pedido sem custo inicial. Os barris de chope em comodato que forem abertos serão cobrados pelo valor do litro ali indicado, e os barris lacrados serão devolvidos na coleta, sem cobrança.</p>
 <h3>II | DO PAGAMENTO</h3>
 <p>2.1. O valor total indicado na Seção II será pago na forma ali informada, até a data da entrega, salvo condição diferente registrada nas observações.</p>
 <p>2.2. Em caso de atraso no pagamento, o valor devido será corrigido pelo IPCA (IBGE), acrescido de multa de 10% e juros de 1% ao mês.</p>
@@ -486,4 +513,59 @@ function dh_email(string $para, string $assunto, string $html): bool
         return true;
     }
     return @mail($para, $assuntoCod, chunk_split(base64_encode($corpo)), $cab, '-f' . $de);
+}
+
+function dh_contrato_campos_padrao(string $tipo): array
+{
+    $base = ['contratante_nome' => '', 'contratante_doc' => '', 'contratante_endereco' => '', 'contratante_telefone' => '', 'contratante_email' => '', 'pagamento' => 'pix'];
+    if ($tipo === 'evento') {
+        return $base + ['espaco' => '', 'data' => '', 'hora_inicio' => '', 'hora_fim' => '', 'valor_pessoa' => '', 'valor_adicional' => '', 'atracao' => 'Banda de POP Rock Nacional',
+            'convidados' => '', 'max_participantes' => '', 'adicionais' => [], 'total' => '', 'responsavel_nome' => '', 'responsavel_telefone' => '', 'responsavel_email' => '',
+            'cardapio' => DH_ANEXO_EVENTO];
+    }
+    return $base + ['entrega_endereco' => '', 'entrega_data' => '', 'entrega_hora' => '', 'devolucao_data' => '', 'devolucao_hora' => '', 'frete' => '', 'observacoes' => '',
+        'itens' => [['descricao' => 'DH Premium Lager', 'litros' => '50', 'valor_litro' => '13']],
+        'equipamentos' => array_map(fn($eq) => ['descricao' => $eq[0], 'valor' => (string) $eq[1], 'quantidade' => 1], DH_EQUIPAMENTOS)];
+}
+
+// O que falta para poder enviar
+function dh_contrato_pendencias(array $k): array
+{
+    $f = $k['campos'];
+    $faltam = [];
+    if ($f['contratante_nome'] === '') {
+        $faltam[] = 'nome do contratante';
+    }
+    if (!dh_cpf_valido($f['contratante_doc']) && !dh_cnpj_valido($f['contratante_doc'])) {
+        $faltam[] = 'CPF ou CNPJ válido do contratante';
+    }
+    if (!filter_var($f['contratante_email'], FILTER_VALIDATE_EMAIL)) {
+        $faltam[] = 'e-mail do contratante (é para onde vai o código de assinatura)';
+    }
+    if ($f['contratante_telefone'] === '') {
+        $faltam[] = 'telefone do contratante';
+    }
+    if ($f['pagamento'] === '') {
+        $faltam[] = 'forma de pagamento';
+    }
+    if ($k['tipo'] === 'evento') {
+        foreach (['espaco' => 'espaço', 'data' => 'data do evento', 'hora_inicio' => 'horário de início', 'hora_fim' => 'horário de término', 'valor_pessoa' => 'valor por pessoa', 'convidados' => 'quantidade de convidados'] as $c => $rot) {
+            if ($f[$c] === '') {
+                $faltam[] = $rot;
+            }
+        }
+    } else {
+        foreach (['entrega_endereco' => 'endereço de entrega', 'entrega_data' => 'data de entrega', 'devolucao_data' => 'data de devolução'] as $c => $rot) {
+            if ($f[$c] === '') {
+                $faltam[] = $rot;
+            }
+        }
+        if (!$f['itens']) {
+            $faltam[] = 'ao menos um item de chope';
+        }
+        if (!$f['equipamentos']) {
+            $faltam[] = 'ao menos um equipamento';
+        }
+    }
+    return $faltam;
 }
