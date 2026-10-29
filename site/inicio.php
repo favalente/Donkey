@@ -267,7 +267,7 @@ function detalhe(array $c): string
     <section class="section section-feature cardapio-cta">
       <div class="container cta">
         <div>
-          <p class="eyebrow">Cardápio</p>
+          <p class="eyebrow">Dá uma olhadinha no nosso menu</p>
           <h2>Boa cerveja pede boa cozinha.</h2>
         </div>
         <a class="btn btn-primary" href="<?= e($cardapio) ?>" target="_blank" rel="noopener">Ver cardápio</a>
