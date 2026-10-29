@@ -962,6 +962,91 @@ function agenda_status_tag(string $st): string
     return '<em class="tag st-' . e($st) . '">' . e(DH_STATUS_SHOW[$st] ?? $st) . '</em>';
 }
 
+// Calendário do mês no painel (igual ao do site, com todos os shows e a situação de cada um).
+// $escolher: tocar no dia preenche a data do formulário; senão abre um show novo naquele dia.
+function agenda_calendario(array $a, string $mes, string $un, bool $escolher, string $selecionado = '', string $extra = ''): void
+{
+    $bandas = dh_bandas_por_id($a);
+    $ini = $mes . '-01';
+    $fim = date('Y-m-t', strtotime($ini));
+    $porDia = [];
+    foreach ($a['shows'] as $s) {
+        if ($s['data'] >= $ini && $s['data'] <= $fim && (!$un || $s['unidade'] === $un)) {
+            $porDia[$s['data']][] = $s;
+        }
+    }
+    $hoje = date('Y-m-d');
+    $nav = './?acao=' . ($escolher ? 'show' : 'agenda') . ($un ? '&unidade=' . $un : '') . $extra . '&mes=';
+    ?>
+      <div class="cal-admin" data-escolher="<?= $escolher ? '1' : '' ?>">
+        <div class="mes-nav">
+          <a class="btn mini" href="<?= e($nav . dh_mes_somar($mes, -1)) ?>">‹</a>
+          <strong><?= e(dh_mes_nome($mes)) ?></strong>
+          <a class="btn mini" href="<?= e($nav . dh_mes_somar($mes, 1)) ?>">›</a>
+        </div>
+        <p class="dica cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-confirmar">A confirmar</span> · <?= $escolher ? 'toque no dia para escolher a data' : 'toque no dia para marcar um show' ?>; toque no show para editar ou duplicar.</p>
+        <div class="calendario">
+          <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana"><?= $d ?></div><?php endforeach; ?>
+          <?php for ($i = 0; $i < (int) date('w', strtotime($ini)); $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
+          <?php for ($t = strtotime($ini); $t <= strtotime($fim); $t = strtotime('+1 day', $t)): $dia = date('Y-m-d', $t); ?>
+            <div class="cal-dia<?= $dia < $hoje ? ' passado' : '' ?><?= $dia === $hoje ? ' hoje' : '' ?><?= $dia === $selecionado ? ' escolhido' : '' ?>" data-dia="<?= $dia ?>" role="button" tabindex="0" aria-label="<?= e(dh_data_curta($dia)) ?>">
+              <span class="cal-num"><?= date('j', $t) ?></span>
+              <?php foreach ($porDia[$dia] ?? [] as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
+                <button type="button" class="cal-show u-<?= e($s['unidade']) ?> st-<?= e($s['status']) ?>" data-show="<?= e($s['id']) ?>"
+                  data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? ''], JSON_UNESCAPED_UNICODE)) ?>"><?= e($b['nome'] ?? '—') ?></button>
+              <?php endforeach; ?>
+            </div>
+          <?php endfor; ?>
+          <?php for ($i = (int) date('w', strtotime($fim)); $i < 6; $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
+        </div>
+      </div>
+      <dialog class="cal-menu" id="cal-menu">
+        <p class="cal-menu-quando"></p>
+        <h3 class="cal-menu-banda"></h3>
+        <p class="cal-menu-tributo"></p>
+        <p class="cal-menu-situacao"></p>
+        <div class="cal-menu-botoes">
+          <a class="btn primario" data-op="editar">Editar</a>
+          <a class="btn secundario" data-op="duplicar">Duplicar</a>
+          <button type="button" class="btn secundario" data-op="fechar">Fechar</button>
+        </div>
+      </dialog>
+      <script>
+        (function () {
+          var cal = document.querySelector('.cal-admin'), menu = document.getElementById('cal-menu');
+          var escolher = cal.dataset.escolher === '1';
+          function dia(el) {
+            if (!escolher) { location.href = './?acao=show&data=' + el.dataset.dia; return; }
+            var campo = document.querySelector('#form-show [name=data]');
+            campo.value = el.dataset.dia;
+            cal.querySelectorAll('.cal-dia.escolhido').forEach(function (d) { d.classList.remove('escolhido'); });
+            el.classList.add('escolhido');
+            document.getElementById('form-show').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          cal.querySelectorAll('.cal-dia').forEach(function (el) {
+            el.addEventListener('click', function () { dia(el); });
+            el.addEventListener('keydown', function (e) { if (e.key === 'Enter') dia(el); });
+          });
+          cal.querySelectorAll('.cal-show').forEach(function (bt) {
+            bt.addEventListener('click', function (e) {
+              e.stopPropagation();
+              var i = JSON.parse(bt.dataset.info);
+              menu.querySelector('.cal-menu-quando').textContent = i.quando;
+              menu.querySelector('.cal-menu-banda').textContent = i.banda;
+              menu.querySelector('.cal-menu-tributo').textContent = i.tributo || 'Sem tributo definido';
+              menu.querySelector('.cal-menu-situacao').textContent = i.situacao;
+              menu.querySelector('[data-op=editar]').href = './?acao=show&id=' + encodeURIComponent(bt.dataset.show);
+              menu.querySelector('[data-op=duplicar]').href = './?acao=show&duplicar=' + encodeURIComponent(bt.dataset.show);
+              menu.showModal();
+            });
+          });
+          menu.querySelector('[data-op=fechar]').addEventListener('click', function () { menu.close(); });
+          menu.addEventListener('click', function (e) { if (e.target === menu) menu.close(); });
+        })();
+      </script>
+    <?php
+}
+
 function agenda_tela_lista(): void
 {
     global $csrf;
@@ -976,17 +1061,20 @@ function agenda_tela_lista(): void
         <h1>Agenda</h1>
         <?php if (pode('agenda_editar')): ?><a class="btn primario" href="./?acao=show">+ Novo show</a><?php endif; ?>
       </div>
+      <?php if (!pode('agenda_editar')): ?>
       <div class="mes-nav">
         <a class="btn mini" href="<?= e($base . '&mes=' . dh_mes_somar($mes, -1)) ?>">‹</a>
         <strong><?= e(dh_mes_nome($mes)) ?></strong>
         <a class="btn mini" href="<?= e($base . '&mes=' . dh_mes_somar($mes, 1)) ?>">›</a>
       </div>
+      <?php endif; ?>
       <div class="abas">
         <a href="./?acao=agenda&mes=<?= e($mes) ?>" class="<?= !$un ? 'ativo' : '' ?>">Todas</a>
         <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
           <a href="./?acao=agenda&mes=<?= e($mes) ?>&unidade=<?= $u ?>" class="<?= $un === $u ? 'ativo' : '' ?>"><?= e($nomeU) ?></a>
         <?php endforeach; ?>
       </div>
+      <?php if (pode('agenda_editar')) agenda_calendario($a, $mes, $un, false); ?>
       <?php if (!$shows): ?><p class="dica">Nenhum show neste mês.</p><?php endif; ?>
       <ul class="lista shows">
         <?php foreach ($shows as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
@@ -1002,6 +1090,7 @@ function agenda_tela_lista(): void
               </span>
               <span class="seta">›</span>
             </a>
+            <?php if (pode('agenda_editar')): ?><a class="duplicar" href="./?acao=show&duplicar=<?= e($s['id']) ?>" title="Duplicar show">⧉ Duplicar</a><?php endif; ?>
           </li>
         <?php endforeach; ?>
       </ul>
@@ -1036,6 +1125,15 @@ function agenda_tela_show(): void
             $s = $x;
         }
     }
+    // Duplicar: mesma banda, tributo, horário, unidade e valores; falta só escolher o dia
+    $origem = null;
+    foreach ($a['shows'] as $x) {
+        if (!$s && $x['id'] === (string) ($_GET['duplicar'] ?? '')) {
+            $origem = $x;
+            $s = ['id' => '', 'data' => '', 'status' => in_array($x['status'], ['pago', 'cancelado'], true) ? 'confirmado' : $x['status'], 'obs' => '']
+                + array_intersect_key($x, array_flip(['hora', 'unidade', 'banda_id', 'tributo', 'cache', 'consumacao']));
+        }
+    }
     $s = $s ?? ['id' => '', 'data' => (string) ($_GET['data'] ?? ''), 'hora' => $a['config']['hora_padrao'], 'unidade' => $usuario['unidade'] ?? '' ?: 'aldeota', 'banda_id' => '',
         'tributo' => '', 'cache' => '', 'consumacao' => '', 'status' => 'a_confirmar', 'obs' => ''];
     if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -1048,7 +1146,13 @@ function agenda_tela_show(): void
     $bandas = $a['bandas'];
     ?>
       <p><a href="./?acao=agenda<?= $s['data'] ? '&mes=' . e(substr($s['data'], 0, 7)) : '' ?>">‹ Voltar para a Agenda</a></p>
-      <h1><?= $s['id'] ? 'Editar show' : 'Novo show' ?></h1>
+      <h1><?= $s['id'] ? 'Editar show' : ($origem ? 'Duplicar show' : 'Novo show') ?></h1>
+      <?php if ($origem): ?><p class="aviso">Cópia do show de <?= e(dh_data_curta($origem['data'])) ?>. Escolha o novo dia no calendário e salve.</p><?php endif; ?>
+      <?php
+        $mesCal = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) ($_GET['mes'] ?? '')) ? $_GET['mes'] : (preg_match('/^\d{4}-\d{2}/', $s['data']) ? substr($s['data'], 0, 7) : ($origem ? substr($origem['data'], 0, 7) : date('Y-m')));
+        $extra = $s['id'] ? '&id=' . rawurlencode($s['id']) : ($origem ? '&duplicar=' . rawurlencode($origem['id']) : '');
+        agenda_calendario($a, $mesCal, '', true, $s['data'], $extra);
+      ?>
       <form method="post" action="./?acao=show-salvar" class="form-cerveja" id="form-show">
         <?= $csrf ?>
         <input type="hidden" name="id" value="<?= e($s['id']) ?>">
