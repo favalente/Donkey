@@ -353,3 +353,5 @@ a.filtro { text-decoration: none; color: var(--text); }
 .delivery-mais { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 0; border-radius: 0 0 12px 12px; background: rgba(0, 0, 0, .72); color: var(--amber); font-size: .7rem; font-weight: 700; text-align: center; }
 .link-cerveja { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .link-cerveja:hover, .delivery-ver:hover + .detalhe + .delivery-info .link-cerveja { color: var(--amber); }
+.delivery-card { text-decoration: none; }
+.delivery-card .historia-card-foto img { max-height: 560px; object-fit: cover; object-position: top; }

@@ -90,7 +90,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=19">
+  <link rel="stylesheet" href="assets/css/style.css?v=20">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -285,15 +285,18 @@ function detalhe(array $c): string
     </section>
     <?php endif; ?>
 
-    <section class="section agenda-cta delivery-cta" id="chope-delivery">
-      <a class="container cta agenda-card" href="chope/">
-        <div>
-          <p class="eyebrow">Chope Delivery</p>
-          <h2>Leve o nosso chope para o seu evento!</h2>
-          <p class="delivery-card-texto">Clique abaixo e confira os valores e rótulos disponíveis:</p>
-        </div>
-        <span class="btn btn-primary">Ver Tabela de Preços</span>
-      </a>
+    <section class="section delivery-cta" id="chope-delivery">
+      <div class="container">
+        <a class="historia-card delivery-card" href="chope/">
+          <span class="historia-card-foto"><img src="assets/img/chope-delivery.jpg" alt="Chope Delivery da Donkey Head Cervejaria: o mascote com um copo de chope, barris de Premium Lager e a picape da Donkey Head" width="892" height="1042" loading="lazy"></span>
+          <span class="historia-card-texto">
+            <span class="eyebrow">Chope Delivery</span>
+            <span class="historia-card-titulo">Leve o nosso chope para o seu evento!</span>
+            <span class="historia-card-resumo">Clique abaixo e confira os valores e rótulos disponíveis:</span>
+            <span class="btn btn-primary">Ver Tabela de Preços</span>
+          </span>
+        </a>
+      </div>
     </section>
 
     <section class="section" id="contato">
