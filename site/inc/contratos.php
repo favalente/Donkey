@@ -372,6 +372,12 @@ function dh_contrato_documento(array $k, array $config): string
         . $linha('ENDEREÇO:', $f['contratante_endereco']) . $linha('TELEFONE:', $f['contratante_telefone']) . $linha('E-MAIL:', $f['contratante_email']);
     $h .= '</table>';
     $h .= $k['tipo'] === 'evento' ? dh_contrato_evento($f, $linha) : dh_contrato_comodato($f, $linha);
+    // No evento, o comprovante vai em quadro próprio no fim (no comodato ele já está na Seção II)
+    if ($k['tipo'] === 'evento' && !empty($f['comprovante'])) {
+        $cp = $f['comprovante'];
+        $h .= '<h2>COMPROVANTE DE PAGAMENTO</h2><table class="quadro">' . $linha('Comprovante:', 'Anexado em ' . date('d/m/Y \à\s H:i', strtotime($cp['em'])) . ' (arquivo "' . $cp['nome'] . '", código SHA-256 ' . $cp['sha256'] . ')') . '</table>'
+            . '<p>O comprovante de pagamento identificado acima integra este contrato.</p>';
+    }
     $h .= '<p class="local-data">Fortaleza/CE, ' . e(dh_data_extenso($k['enviado_em'] ?? date('Y-m-d'))) . '.</p>';
     return $h;
 }
@@ -475,7 +481,7 @@ function dh_contrato_comodato(array $f, callable $linha): string
         . $linha('Forma de pagamento:', DH_PAGAMENTOS[$f['pagamento']] ?? '');
     if (!empty($f['comprovante'])) {
         $cp = $f['comprovante'];
-        $h .= $linha('Comprovante de pagamento:', 'Anexado pelo CONTRATANTE em ' . date('d/m/Y \à\s H:i', strtotime($cp['em'])) . ' (arquivo "' . $cp['nome'] . '", código SHA-256 ' . $cp['sha256'] . ')');
+        $h .= $linha('Comprovante de pagamento:', 'Anexado ' . (($cp['por'] ?? '') === 'donkey' ? 'pela CONTRATADA' : 'pelo CONTRATANTE') . ' em ' . date('d/m/Y \à\s H:i', strtotime($cp['em'])) . ' (arquivo "' . $cp['nome'] . '", código SHA-256 ' . $cp['sha256'] . ')');
     }
     $comprado = array_filter($f['itens'], fn($it) => empty($it['comodato']));
     $emComodato = array_filter($f['itens'], fn($it) => !empty($it['comodato']));
@@ -536,7 +542,7 @@ function dh_contrato_comodato(array $f, callable $linha): string
 HTML;
     // O comprovante anexado faz parte do contrato
     if (!empty($f['comprovante'])) {
-        $h = str_replace('<!--2.3-->', '<p>2.3. O comprovante de pagamento anexado pelo CONTRATANTE e identificado na Seção II integra este contrato.</p>', $h);
+        $h = str_replace('<!--2.3-->', '<p>2.3. O comprovante de pagamento identificado na Seção II integra este contrato.</p>', $h);
     }
     return str_replace("<!--2.3-->\n", '', $h);
 }

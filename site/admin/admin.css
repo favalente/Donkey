@@ -329,3 +329,6 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .cupom-item .info strong { font-size: 1.15rem; letter-spacing: .04em; }
 .cupom-botoes { display: flex; gap: 8px; }
 .cupom-botoes form { margin: 0; }
+/* Comprovante de pagamento no formulário do contrato */
+.form-contrato input[type=file] { display: block; width: 100%; margin-top: 6px; padding: 14px; border: 2px dashed var(--amber); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; }
+.comprovante-atual { overflow-wrap: anywhere; }

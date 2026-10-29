@@ -192,8 +192,20 @@ function contratos_acao(string $acao): bool
             $k['campos'] = dh_contrato_ler_form($k['tipo'], $_POST);
             // Pedido preenchido pelo cliente e depois editado: o comprovante e o cupom continuam
             foreach (['comprovante', 'cupom', 'entrega_hora_estimada'] as $x) {
-                if (isset($antes[$x]) && $k['tipo'] === 'comodato') {
+                if (isset($antes[$x]) && ($k['tipo'] === 'comodato' || $x === 'comprovante')) {
                     $k['campos'][$x] = $antes[$x];
+                }
+            }
+            // Comprovante anexado por você (troca ou remove o anterior). O arquivo de um contrato que já
+            // foi gerado fica guardado, porque a versão anterior registrada aponta para ele.
+            $trocar = ($_FILES['comprovante']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+            if ($trocar || !empty($_POST['remover_comprovante'])) {
+                if (!empty($antes['comprovante']) && $k['numero'] === '') {
+                    dh_comprovante_apagar($antes['comprovante']);
+                }
+                unset($k['campos']['comprovante']);
+                if ($trocar) {
+                    $k['campos']['comprovante'] = dh_comprovante_salvar($k['id'], $_FILES['comprovante']) + ['por' => 'donkey'];
                 }
             }
             if (($k['campos']['desconto'] ?? '') === '') {
@@ -677,7 +689,7 @@ function contratos_form(array $k): void
     $f = $k['campos'];
     $v = fn($x) => e(is_numeric($x) && strpos((string) $x, '.') !== false ? dh_num($x) : $x);
     ?>
-      <form method="post" action="./?acao=contrato-salvar" class="form-cerveja form-contrato">
+      <form method="post" action="./?acao=contrato-salvar" class="form-cerveja form-contrato" enctype="multipart/form-data">
         <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><input type="hidden" name="tipo" value="<?= e($k['tipo']) ?>">
         <h2>Contratante</h2>
         <?= contratos_campo_cliente('', 'Puxar cliente da base', 'Preenche os campos abaixo com os dados do cliente') ?>
@@ -744,7 +756,6 @@ function contratos_form(array $k): void
           <?php endforeach; ?>
           <label>Frete de ida e volta (R$) <small>(em branco = incluso)</small><input name="frete" value="<?= $v($f['frete']) ?>" inputmode="decimal" class="calc"></label>
           <label>Desconto no chope (R$) <small>(opcional<?= !empty($f['cupom']) ? '; cupom ' . e($f['cupom']) : '' ?>)</small><input name="desconto" value="<?= $v($f['desconto'] ?? '') ?>" inputmode="decimal" class="calc"></label>
-          <?php if (!empty($f['comprovante'])): ?><p class="dica">📎 Comprovante anexado pelo cliente: <a href="./?acao=contrato-comprovante&amp;id=<?= e($k['id']) ?>" target="_blank"><?= e($f['comprovante']['nome']) ?></a> (continua no contrato).</p><?php endif; ?>
           <p class="aviso" id="total-comodato"></p>
           <h2>Equipamentos em comodato</h2>
           <?php
@@ -772,6 +783,17 @@ function contratos_form(array $k): void
 
         <p class="rotulo">Forma de pagamento</p>
         <span class="escolhas"><?php foreach (DH_PAGAMENTOS as $p => $rot): ?><label class="escolha"><input type="radio" name="pagamento" value="<?= $p ?>" <?= $f['pagamento'] === $p ? 'checked' : '' ?>><span><?= e($rot) ?></span></label><?php endforeach; ?></span>
+
+        <h2>Comprovante de pagamento</h2>
+        <?php if (!empty($f['comprovante'])): $cp = $f['comprovante']; ?>
+          <p class="comprovante-atual">📎 <a href="./?acao=contrato-comprovante&amp;id=<?= e($k['id']) ?>" target="_blank"><?= e($cp['nome']) ?></a>
+            <small>· enviado <?= ($cp['por'] ?? '') === 'donkey' ? 'por você' : 'pelo cliente' ?> em <?= e(date('d/m/Y H:i', strtotime($cp['em']))) ?></small></p>
+          <label class="check"><input type="checkbox" name="remover_comprovante" value="1"> Tirar este comprovante do contrato</label>
+          <label>Trocar por outro <small>(opcional; foto, print ou PDF)</small><input type="file" name="comprovante" accept="image/*,application/pdf"></label>
+        <?php else: ?>
+          <label>Anexar comprovante <small>(opcional; foto, print ou PDF, até 15 MB)</small><input type="file" name="comprovante" accept="image/*,application/pdf"></label>
+        <?php endif; ?>
+        <p class="dica">O comprovante entra no texto do contrato (com o código do arquivo) quando você tocar em Gerar para assinatura.</p>
 
         <div class="barra-salvar barra-dupla">
           <button class="btn secundario" name="op" value="salvar">Salvar rascunho</button>
