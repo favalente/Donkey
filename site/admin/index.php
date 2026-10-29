@@ -25,6 +25,9 @@ const DH_DIR_UPLOAD = DH_RAIZ . '/uploads/cervejas';
 const DH_DIR_GALERIA = DH_RAIZ . '/uploads/galeria';
 const DH_MAX_FALHAS = 5;
 const DH_BLOQUEIO_MIN = 15;
+// "Manter conectado": aparelhos lembrados ficam em dados/lembrar.json (só o hash do código)
+const DH_ARQ_LEMBRAR = DH_RAIZ . '/dados/lembrar.json';
+const DH_LEMBRAR_DIAS = 180;
 
 header('X-Robots-Tag: noindex, nofollow');
 header('X-Frame-Options: DENY');
@@ -192,7 +195,66 @@ function apagar_upload(string $caminho): void
     }
 }
 
+function lembrar_cookie(string $valor, int $expira): void
+{
+    setcookie('dh_lembrar', $valor, [
+        'expires' => $expira,
+        'path' => dirname($_SERVER['SCRIPT_NAME']) . '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    ]);
+}
+
+// Trocar a senha desconecta os aparelhos lembrados
+function lembrar_marca(array $u): string
+{
+    return hash('sha256', $u['hash']);
+}
+
+function lembrar_criar(array $u): void
+{
+    $lista = json_decode((string) @file_get_contents(DH_ARQ_LEMBRAR), true) ?: [];
+    $lista = array_filter($lista, fn($x) => ($x['expira'] ?? 0) > time());
+    $sel = bin2hex(random_bytes(9));
+    $val = bin2hex(random_bytes(24));
+    $expira = time() + DH_LEMBRAR_DIAS * 86400;
+    $lista[$sel] = ['login' => $u['login'], 'valor' => hash('sha256', $val), 'senha' => lembrar_marca($u), 'expira' => $expira];
+    gravar_json(DH_ARQ_LEMBRAR, $lista);
+    lembrar_cookie($sel . '.' . $val, $expira);
+}
+
+// Login de quem marcou "manter conectado", ou null
+function lembrar_login(array $usuarios): ?string
+{
+    if (!preg_match('/^([a-f0-9]{18})\.([a-f0-9]{48})$/', (string) ($_COOKIE['dh_lembrar'] ?? ''), $m)) {
+        return null;
+    }
+    $lista = json_decode((string) @file_get_contents(DH_ARQ_LEMBRAR), true) ?: [];
+    $x = $lista[$m[1]] ?? null;
+    if (!$x || $x['expira'] < time() || !hash_equals($x['valor'], hash('sha256', $m[2]))
+        || !isset($usuarios[$x['login']]) || !hash_equals($x['senha'], lembrar_marca($usuarios[$x['login']]))) {
+        lembrar_cookie('', time() - 3600);
+        return null;
+    }
+    return $x['login'];
+}
+
+function lembrar_apagar(): void
+{
+    if (preg_match('/^([a-f0-9]{18})\./', (string) ($_COOKIE['dh_lembrar'] ?? ''), $m)) {
+        $lista = json_decode((string) @file_get_contents(DH_ARQ_LEMBRAR), true) ?: [];
+        unset($lista[$m[1]]);
+        gravar_json(DH_ARQ_LEMBRAR, $lista);
+    }
+    lembrar_cookie('', time() - 3600);
+}
+
 $usuarios = dh_usuarios();
+if (empty($_SESSION['login']) && $usuarios && ($lembrado = lembrar_login($usuarios))) {
+    session_regenerate_id(true);
+    $_SESSION['login'] = $lembrado;
+}
 $usuario = isset($_SESSION['login'], $usuarios[$_SESSION['login']]) ? $usuarios[$_SESSION['login']] : null;
 $erro = null;
 // Tela inicial de cada função
@@ -212,9 +274,11 @@ if (!$usuarios) {
         } elseif ($s !== ($_POST['senha2'] ?? '')) {
             $erro = 'As senhas não conferem.';
         } else {
-            dh_usuarios_salvar([$login => ['login' => $login, 'nome' => 'Administrador', 'papel' => 'admin', 'hash' => password_hash($s, PASSWORD_DEFAULT)]]);
+            $novo = ['login' => $login, 'nome' => 'Administrador', 'papel' => 'admin', 'hash' => password_hash($s, PASSWORD_DEFAULT)];
+            dh_usuarios_salvar([$login => $novo]);
             session_regenerate_id(true);
             $_SESSION['login'] = $login;
+            lembrar_criar($novo);
             ir('./', 'Usuário criado! Bem-vindo ao painel.');
         }
     }
@@ -229,6 +293,9 @@ if (!$usuarios) {
             registrar_falha(true);
             session_regenerate_id(true);
             $_SESSION['login'] = $login;
+            if (!empty($_POST['lembrar'])) {
+                lembrar_criar($usuarios[$login]);
+            }
             ir('./');
         } else {
             registrar_falha();
@@ -247,6 +314,7 @@ if (!$usuarios) {
         switch ($acao) {
             case 'sair':
                 exigir_post();
+                lembrar_apagar();
                 session_destroy();
                 ir('./');
 
@@ -449,6 +517,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <label>Senha <input type="password" name="senha" required autocomplete="<?= $tela === 'login' ? 'current-password' : 'new-password' ?>"></label>
       <?php if ($tela === 'primeiro-acesso'): ?>
         <label>Repita a senha <input type="password" name="senha2" required autocomplete="new-password"></label>
+      <?php else: ?>
+        <label class="check"><input type="checkbox" name="lembrar" value="1" checked> Manter conectado neste aparelho</label>
       <?php endif; ?>
       <button class="btn primario"><?= $tela === 'login' ? 'Entrar' : 'Criar usuário' ?></button>
     </form>
