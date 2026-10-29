@@ -90,7 +90,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=14">
+  <link rel="stylesheet" href="assets/css/style.css?v=15">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -159,15 +159,28 @@ function detalhe(array $c): string
     </section>
 
     <section class="section" id="historia">
-      <div class="container split">
-        <div>
-          <p class="eyebrow">Nossa história</p>
-          <h2>Começou no quintal de casa.</h2>
-          <figure class="historia-foto">
-            <img src="assets/img/historia-comeco.jpg" alt="Panela de brassagem caseira com mosto e, ao lado, uma garrafa da StigmAPA servida no copo" width="1200" height="906" loading="lazy">
-            <figcaption>Lá no começo: a brassagem no equipamento de casa e uma das primeiras StigmAPA.</figcaption>
-          </figure>
-        </div>
+      <div class="container">
+        <button type="button" class="historia-card" id="abrir-historia" aria-haspopup="dialog">
+          <span class="historia-card-foto"><img src="assets/img/historia-comeco.jpg" alt="Panela de brassagem caseira com mosto e, ao lado, uma garrafa da StigmAPA servida no copo" width="1200" height="906" loading="lazy"></span>
+          <span class="historia-card-texto">
+            <span class="eyebrow">Nossa história</span>
+            <span class="historia-card-titulo">Começou no quintal de casa.</span>
+            <span class="historia-card-resumo">Três amigos, uma paixão por cerveja e uma ideia meio maluca: fazer a própria cerveja no quintal de casa. Deu tão certo que virou a Donkey Head.</span>
+            <span class="btn btn-primary">Conheça a nossa história</span>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <dialog class="historia-modal" id="historia-completa" aria-labelledby="historia-titulo">
+      <button class="fechar" aria-label="Fechar">×</button>
+      <article class="historia-artigo">
+        <p class="eyebrow">Nossa história</p>
+        <h2 id="historia-titulo">Começou no quintal de casa.</h2>
+        <figure class="foto-jornal">
+          <img src="assets/img/historia-comeco.jpg" alt="Panela de brassagem caseira com mosto e, ao lado, uma garrafa da StigmAPA servida no copo" width="1200" height="906" loading="lazy">
+          <figcaption>Lá no começo: a brassagem no equipamento de casa e uma das primeiras StigmAPA.</figcaption>
+        </figure>
         <div class="prose">
           <p>Tudo começou com três amigos, uma paixão por cerveja e uma ideia meio maluca: fazer a própria cerveja no quintal de casa.</p>
           <p>A primeira leva ficou boa. Boa até demais! Os amigos provaram, elogiaram e logo veio aquela pergunta: por que não vender essa cerveja?</p>
@@ -182,8 +195,9 @@ function detalhe(array $c): string
           <p>De lá pra cá, muita coisa mudou. Mas a vontade de fazer cerveja boa e juntar gente em volta da mesa continua a mesma.</p>
           <p class="assinatura">Mais cerveja, menos arenga! 🍺</p>
         </div>
-      </div>
-    </section>
+        <p class="centro"><button type="button" class="btn btn-ghost fechar-historia">Voltar para o site</button></p>
+      </article>
+    </dialog>
 
     <section class="section section-alt" id="cervejas">
       <div class="container">
@@ -330,6 +344,6 @@ function detalhe(array $c): string
     <button class="nav-foto prox" aria-label="Próxima foto">›</button>
   </dialog>
 
-  <script src="assets/js/main.js?v=5"></script>
+  <script src="assets/js/main.js?v=6"></script>
 </body>
 </html>

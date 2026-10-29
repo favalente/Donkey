@@ -75,6 +75,18 @@
     a.addEventListener('click', function () { filtrar(a.getAttribute('data-ir-filtro')); });
   });
 
+  // História: o card abre o texto completo numa janela de leitura
+  var historia = document.getElementById('historia-completa');
+  var abrirHistoria = document.getElementById('abrir-historia');
+  if (historia && abrirHistoria) {
+    abrirHistoria.addEventListener('click', function () {
+      historia.showModal();
+      historia.scrollTop = 0;
+    });
+    fecharAoClicarFora(historia);
+    historia.querySelector('.fechar-historia').addEventListener('click', function () { historia.close(); });
+  }
+
   // Galeria: mostra 12 fotos e expande; foto ampliada com navegação
   var galeria = document.querySelector('.galeria');
   var mais = document.getElementById('mais-fotos');

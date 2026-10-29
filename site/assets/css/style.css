@@ -299,3 +299,22 @@ a.filtro { text-decoration: none; color: var(--text); }
 .foto-jornal img { display: block; width: 100%; height: auto; border-radius: calc(var(--radius) - 6px); }
 .foto-jornal figcaption { padding: 10px 4px 12px; color: var(--muted); font-size: .9rem; font-style: italic; border-top: 0; }
 .foto-jornal figcaption::before { content: "▲ "; color: var(--amber); font-style: normal; font-size: .75em; }
+
+/* História: card na página e texto completo numa janela de leitura */
+.historia-card { width: 100%; display: grid; grid-template-columns: 1fr 1.2fr; align-items: center; gap: clamp(20px, 4vw, 48px); padding: clamp(14px, 2vw, 22px); text-align: left; color: var(--text); font: inherit; cursor: pointer; background: var(--surface); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); transition: border-color .2s, transform .2s; }
+.historia-card:hover { border-color: var(--amber); transform: translateY(-2px); }
+.historia-card-foto img { display: block; width: 100%; height: auto; border-radius: var(--radius); }
+.historia-card-texto { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; }
+.historia-card .eyebrow { margin: 0; }
+.historia-card-titulo { font-family: var(--display); font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1; }
+.historia-card-resumo { color: var(--muted); font-size: 1.05rem; line-height: 1.6; }
+.historia-card .btn { margin-top: .4rem; }
+@media (max-width: 720px) { .historia-card { grid-template-columns: 1fr; } }
+
+.historia-modal { width: min(760px, 100%); max-height: 100dvh; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--text); overflow-y: auto; }
+.historia-modal::backdrop { background: rgba(0, 0, 0, .75); }
+.historia-modal .fechar { position: sticky; top: 10px; float: right; margin: 10px 10px 0 0; z-index: 2; width: 46px; height: 46px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .7); color: #fff; font-size: 1.8rem; line-height: 1; cursor: pointer; }
+.historia-artigo { padding: clamp(24px, 5vw, 48px); }
+.historia-artigo h2 { margin-bottom: 1rem; }
+.historia-artigo .prose { margin-top: 1.2rem; }
+@media (max-width: 720px) { .historia-modal { width: 100%; max-width: 100%; height: 100dvh; margin: 0; border-radius: 0; border: 0; } }
