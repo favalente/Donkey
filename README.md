@@ -53,7 +53,7 @@ Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento co
 1. Preencha o formulário (dá para salvar rascunho) e toque em **Gerar para assinatura**: o texto é congelado e ganha número (DH-2026-001) e **código de integridade** (SHA-256).
 2. **A Donkey assina** no painel, com a senha do administrador. O nome e o CPF de quem assina ficam em Contratos → Configurações (só no servidor, nunca no código).
 3. **O cliente** recebe o link (WhatsApp ou e-mail), lê, informa nome e CPF, recebe um **código de 6 números no e-mail** e assina.
-4. Com as duas assinaturas, os dois lados recebem a cópia por e-mail. A página do contrato tem o **Relatório de assinaturas** (horário, IP, aparelho, forma de autenticação) e vira PDF pelo botão **Baixar PDF / Imprimir**.
+4. Com as duas assinaturas, os dois lados recebem a cópia por e-mail (e também os **e-mails de cópia** cadastrados em Contratos → Configurações, que recebem ainda os avisos de pedido preenchido, frete para calcular e cliente que assinou). A página do contrato tem o **Relatório de assinaturas** (horário, IP, aparelho, forma de autenticação) e vira PDF pelo botão **Baixar PDF / Imprimir**.
 5. Qualquer pessoa confere a autenticidade em `/contrato/verificar.php` pelo número ou pelo código de integridade.
 
 Validade: assinatura eletrônica entre as partes (MP 2.200-2/2001, art. 10, § 2º; Lei 14.063/2020). Os e-mails saem de contato@donkeyheadcervejaria.com.br pelo servidor da Locaweb. Dados em `dados/contratos.json`, com cópia diária em `dados/backup/`.

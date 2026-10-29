@@ -485,11 +485,40 @@ function dh_contrato_concluir(array &$k): bool
     $texto = '<p>O contrato nº <b>' . e($k['numero']) . '</b> (' . e(DH_CONTRATO_TIPOS[$k['tipo']]) . ') foi assinado pelas duas partes.</p>'
         . '<p>Código de integridade: <span style="font-family:monospace;font-size:12px">' . e($k['hash']) . '</span></p>'
         . '<p><a href="' . e($link) . '">Abrir o contrato assinado</a> (dá para baixar em PDF pela própria página).</p>';
-    $para = array_unique(array_filter([$k['assinaturas']['contratante']['email'], DH_EMPRESA['email']]));
+    $para = array_unique(array_filter([$k['assinaturas']['contratante']['email'], ...dh_emails_equipe()]));
     foreach ($para as $email) {
         dh_email($email, 'Contrato assinado nº ' . $k['numero'] . ' · Donkey Head Cervejaria', $texto . '<hr>' . $k['documento'] . dh_contrato_relatorio($k));
     }
     return true;
+}
+
+// Quem recebe os avisos e as cópias dos contratos: o e-mail da Donkey + os extras das Configurações
+function dh_emails_equipe(): array
+{
+    return array_values(array_unique([DH_EMPRESA['email'], ...(array) (dh_contratos()['config']['emails_copia'] ?? [])]));
+}
+
+function dh_email_equipe(string $assunto, string $html): void
+{
+    foreach (dh_emails_equipe() as $email) {
+        dh_email($email, $assunto, $html);
+    }
+}
+
+// Lista de e-mails digitada no painel (um por linha, ou separados por vírgula)
+function dh_emails_lista(string $texto): array
+{
+    $lista = [];
+    foreach (preg_split('/[\s,;]+/', mb_strtolower(trim($texto))) as $email) {
+        if ($email === '') {
+            continue;
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('E-mail inválido: ' . $email);
+        }
+        $lista[] = $email;
+    }
+    return array_values(array_unique($lista));
 }
 
 // E-mail pelo servidor da Locaweb, saindo de contato@donkeyheadcervejaria.com.br

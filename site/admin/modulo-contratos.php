@@ -300,11 +300,13 @@ function contratos_acao(string $acao): bool
             if ($nome === '' || !dh_cpf_valido($cpf)) {
                 throw new RuntimeException('Informe o nome e um CPF válido do representante.');
             }
+            $copia = dh_emails_lista((string) ($_POST['emails_copia'] ?? ''));
             $c = dh_contratos();
             $c['config']['representante_nome'] = $nome;
             $c['config']['representante_cpf'] = dh_so_digitos($cpf);
+            $c['config']['emails_copia'] = $copia;
             dh_contratos_salvar($c);
-            ir('./?acao=contratos', 'Representante da Donkey salvo.');
+            ir('./?acao=contratos', 'Configurações dos contratos salvas.');
     }
     return false;
 }
@@ -384,6 +386,9 @@ function contratos_tela_config(): void
         <?= $csrf ?>
         <label>Nome do representante <input name="representante_nome" value="<?= e($c['config']['representante_nome'] ?? 'Fábio Alan Urbano Valente') ?>" required maxlength="100"></label>
         <label>CPF do representante <input name="representante_cpf" value="<?= e(dh_cpf_formatar($c['config']['representante_cpf'] ?? '')) ?>" required inputmode="numeric" placeholder="000.000.000-00"></label>
+        <label>E-mails que recebem cópia dos contratos <small>(um por linha)</small>
+          <textarea name="emails_copia" rows="4" autocapitalize="none" spellcheck="false" placeholder="financeiro@exemplo.com.br"><?= e(implode("\n", $_POST ? (array) preg_split('/[\s,;]+/', trim((string) ($_POST['emails_copia'] ?? ''))) : ($c['config']['emails_copia'] ?? []))) ?></textarea></label>
+        <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato assinado e os avisos de pedido preenchido, frete para calcular e cliente que assinou.</p>
         <?php if ($usuario['papel'] === 'admin'): ?><div class="barra-salvar"><button class="btn primario">Salvar</button></div><?php else: ?><p class="aviso">Só o administrador altera estes dados.</p><?php endif; ?>
       </form>
     <?php

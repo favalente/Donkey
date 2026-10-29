@@ -115,7 +115,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
             $k['status'] = 'consulta';
             $c['contratos'][$i] = $k;
             dh_contratos_salvar($c);
-            dh_email(DH_EMPRESA['email'], 'Pedido de chope fora de Fortaleza: defina o frete',
+            dh_email_equipe('Pedido de chope fora de Fortaleza: defina o frete',
                 '<p>' . e($f['contratante_nome']) . ' fez um pedido de chope com entrega em <b>' . e($f['cidade']) . '</b> (' . e(dh_data_br($f['entrega_data'])) . ', chope ' . e(dh_moeda(dh_comodato_total($f))) . ').</p>'
                 . '<p>Abra o pedido no painel (Contratos), informe o valor do frete e libere para o cliente assinar.</p>');
             $_SESSION['contrato_aviso'] = 'Pedido recebido! Como a entrega é em ' . $f['cidade'] . ', vamos calcular o frete e avisar você por e-mail e WhatsApp. Depois é só voltar neste mesmo link para conferir e assinar o contrato.';
@@ -126,7 +126,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         dh_contrato_congelar($k, $c['config']);
         $c['contratos'][$i] = $k;
         dh_contratos_salvar($c);
-        dh_email(DH_EMPRESA['email'], 'Pedido de chope preenchido nº ' . $k['numero'],
+        dh_email_equipe('Pedido de chope preenchido nº ' . $k['numero'],
             '<p>' . e($f['contratante_nome']) . ' preencheu o pedido de chope nº <b>' . e($k['numero']) . '</b> (entrega em ' . e(dh_data_br($f['entrega_data'])) . ', total ' . e(dh_moeda(dh_comodato_total($f))) . ').</p><p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>');
         $_SESSION['contrato_aviso'] = 'Pedido registrado! Confira o contrato abaixo e assine no final da página.';
         header('Location: ./?t=' . $token . '#assinar', true, 303);
@@ -200,7 +200,7 @@ if ($podeAssinar && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $fechou = dh_contrato_concluir($c['contratos'][$i]);
             dh_contratos_salvar($c);
             if (!$fechou) {
-                dh_email(DH_EMPRESA['email'], 'Cliente assinou o contrato nº ' . $k['numero'],
+                dh_email_equipe('Cliente assinou o contrato nº ' . $k['numero'],
                     '<p>' . e($pend['nome']) . ' assinou o contrato nº <b>' . e($k['numero']) . '</b>. Falta a assinatura da Donkey Head Cervejaria no painel.</p>');
             }
             unset($_SESSION['contrato_codigo']);
