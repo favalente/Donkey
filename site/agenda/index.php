@@ -36,7 +36,8 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=10">
+  <link rel="stylesheet" href="../assets/css/style.css?v=11">
+  <script src="../assets/js/arrastar-mes.js?v=1"></script>
   <script type="application/ld+json">
   <?= json_encode(array_map(fn($s) => [
       '@context' => 'https://schema.org',
@@ -70,9 +71,9 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
       </div>
       <div class="agenda-filtros">
         <div class="agenda-mes">
-          <a href="<?= e($link($anterior, $unidade)) ?>" aria-label="Mês anterior">‹</a>
+          <a href="<?= e($link($anterior, $unidade)) ?>" aria-label="Mês anterior" id="mes-anterior">‹</a>
           <strong><?= e($nomeMes) ?></strong>
-          <a href="<?= e($link($proximo, $unidade)) ?>" aria-label="Próximo mês">›</a>
+          <a href="<?= e($link($proximo, $unidade)) ?>" aria-label="Próximo mês" id="mes-proximo">›</a>
         </div>
         <div class="filtros" role="group" aria-label="Unidade">
           <a class="filtro<?= !$unidade ? ' ativo' : '' ?>" href="<?= e($link($mes, null)) ?>">Todas</a>
@@ -102,7 +103,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
         <?php endfor; ?>
         <?php for ($i = (int) date('w', strtotime($fim)); $i < 6; $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
       </div>
-      <p class="note cal-dica">Toque no dia para ver a banda, o tributo e o horário.</p>
+      <p class="note cal-dica">Toque no dia para ver a banda, o tributo e o horário. Arraste o calendário para o lado para trocar de mês.</p>
 
       <h2 class="cal-lista-titulo"><?= $mes === date('Y-m') ? 'Próximos shows do mês' : 'Shows do mês' ?></h2>
       <?php if ($shows): ?>
@@ -141,6 +142,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
           modal.showModal();
         });
       });
+      dhArrastarMes(document.querySelector('.calendario'), document.getElementById('mes-anterior'), document.getElementById('mes-proximo'));
       modal.addEventListener('click', function (e) {
         if (e.target === modal || e.target.classList.contains('fechar')) modal.close();
       });

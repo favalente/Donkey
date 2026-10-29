@@ -979,12 +979,15 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
     $nav = './?acao=' . ($escolher ? 'show' : 'agenda') . ($un ? '&unidade=' . $un : '') . $extra . '&mes=';
     ?>
       <div class="cal-admin" data-escolher="<?= $escolher ? '1' : '' ?>">
-        <div class="mes-nav">
-          <a class="btn mini" href="<?= e($nav . dh_mes_somar($mes, -1)) ?>">‹</a>
+        <?php $ant = dh_mes_somar($mes, -1); $prox = dh_mes_somar($mes, 1); ?>
+        <div class="mes-nav cal-nav">
+          <a class="btn mes-btn" data-mes="anterior" href="<?= e($nav . $ant) ?>">‹ <?= e(DH_MESES[(int) substr($ant, 5, 2)]) ?></a>
           <strong><?= e(dh_mes_nome($mes)) ?></strong>
-          <a class="btn mini" href="<?= e($nav . dh_mes_somar($mes, 1)) ?>">›</a>
+          <a class="btn mes-btn" data-mes="proximo" href="<?= e($nav . $prox) ?>"><?= e(DH_MESES[(int) substr($prox, 5, 2)]) ?> ›</a>
         </div>
-        <p class="dica cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-confirmar">A confirmar</span> · <?= $escolher ? 'toque no dia para escolher a data' : 'toque no dia para marcar um show' ?>; toque no show para editar ou duplicar.</p>
+        <?php if ($mes !== date('Y-m')): ?><p class="centro"><a class="btn secundario hoje-btn" href="<?= e($nav . date('Y-m')) ?>">Voltar para o mês atual</a></p><?php endif; ?>
+        <p class="cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-confirmar">A confirmar</span></p>
+        <p class="dica cal-ajuda">👆 <?= $escolher ? 'Toque no dia do show.' : 'Toque num dia para marcar um show.' ?> Toque no nome da banda para editar ou duplicar. Arraste o calendário para o lado para trocar de mês.</p>
         <div class="calendario">
           <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana"><?= $d ?></div><?php endforeach; ?>
           <?php for ($i = 0; $i < (int) date('w', strtotime($ini)); $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
@@ -1019,6 +1022,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
             if (!escolher) { location.href = './?acao=show&data=' + el.dataset.dia; return; }
             var campo = document.querySelector('#form-show [name=data]');
             campo.value = el.dataset.dia;
+            campo.dispatchEvent(new Event('change'));
             cal.querySelectorAll('.cal-dia.escolhido').forEach(function (d) { d.classList.remove('escolhido'); });
             el.classList.add('escolhido');
             document.getElementById('form-show').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1041,6 +1045,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
             });
           });
           menu.querySelector('[data-op=fechar]').addEventListener('click', function () { menu.close(); });
+          dhArrastarMes(cal.querySelector('.calendario'), cal.querySelector('[data-mes=anterior]'), cal.querySelector('[data-mes=proximo]'));
           menu.addEventListener('click', function (e) { if (e.target === menu) menu.close(); });
         })();
       </script>
@@ -1145,7 +1150,7 @@ function agenda_tela_show(): void
     }
     $bandas = $a['bandas'];
     ?>
-      <p><a href="./?acao=agenda<?= $s['data'] ? '&mes=' . e(substr($s['data'], 0, 7)) : '' ?>">‹ Voltar para a Agenda</a></p>
+      <p><a class="voltar" href="./?acao=agenda<?= $s['data'] ? '&mes=' . e(substr($s['data'], 0, 7)) : '' ?>">‹ Voltar para a Agenda</a></p>
       <h1><?= $s['id'] ? 'Editar show' : ($origem ? 'Duplicar show' : 'Novo show') ?></h1>
       <?php if ($origem): ?><p class="aviso">Cópia do show de <?= e(dh_data_curta($origem['data'])) ?>. Escolha o novo dia no calendário e salve.</p><?php endif; ?>
       <?php
@@ -1157,11 +1162,12 @@ function agenda_tela_show(): void
         <?= $csrf ?>
         <input type="hidden" name="id" value="<?= e($s['id']) ?>">
         <div class="duas">
-          <label>Data <input type="date" name="data" value="<?= e($s['data']) ?>" required></label>
+          <label>Data <input type="date" name="data" value="<?= e($s['data']) ?>" required>
+            <span class="data-extenso" id="data-extenso"><?= $s['data'] ? e(dh_data_curta($s['data'])) . '/' . e(substr($s['data'], 0, 4)) : 'Toque no dia no calendário acima' ?></span></label>
           <label>Horário <input type="time" name="hora" value="<?= e($s['hora']) ?>" required></label>
         </div>
         <label>Unidade
-          <select name="unidade"><?php foreach (DH_UNIDADES as $u => $nomeU): ?><option value="<?= $u ?>" <?= $u === $s['unidade'] ? 'selected' : '' ?>><?= e($nomeU) ?></option><?php endforeach; ?></select>
+          <span class="escolhas"><?php foreach (DH_UNIDADES as $u => $nomeU): ?><label class="escolha u-<?= $u ?>"><input type="radio" name="unidade" value="<?= $u ?>" <?= $u === $s['unidade'] ? 'checked' : '' ?>><span><?= e($nomeU) ?></span></label><?php endforeach; ?></span>
         </label>
         <?php
           $atual = null;
@@ -1190,7 +1196,7 @@ function agenda_tela_show(): void
           <label>Consumação (R$) <input name="consumacao" value="<?= e(dh_num($s['consumacao'])) ?>" inputmode="decimal" id="consumacao"></label>
         </div>
         <label>Situação
-          <select name="status"><?php foreach (DH_STATUS_SHOW as $k => $rot): ?><option value="<?= $k ?>" <?= $k === $s['status'] ? 'selected' : '' ?>><?= e($rot) ?></option><?php endforeach; ?></select>
+          <span class="escolhas"><?php foreach (DH_STATUS_SHOW as $k => $rot): ?><label class="escolha st-<?= $k ?>"><input type="radio" name="status" value="<?= $k ?>" <?= $k === $s['status'] ? 'checked' : '' ?>><span><?= e($rot) ?></span></label><?php endforeach; ?></span>
         </label>
         <p class="dica">"A confirmar" e "Cancelado" não aparecem no site.</p>
         <label>Observações internas <textarea name="obs" rows="3" maxlength="500"><?= e($s['obs']) ?></textarea></label>
@@ -1274,6 +1280,16 @@ function agenda_tela_show(): void
             }
           });
           trib.addEventListener('change', function () { outro.hidden = trib.value !== '__outro'; });
+          // Dia escolhido por extenso, para conferir sem erro
+          var campoData = document.querySelector('#form-show [name=data]'), extenso = document.getElementById('data-extenso');
+          var dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+          campoData.addEventListener('change', function () {
+            var p = campoData.value.split('-');
+            if (p.length !== 3) return;
+            var d = new Date(+p[0], +p[1] - 1, +p[2]);
+            extenso.textContent = dias[d.getDay()] + ', ' + p[2] + '/' + p[1] + '/' + p[0];
+            extenso.classList.add('ok-data');
+          });
           montar();
         })();
       </script>
@@ -1340,7 +1356,7 @@ function agenda_tela_banda(): void
     $hoje = date('Y-m-d');
     $shows = array_values(array_filter($a['shows'], fn($s) => $s['banda_id'] === $b['id'] && $s['data'] >= $hoje && $s['status'] !== 'cancelado'));
     ?>
-      <p><a href="./?acao=bandas">‹ Voltar para Bandas</a></p>
+      <p><a class="voltar" href="./?acao=bandas">‹ Voltar para Bandas</a></p>
       <h1><?= $b['id'] ? e($b['nome']) : 'Nova banda' ?></h1>
       <?php if ($shows): ?>
         <p class="aviso">Próximos shows: <?= e(implode(' · ', array_map(fn($s) => dh_data_curta($s['data']) . ' ' . $s['hora'] . ' (' . DH_UNIDADES[$s['unidade']] . ')', $shows))) ?></p>
@@ -1514,7 +1530,7 @@ function agenda_tela_importar(): void
     $linhas = $revisar ? $_SESSION['importacao'] : [];
     $bandas = $revisar ? ($_SESSION['importacao_bandas'] ?? []) : [];
     ?>
-      <p><a href="./?acao=usuarios">‹ Voltar</a></p>
+      <p><a class="voltar" href="./?acao=usuarios">‹ Voltar</a></p>
       <h1>Importar do Google Agenda</h1>
       <?php if (!$revisar): ?>
         <p class="dica">No Google Agenda (no computador): passe o mouse na agenda dos shows → <strong>⋮ → Configurações e compartilhamento</strong> → role até <strong>"Integrar agenda"</strong> → copie o <strong>"Endereço secreto no formato iCal"</strong> e cole abaixo.</p>

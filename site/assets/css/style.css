@@ -289,3 +289,4 @@ a.filtro { text-decoration: none; color: var(--text); }
 .cal-linha-info span { color: var(--muted); font-size: .88rem; }
 .cal-linha-onde { flex: none; text-align: right; color: var(--cal-cor); font-weight: 600; font-size: .85rem; }
 .cal-linha-onde small { display: block; color: var(--muted); font-weight: 500; }
+.calendario { touch-action: pan-y; }

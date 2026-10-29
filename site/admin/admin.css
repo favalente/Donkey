@@ -170,3 +170,60 @@ details.usuario form { padding: 0 10px; }
 .cal-menu-botoes .btn { text-align: center; }
 .lista .duplicar { display: inline-block; border: 0; padding: 0 10px 10px 80px; font-size: .85rem; color: var(--amber); }
 .lista .duplicar:hover { background: none; text-decoration: underline; }
+
+/* ===== Leitura fácil: letras e alvos de toque maiores, contraste melhor ===== */
+:root { --muted: #d2c3b0; }
+body { font-size: 18px; line-height: 1.55; }
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.4rem; }
+label { font-size: 1.05rem; margin-bottom: 18px; }
+input:not([type=checkbox]):not([type=file]):not([type=radio]), select, textarea { min-height: 54px; padding: 13px 14px; font-size: 1.1rem; border-width: 2px; }
+input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
+.btn { padding: 14px 24px; font-size: 1.05rem; min-height: 52px; }
+.btn.mini { min-height: 40px; padding: 8px 12px; font-size: .95rem; }
+.dica { font-size: 1rem; }
+.ok, .erro { font-size: 1.1rem; padding: 16px 18px; border: 2px solid currentColor; }
+.voltar { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border: 2px solid var(--line); border-radius: 999px; text-decoration: none; font-weight: 700; color: var(--text); }
+.voltar:hover { border-color: var(--amber); color: var(--amber); }
+.check input { width: 28px; height: 28px; }
+.tag { font-size: .85rem; padding: 3px 10px; }
+.info > span { font-size: 1rem; }
+.seta { font-size: 2rem; }
+.lista a { padding: 14px 10px; }
+.abas a { padding: 14px; font-size: 1.05rem; }
+
+/* Menu com ícone e texto, botões grandes (não fica preso no topo: sobra tela para o conteúdo) */
+.topo { position: static; padding: 12px 12px 14px; }
+.marca { font-size: 1.2rem; }
+.topo nav { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; width: 100%; }
+.topo nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; border: 2px solid var(--line); font-size: .95rem; text-align: center; line-height: 1.2; }
+.topo nav a .ic { font-size: 1.6rem; line-height: 1; }
+.topo nav a.ativo { border-color: var(--amber); }
+
+/* Escolhas em botões grandes (unidade e situação do show) */
+.escolhas { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 6px; }
+.escolha { position: relative; margin: 0; font-weight: 700; }
+.escolha input { position: absolute; opacity: 0; inset: 0; }
+.escolha span { display: flex; align-items: center; justify-content: center; min-height: 54px; padding: 8px 10px; border: 2px solid var(--line); border-radius: 12px; text-align: center; cursor: pointer; }
+.escolha input:checked + span { border-color: var(--amber); background: rgba(233, 162, 59, .18); color: var(--amber); }
+.escolha input:checked + span::before { content: "✓ "; white-space: pre; }
+.escolha input:focus-visible + span { outline: 3px solid var(--amber); }
+.escolha.st-confirmado input:checked + span { border-color: #6fcf75; background: rgba(76, 175, 80, .18); color: #8fdc93; }
+.escolha.st-cancelado input:checked + span { border-color: var(--erro); background: rgba(229, 83, 61, .15); color: #ff9b8a; }
+.escolha.u-maraponga input:checked + span { border-color: #5fb7a4; background: rgba(95, 183, 164, .18); color: #7fd3c0; }
+.data-extenso { display: block; margin-top: 6px; font-size: 1rem; font-weight: 600; color: var(--muted); }
+.data-extenso.ok-data { color: var(--amber); }
+
+/* Calendário com números e nomes de mês grandes */
+.cal-nav strong { font-size: 1.25rem; text-align: center; }
+.mes-btn { background: var(--surface); color: var(--text); border: 2px solid var(--line); padding: 10px 14px; font-size: 1rem; white-space: nowrap; }
+.centro { text-align: center; }
+.cal-legenda { font-size: 1rem; margin: 6px 0; }
+.cal-ajuda { margin: 0 0 10px; }
+.calendario { touch-action: pan-y; }
+.cal-num { font-size: .95rem; width: 28px; height: 28px; }
+.cal-show { font-size: .68rem; padding: 3px 4px; }
+.cal-semana { font-size: .78rem; }
+.cal-menu h3 { font-size: 1.5rem; }
+.cal-menu p { font-size: 1.05rem; }
+@media (min-width: 700px) { .cal-show { font-size: .85rem; } }

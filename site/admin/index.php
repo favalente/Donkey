@@ -500,7 +500,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=10">
+  <link rel="stylesheet" href="admin.css?v=11">
+  <script src="../assets/js/arrastar-mes.js?v=1"></script>
 </head>
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
@@ -527,19 +528,19 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <header class="topo">
     <a class="marca" href="./"><img src="../assets/img/logo-donkey-head.png" alt="" width="28"> Painel</a>
     <nav>
-      <?php if (pode('taplist')): ?><a href="./?acao=taplist" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>">Tap List</a><?php endif; ?>
-      <?php if (pode('cervejas')): ?><a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>">Cervejas</a><?php endif; ?>
-      <?php if (pode('agenda')): ?><a href="./?acao=agenda" class="<?= in_array($tela, ['agenda', 'show'], true) ? 'ativo' : '' ?>">Agenda</a><?php endif; ?>
-      <?php if (pode('bandas')): ?><a href="./?acao=bandas" class="<?= in_array($tela, ['bandas', 'banda'], true) ? 'ativo' : '' ?>">Bandas</a><?php endif; ?>
-      <?php if (pode('relatorio')): ?><a href="./?acao=relatorio" class="<?= $tela === 'relatorio' ? 'ativo' : '' ?>">Financeiro</a><?php endif; ?>
-      <?php if (pode('galeria')): ?><a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>">Galeria</a><?php endif; ?>
-      <?php if (pode('usuarios')): ?><a href="./?acao=usuarios" class="<?= in_array($tela, ['usuarios', 'importar'], true) ? 'ativo' : '' ?>">Usuários</a><?php endif; ?>
-      <a href="../" target="_blank">Site ↗</a>
+      <?php if (pode('taplist')): ?><a href="./?acao=taplist" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🍺</span>Tap List</a><?php endif; ?>
+      <?php if (pode('cervejas')): ?><a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🏷️</span>Cervejas</a><?php endif; ?>
+      <?php if (pode('agenda')): ?><a href="./?acao=agenda" class="<?= in_array($tela, ['agenda', 'show'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📅</span>Agenda</a><?php endif; ?>
+      <?php if (pode('bandas')): ?><a href="./?acao=bandas" class="<?= in_array($tela, ['bandas', 'banda'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🎸</span>Bandas</a><?php endif; ?>
+      <?php if (pode('relatorio')): ?><a href="./?acao=relatorio" class="<?= $tela === 'relatorio' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">💰</span>Financeiro</a><?php endif; ?>
+      <?php if (pode('galeria')): ?><a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🖼️</span>Galeria</a><?php endif; ?>
+      <?php if (pode('usuarios')): ?><a href="./?acao=usuarios" class="<?= in_array($tela, ['usuarios', 'importar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👥</span>Usuários</a><?php endif; ?>
+      <a href="../" target="_blank"><span class="ic" aria-hidden="true">🌐</span>Ver site</a>
     </nav>
   </header>
   <main class="conteudo">
-    <?php if ($flash): ?><p class="ok"><?= e($flash) ?></p><?php endif; ?>
-    <?php if ($erro): ?><p class="erro"><?= e($erro) ?></p><?php endif; ?>
+    <?php if ($flash): ?><p class="ok" role="status">✓ <?= e($flash) ?></p><?php endif; ?>
+    <?php if ($erro): ?><p class="erro" role="alert">⚠ <?= e($erro) ?></p><?php endif; ?>
 
     <?php if ($tela === 'taplist'):
         $uSel = isset(DH_UNIDADES[$_GET['unidade'] ?? '']) ? $_GET['unidade'] : array_key_first(DH_UNIDADES);
@@ -636,7 +637,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
             $c['ativa'] = !empty($_POST['ativa']);
         }
     ?>
-      <p><a href="./?acao=cervejas">‹ Voltar para Cervejas</a></p>
+      <p><a class="voltar" href="./?acao=cervejas">‹ Voltar para Cervejas</a></p>
       <h1><?= $c['id'] ? 'Editar ' . e($c['nome']) : 'Nova cerveja' ?></h1>
       <form method="post" action="./?acao=salvar-cerveja" enctype="multipart/form-data" class="form-cerveja">
         <?= $csrf ?>
@@ -736,7 +737,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
 
     <footer class="rodape">
       <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a></span>
-      <form method="post" action="./?acao=sair"><?= $csrf ?><button class="link">Sair</button></form>
+      <form method="post" action="./?acao=sair" onsubmit="return confirm('Sair do painel neste aparelho?');"><?= $csrf ?><button class="link">Sair</button></form>
     </footer>
   </main>
   <script>
