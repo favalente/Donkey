@@ -321,7 +321,7 @@ a.filtro { text-decoration: none; color: var(--text); }
 /* Subtítulo logo abaixo do título da seção */
 .section-head h2 + .subtitulo { margin: -.2em 0 1em; }
 /* Chope delivery: card na página inicial e página da tabela de preços */
-.delivery-cta { padding-top: 0; }
+.delivery-cta { padding: 56px 0 0; }
 .delivery-card-texto { margin: 0; color: var(--muted); }
 .delivery-subtitulo { margin: 8px 0 16px; }
 .delivery-aviso { padding: 16px; border: 1px solid var(--amber); border-radius: 14px; }
