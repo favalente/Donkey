@@ -346,3 +346,17 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 /* Comprovante de pagamento no formulário do contrato */
 .form-contrato input[type=file] { display: block; width: 100%; margin-top: 6px; padding: 14px; border: 2px dashed var(--amber); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; }
 .comprovante-atual { overflow-wrap: anywhere; }
+/* Contratos em cartões, com os botões de cada um */
+.cards-contrato { display: grid; gap: 14px; margin: 18px 0 24px; }
+.card-contrato { background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--amber); border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, .06); }
+.card-contrato.st-assinado { border-left-color: var(--ok); }
+.card-contrato.st-cancelado { border-left-color: var(--erro); opacity: .8; }
+.card-contrato.st-rascunho { border-left-color: var(--line); }
+.card-topo { display: flex; flex-direction: column; gap: 2px; color: var(--text); text-decoration: none; }
+.card-topo > strong { font-size: 1.15rem; }
+.card-topo > span { color: var(--muted); font-size: .92rem; }
+.card-topo .valor { color: var(--text); }
+.card-topo .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.card-botoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.card-botoes form { margin: 0; }
+.card-botoes .btn { padding: 10px 14px; font-size: .95rem; }

@@ -370,6 +370,29 @@ function contratos_acao(string $acao): bool
             dh_contratos_salvar($c);
             ir('./?acao=contrato&id=' . $k['id'], 'Contrato nº ' . $k['numero'] . ' aberto para edição. Faça as mudanças e toque em "Gerar para assinatura" (o link do cliente continua o mesmo).');
 
+        case 'contrato-excluir':
+            // Apaga de vez (para testes e pedidos que não vão acontecer); contrato assinado, só o administrador
+            exigir_post();
+            exigir('contratos');
+            $c = dh_contratos();
+            $i = dh_contrato_indice($c, (string) ($_POST['id'] ?? ''));
+            if ($i === null) {
+                throw new RuntimeException('Contrato não encontrado.');
+            }
+            $k = $c['contratos'][$i];
+            if ($k['status'] === 'assinado' && $usuario['papel'] !== 'admin') {
+                throw new RuntimeException('Só o administrador exclui contrato assinado.');
+            }
+            dh_comprovante_apagar($k['campos']['comprovante'] ?? null);
+            array_splice($c['contratos'], $i, 1);
+            dh_contratos_salvar($c);
+            $clientes = dh_clientes();
+            foreach ($clientes as $doc => $cl) {
+                $clientes[$doc]['contratos'] = array_values(array_diff($cl['contratos'] ?? [], [$k['id']]));
+            }
+            dh_clientes_salvar($clientes);
+            ir('./?acao=contratos', ($k['numero'] !== '' ? 'Contrato nº ' . $k['numero'] : 'Pedido') . ' excluído.');
+
         case 'contrato-duplicar':
             exigir_post();
             exigir('contratos');
@@ -441,6 +464,61 @@ function dh_contrato_tag(array $k): string
     return '<em class="tag ct-' . e($st) . '">' . e($st === 'edicao' ? 'Em edição' : (DH_CONTRATO_STATUS[$st] ?? $st)) . '</em>';
 }
 
+// Cartão do contrato na lista, com os botões do que dá para fazer no momento
+function contratos_card(array $k): void
+{
+    global $csrf, $usuario;
+    $f = $k['campos'];
+    $quando = $k['tipo'] === 'evento' ? $f['data'] : $f['entrega_data'];
+    $abrir = './?acao=contrato&id=' . rawurlencode($k['id']);
+    $link = dh_url_site() . 'contrato/?t=' . $k['token'];
+    $cliente = $k['assinaturas']['contratante'] ?? null;
+    $donkey = $k['assinaturas']['contratada'] ?? null;
+    $post = fn(string $acao, string $rotulo, string $classe = 'secundario', string $confirmar = '') => '<form method="post" action="./?acao=' . $acao . '"'
+        . ($confirmar !== '' ? ' onsubmit="return confirm(\'' . e(addslashes($confirmar)) . '\');"' : '') . '>' . $csrf
+        . '<input type="hidden" name="id" value="' . e($k['id']) . '"><button class="btn ' . $classe . '">' . $rotulo . '</button></form>';
+    $nome = $f['contratante_nome'] ?: ($k['referencia'] ?? '') ?: 'Sem nome';
+    ?>
+      <article class="card-contrato st-<?= e($k['status']) ?>">
+        <a class="card-topo" href="<?= e($abrir) ?>">
+          <strong><?= e($nome) ?></strong>
+          <span><?= $k['numero'] !== '' ? e($k['numero']) . ' · ' : '' ?><?= e(DH_CONTRATO_TIPOS[$k['tipo']]) ?></span>
+          <span><?= $quando ? '📅 ' . e(dh_data_br($quando)) . ' · ' : '' ?><strong class="valor"><?= e(dh_moeda(dh_contrato_total($k))) ?></strong></span>
+          <span class="tags"><?= dh_contrato_tag($k) ?>
+            <?php if ($k['status'] === 'enviado'): ?>
+              <em class="tag <?= $donkey ? 'ct-ok' : 'cinza' ?>">Donkey <?= $donkey ? '✓' : 'pendente' ?></em>
+              <em class="tag <?= $cliente ? 'ct-ok' : 'cinza' ?>">Cliente <?= $cliente ? '✓' : 'pendente' ?></em>
+            <?php endif; ?>
+            <?php if (!empty($f['comprovante'])): ?><em class="tag ct-ok">📎 Comprovante</em><?php endif; ?>
+          </span>
+        </a>
+        <div class="card-botoes">
+          <?php if ($k['status'] === 'rascunho'): ?>
+            <a class="btn primario" href="<?= e($abrir) ?>">✏️ <?= $k['numero'] !== '' ? 'Continuar editando' : 'Editar rascunho' ?></a>
+          <?php elseif ($k['status'] === 'preenchimento'): ?>
+            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\nPara fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n" . $link)) ?>">📲 Enviar link</a>
+            <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($link) ?>').then(function(){ alert('Link copiado!'); })">🔗 Copiar link</button>
+          <?php elseif ($k['status'] === 'consulta'): ?>
+            <a class="btn primario" href="<?= e($abrir) ?>">🚚 Definir frete</a>
+          <?php else: ?>
+            <?php if ($k['status'] === 'enviado' && !$donkey && $usuario['papel'] === 'admin'): ?><a class="btn primario" href="<?= e($abrir) ?>#form-assinar">✍ Assinar</a><?php endif; ?>
+            <a class="btn secundario" href="../contrato/?t=<?= e($k['token']) ?>" target="_blank">📄 Ver contrato</a>
+            <?php if ($k['status'] === 'enviado' && !$cliente): ?>
+              <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($f['contratante_telefone'])) ?>?text=<?= e(rawurlencode('Olá, ' . $f['contratante_nome'] . ", aqui é a Donkey Head Cervejaria.\n\nSegue o contrato nº " . $k['numero'] . " para leitura e assinatura eletrônica:\n" . $link)) ?>">📲 Enviar</a>
+              <?= $post('contrato-editar', '✏️ Editar', 'secundario', 'Editar o contrato nº ' . $k['numero'] . '?' . ($donkey ? ' A assinatura da Donkey será descartada e você assina de novo depois.' : '') . ' O cliente continua usando o mesmo link.') ?>
+            <?php endif; ?>
+            <?= $post('contrato-duplicar', '⧉ Duplicar') ?>
+          <?php endif; ?>
+          <?php if ($k['status'] !== 'assinado' || $usuario['papel'] === 'admin'): ?>
+            <?= $post('contrato-excluir', '🗑 Excluir', 'perigo', $k['status'] === 'assinado'
+                ? 'ATENÇÃO: este contrato está ASSINADO pelas duas partes. Excluir apaga o contrato e o comprovante para sempre. Excluir mesmo assim?'
+                : 'Excluir ' . ($k['numero'] !== '' ? 'o contrato nº ' . $k['numero'] : 'este ' . ($k['status'] === 'preenchimento' ? 'pedido' : 'rascunho')) . ' de ' . $nome . ' para sempre? O link do cliente deixa de funcionar.') ?>
+          <?php endif; ?>
+        </div>
+      </article>
+    <?php
+}
+
 function contratos_tela_lista(): void
 {
     $c = dh_contratos();
@@ -457,25 +535,9 @@ function contratos_tela_lista(): void
         <?php endforeach; ?>
       </div>
       <?php if (!$lista): ?><p class="dica">Nenhum contrato ainda.</p><?php endif; ?>
-      <ul class="lista contratos">
-        <?php foreach ($lista as $k): $f = $k['campos']; $quando = $k['tipo'] === 'evento' ? $f['data'] : $f['entrega_data']; ?>
-          <li>
-            <a href="./?acao=contrato&id=<?= e($k['id']) ?>">
-              <span class="info">
-                <strong><?= e($f['contratante_nome'] ?: ($k['referencia'] ?? '') ?: 'Sem nome') ?></strong>
-                <span><?= e($k['numero'] ?: 'Rascunho') ?> · <?= e(DH_CONTRATO_TIPOS[$k['tipo']]) ?><?= $quando ? ' · ' . e(dh_data_br($quando)) : '' ?> · <?= e(dh_moeda(dh_contrato_total($k))) ?></span>
-                <span class="tags"><?= dh_contrato_tag($k) ?>
-                  <?php if ($k['status'] === 'enviado'): ?>
-                    <em class="tag <?= isset($k['assinaturas']['contratada']) ? 'ct-ok' : 'cinza' ?>">Donkey <?= isset($k['assinaturas']['contratada']) ? '✓' : 'pendente' ?></em>
-                    <em class="tag <?= isset($k['assinaturas']['contratante']) ? 'ct-ok' : 'cinza' ?>">Cliente <?= isset($k['assinaturas']['contratante']) ? '✓' : 'pendente' ?></em>
-                  <?php endif; ?>
-                </span>
-              </span>
-              <span class="seta">›</span>
-            </a>
-          </li>
-        <?php endforeach; ?>
-      </ul>
+      <div class="cards-contrato">
+        <?php foreach ($lista as $k): contratos_card($k); endforeach; ?>
+      </div>
       <p class="botoes-link"><a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a></p>
     <?php
 }
