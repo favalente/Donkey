@@ -10,8 +10,16 @@ const DH_LOTE_STATUS = ['fermentando' => 'Fermentando', 'maturando' => 'Maturand
 function dh_brassagem(): array
 {
     $b = json_decode((string) @file_get_contents(DH_ARQ_BRASSAGEM), true);
-    $b = is_array($b) ? $b : [];
-    return $b + ['tanques' => [], 'lotes' => []];
+    $b = (is_array($b) ? $b : []) + ['tanques' => [], 'lotes' => []];
+    // Tanques da fábrica: 1 a 11, todos de 500 L menos o 10 (450 L). Entram uma vez só, enquanto não
+    // houver nenhum tanque; depois o cadastro é pelo painel (⚙ Tanques).
+    if (!$b['tanques'] && empty($b['tanques_iniciais'])) {
+        foreach (range(1, 11) as $n) {
+            $b['tanques'][] = ['id' => sprintf('t%02d', $n), 'nome' => 'Tanque ' . $n, 'capacidade' => $n === 10 ? '450' : '500', 'litros_cm' => '', 'ativo' => true];
+        }
+        $b['tanques_iniciais'] = true;
+    }
+    return $b;
 }
 
 function dh_brassagem_salvar(array $b): void
