@@ -327,8 +327,7 @@ function brassagem_tela_lote(): void
         <h1>Nova brassagem</h1>
         <?php if (!$livres): ?><p class="aviso">Nenhum tanque livre. Finalize um lote ou <a href="./?acao=brassagem-tanques">cadastre outro tanque</a>.</p><?php endif; ?>
       <?php else: ?>
-        <div class="titulo-acao"><h1>Lote <?= e($l['lote']) ?> · <?= e($l['cerveja']) ?></h1><button type="button" class="btn secundario sem-impressao" onclick="var d = document.getElementById('editar-caderno'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' });">✏️ Editar</button></div>
-        <p><em class="tag <?= $l['status'] === 'finalizado' ? 'ct-ok' : ($l['status'] === 'maturando' ? 'ct-enviado' : 'ct-preenchimento') ?>"><?= e(DH_LOTE_STATUS[$l['status']]) ?></em></p>
+        <div class="titulo-acao"><h1>Lote <?= e($l['lote']) ?> · <?= e($l['cerveja']) ?></h1><em class="tag <?= $l['status'] === 'finalizado' ? 'ct-ok' : ($l['status'] === 'maturando' ? 'ct-enviado' : 'ct-preenchimento') ?>"><?= e(DH_LOTE_STATUS[$l['status']]) ?></em></div>
         <p class="dica"><?= e($t['nome'] ?? '?') ?><?= $l['unidade'] !== '' ? ' · ' . e(DH_UNIDADES[$l['unidade']]) : '' ?> · brassagem em <?= e(dh_data_br($l['data'])) ?><?= $l['status'] !== 'finalizado' ? ' · hoje é o dia ' . dh_lote_dia($l) : ' · finalizado em ' . e(dh_data_br(substr($l['finalizado_em'], 0, 10))) . ' (dia ' . dh_lote_dia($l, substr($l['finalizado_em'], 0, 10)) . ')' ?></p>
       <?php endif; ?>
 
@@ -457,6 +456,7 @@ function brassagem_tela_lote(): void
           </ol>
 
           <div class="card-botoes sem-impressao">
+            <button type="button" class="btn secundario" onclick="var d = document.getElementById('editar-caderno'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' });">✏️ Editar</button>
             <?php $st = fn($s, $rot, $cls, $conf) => '<form method="post" action="./?acao=brassagem-status" onsubmit="return confirm(\'' . e($conf) . '\');">' . $csrf . '<input type="hidden" name="id" value="' . e($l['id']) . '"><input type="hidden" name="status" value="' . $s . '"><button class="btn ' . $cls . '">' . $rot . '</button></form>'; ?>
             <?php if ($l['status'] === 'fermentando'): ?><?= $st('maturando', '❄️ Passar para maturação', 'secundario', 'Passar o lote ' . $l['lote'] . ' para maturação?') ?><?php endif; ?>
             <?php if ($l['status'] !== 'finalizado'): ?><?= $st('finalizado', '✅ Finalizar lote (libera o tanque)', 'primario', 'Finalizar o lote ' . $l['lote'] . '? O ' . ($t['nome'] ?? 'tanque') . ' fica livre para outra brassagem.') ?><?php endif; ?>
