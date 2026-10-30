@@ -36,7 +36,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=26">
+  <link rel="stylesheet" href="../assets/css/style.css?v=27">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
   <script type="application/ld+json">
   <?= json_encode(array_map(fn($s) => [
@@ -92,18 +92,16 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
           <div class="cal-dia<?= $dia < $hoje ? ' passado' : '' ?><?= $dia === $hoje ? ' hoje' : '' ?>" role="gridcell">
             <span class="cal-num"><?= date('j', $t) ?></span>
             <?php if ($doDia): ?>
-              <button class="cal-abrir" data-dia="<?= $dia ?>" aria-label="Shows de <?= e(dh_data_curta($dia)) ?>">
-                <?php foreach ($doDia as $sh): ?><span class="cal-show cal-u-<?= $sh['unidade'] ?>"><?= e($sh['banda']) ?></span><?php endforeach; ?>
-              </button>
-              <div class="cal-detalhe" id="dia-<?= $dia ?>" hidden>
-                <?php foreach ($doDia as $sh) echo dh_cartao_show($sh, '../'); ?>
-              </div>
+              <?php foreach ($doDia as $sh): ?>
+                <button class="cal-abrir cal-show cal-u-<?= $sh['unidade'] ?>" data-show="<?= e($sh['id']) ?>" aria-label="<?= e($sh['banda'] . ', ' . dh_data_curta($dia) . ', ' . DH_UNIDADES[$sh['unidade']]) ?>"><?= e($sh['banda']) ?></button>
+                <div class="cal-detalhe" id="show-<?= e($sh['id']) ?>" hidden><?= dh_cartao_show($sh, '../') ?></div>
+              <?php endforeach; ?>
             <?php endif; ?>
           </div>
         <?php endfor; ?>
         <?php for ($i = (int) date('w', strtotime($fim)); $i < 6; $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
       </div>
-      <p class="note cal-dica">Toque no dia para ver a banda, o tributo e o horário. Arraste o calendário para o lado para trocar de mês.</p>
+      <p class="note cal-dica">Toque no nome da banda para ver o tributo e o horário. Arraste o calendário para o lado para trocar de mês.</p>
 
       <h2 class="cal-lista-titulo"><?= $mes === date('Y-m') ? 'Próximos shows do mês' : 'Shows do mês' ?></h2>
       <?php if ($shows): ?>
@@ -125,7 +123,6 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
                         </span>
                         <span class="cal-linha-onde"><small><?= e(str_replace(':', 'h', $s['hora'])) ?></small></span>
                       </button>
-                      <div class="cal-detalhe" id="show-<?= e($s['id']) ?>" hidden><?= dh_cartao_show($s, '../') ?></div>
                     </li>
                   <?php endforeach; ?>
                 </ul>
@@ -150,9 +147,8 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
       var corpo = modal.querySelector('.cal-modal-corpo');
       document.querySelectorAll('.cal-abrir').forEach(function (b) {
         b.addEventListener('click', function () {
-          // Na lista abre só o show tocado; no calendário, todos os shows do dia
-          var id = b.hasAttribute('data-show') ? 'show-' + b.getAttribute('data-show') : 'dia-' + b.getAttribute('data-dia');
-          corpo.innerHTML = document.getElementById(id).innerHTML;
+          // Abre só o show tocado (no calendário e na lista)
+          corpo.innerHTML = document.getElementById('show-' + b.getAttribute('data-show')).innerHTML;
           modal.showModal();
         });
       });

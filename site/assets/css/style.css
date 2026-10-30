@@ -368,3 +368,6 @@ a.filtro { text-decoration: none; color: var(--text); }
 /* Foto do show sempre no formato 4:3 (a foto em pé não estica a moldura) */
 .show-foto { min-height: 0; overflow: hidden; flex: none; }
 .show-foto img { position: absolute; inset: 0; }
+/* Calendário: cada show é um botão próprio (abre só aquele show) */
+.cal-dia > .cal-show { flex: none; width: 100%; margin-top: 3px; border: 0; text-align: left; cursor: pointer; }
+.cal-dia > .cal-show:hover { filter: brightness(1.12); }
