@@ -358,7 +358,7 @@ function brassagem_tela_lote(): void
           <h2 class="caderno-titulo">Anotações brassagem</h2>
           <div class="caderno-brassagem">
             <div><span>PF</span><strong><?= $l['pf_brix'] !== '' ? e(dh_num($l['pf_brix'])) . ' °Bx' : '—' ?></strong><small><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['pre_fervura'] !== '' ? 'receita: ' . e(dh_num($rcl['pre_fervura'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['pf_cm'] !== '' ? e(dh_num($l['pf_cm'])) . ' cm' . $litros($l['pf_cm']) : '—' ?></small></div>
-            <div><span>OG</span><strong><?= $l['og_brix'] !== '' ? e(dh_num($l['og_brix'])) . ' °Bx' : '—' ?></strong><small><?= $l['og_brix'] !== '' ? 'SG ≈ ' . e(dh_brix_sg($l['og_brix'])) . ' · ' : '' ?><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['og'] !== '' ? 'receita: ' . e(dh_num($rcl['og'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['og_cm'] !== '' ? e(dh_num($l['og_cm'])) . ' cm' . $litros($l['og_cm']) : '—' ?></small></div>
+            <div><span>OG</span><strong><?= $l['og_brix'] !== '' ? e(dh_num($l['og_brix'])) . ' °Bx' : '—' ?></strong><small><?= $l['og_brix'] !== '' ? 'SG ≈ ' . e(number_format(dh_refratometro_og_sg((float) $l['og_brix']), 3, ',', '')) . ' · ' : '' ?><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['og'] !== '' ? 'receita: ' . e(dh_num($rcl['og'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['og_cm'] !== '' ? e(dh_num($l['og_cm'])) . ' cm' . $litros($l['og_cm']) : '—' ?></small></div>
           </div>
           <?php if ($l['obs'] !== ''): ?><p class="caderno-obs"><b>Obs.:</b> <?= nl2br(e($l['obs'])) ?></p><?php endif; ?>
           <?php if (!empty($l['receita'])): $rc = dh_receita_simplificar($l['receita']); ?>

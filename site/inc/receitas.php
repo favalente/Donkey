@@ -36,7 +36,7 @@ function dh_receitas_salvar(array $r): void
 function dh_receita_vazia(): array
 {
     return ['id' => '', 'cerveja_id' => '', 'nome' => '', 'volume_l' => '', 'insumos' => [], 'pre_fervura' => '', 'og' => '', 'fg' => '', 'lavagem_l' => '',
-        'cor_ebc' => '', 'abv' => '', 'ibu' => '', 'levedura' => '', 'fg_refr' => false, 'imagem' => '', 'origem' => 'manual', 'arquivo' => '', 'versoes' => []];
+        'cor_ebc' => '', 'abv' => '', 'ibu' => '', 'levedura' => '', 'fg_refr' => false, 'brix_refr' => false, 'imagem' => '', 'origem' => 'manual', 'arquivo' => '', 'versoes' => []];
 }
 
 // Receita no formato da fábrica. A importação do BeerSmith (e receitas gravadas antes da simplificação)
@@ -66,6 +66,18 @@ function dh_receita_simplificar(array $x): array
         }
     }
     $x = array_merge(dh_receita_vazia(), array_intersect_key($x, dh_receita_vazia()), array_intersect_key($x, array_flip(['atualizado_em', 'importado_por'])));
+    // O BeerSmith dá pré-fervura e OG em °Plato; no refratômetro, °Brix = °Plato × 1,04 (fator do mosto).
+    // Receitas importadas antes desta conversão: a FG tinha sido convertida com fator 1,0, volta ao °Plato real.
+    if (!$x['brix_refr'] && $x['origem'] !== 'manual') {
+        if ($x['fg_refr'] && $x['fg'] !== '' && $x['og'] !== '') {
+            $x['fg'] = dh_brix_de_sg(dh_refratometro_sg((float) $x['og'], (float) $x['fg'], 1.0));
+            $x['fg_refr'] = false;
+        }
+        foreach (['pre_fervura', 'og'] as $k) {
+            $x[$k] = $x[$k] !== '' ? (string) round((float) $x[$k] * DH_REFRATOMETRO_FATOR, 1) : '';
+        }
+    }
+    $x['brix_refr'] = true;
     // FG como o refratômetro lê no fim da fermentação (o álcool faz a leitura subir). A FG do BeerSmith
     // é o extrato real (°Plato): vira a leitura esperada no refratômetro, com a correção de álcool.
     if (!$x['fg_refr'] && $x['fg'] !== '' && $x['og'] !== '') {
@@ -267,14 +279,14 @@ function dh_plato_sg(float $p): float
     return 1 + $p / (258.6 - ($p / 258.2) * 227.1);
 }
 
-// Correção de álcool do refratômetro (Sean Terrill, 2011). Fator de correção do mosto 1,0: a fábrica
-// trata °Brix do refratômetro como °Plato (o mesmo do BeerSmith). Leituras em °Brix → densidade real (SG).
-const DH_REFRATOMETRO_FATOR = 1.0;
+// Correção de álcool do refratômetro (Sean Terrill, 2011), com o fator de correção do mosto 1,04
+// (°Brix lido = °Plato × 1,04, o padrão do BeerSmith). Leituras em °Brix → densidade real (SG).
+const DH_REFRATOMETRO_FATOR = 1.04;
 
-function dh_refratometro_sg(float $ogBrix, float $leituraBrix): float
+function dh_refratometro_sg(float $ogBrix, float $leituraBrix, float $fator = DH_REFRATOMETRO_FATOR): float
 {
-    $o = $ogBrix / DH_REFRATOMETRO_FATOR;
-    $f = $leituraBrix / DH_REFRATOMETRO_FATOR;
+    $o = $ogBrix / $fator;
+    $f = $leituraBrix / $fator;
     return 1 - 0.0044993 * $o + 0.011774 * $f + 0.00027581 * $o ** 2 - 0.0012717 * $f ** 2 - 0.0000072800 * $o ** 3 + 0.000063293 * $f ** 3;
 }
 

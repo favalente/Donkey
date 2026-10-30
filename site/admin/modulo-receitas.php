@@ -114,7 +114,7 @@ function receitas_acao(string $acao): bool
                 }
             }
             $x = array_merge($x, ['nome' => mb_substr(trim((string) ($_POST['nome'] ?? '')), 0, 100), 'cerveja_id' => isset(array_column(dh_brassagem_cervejas(), null, 'id')[$cid]) ? $cid : '',
-                'insumos' => $insumos, 'pre_fervura' => brassagem_num($_POST['pre_fervura'] ?? ''), 'og' => brassagem_num($_POST['og'] ?? ''), 'fg' => brassagem_num($_POST['fg'] ?? ''), 'fg_refr' => true,
+                'insumos' => $insumos, 'pre_fervura' => brassagem_num($_POST['pre_fervura'] ?? ''), 'og' => brassagem_num($_POST['og'] ?? ''), 'fg' => brassagem_num($_POST['fg'] ?? ''), 'fg_refr' => true, 'brix_refr' => true,
                 'lavagem_l' => brassagem_num($_POST['lavagem_l'] ?? ''), 'volume_l' => brassagem_num($_POST['volume_l'] ?? ''),
                 'cor_ebc' => brassagem_num($_POST['cor_ebc'] ?? ''), 'abv' => brassagem_num($_POST['abv'] ?? ''), 'ibu' => brassagem_num($_POST['ibu'] ?? ''), 'atualizado_em' => date('Y-m-d H:i:s')]);
             if ($x['nome'] === '') {
@@ -296,8 +296,8 @@ function receitas_tela_receita(): void
           <datalist id="unidades-insumo"><option value="kg"><option value="g"><option value="L"><option value="ml"><option value="pct"><option value="un"></datalist>
           <button type="button" class="link" id="mais-insumo">+ Adicionar insumo</button>
           <div class="quatro receita-numeros">
-            <label>Pré-fervura <small>(°Brix)</small><input name="pre_fervura" inputmode="decimal" value="<?= $n('pre_fervura') ?>"></label>
-            <label>OG <small>(°Brix)</small><input name="og" inputmode="decimal" value="<?= $n('og') ?>"></label>
+            <label>Pré-fervura <small>(°Brix no refratômetro)</small><input name="pre_fervura" inputmode="decimal" value="<?= $n('pre_fervura') ?>"></label>
+            <label>OG <small>(°Brix no refratômetro)</small><input name="og" inputmode="decimal" value="<?= $n('og') ?>"></label>
             <label>FG <small>(°Brix lido no refratômetro)</small><input name="fg" inputmode="decimal" value="<?= $n('fg') ?>"></label>
             <label>Lavagem <small>(litros)</small><input name="lavagem_l" inputmode="decimal" value="<?= $n('lavagem_l') ?>"></label>
           </div>
@@ -350,7 +350,8 @@ function receitas_resumo(array $x): void
     }
     foreach (['pre_fervura' => 'Pré-fervura', 'og' => 'OG'] as $k => $rot) {
         if (($x[$k] ?? '') !== '') {
-            $met[] = [$rot, dh_num($x[$k]) . ' °Bx'];
+            $p = (float) $x[$k] / DH_REFRATOMETRO_FATOR;
+            $met[] = [$rot, dh_num($x[$k]) . ' °Bx', '≈ ' . dh_num(round($p, 1)) . ' °P · ' . number_format(dh_plato_sg($p), 3, ',', '')];
         }
     }
     if (($x['fg'] ?? '') !== '') {
