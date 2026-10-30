@@ -478,3 +478,8 @@ fieldset.produto.fixo { border-style: dashed; }
   body { background: #fff; color: #000; }
   .caderno { border: 0; padding: 0; }
 }
+.tanque-cerveja { display: flex; align-items: center; gap: 10px; }
+.tanque-cerveja img, .caderno-cerveja img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
+.caderno-cerveja { display: flex; align-items: center; gap: 10px; }
+.caderno-cerveja span { display: flex; flex-direction: column; }
+.caderno-cerveja small { font-weight: 400; font-size: .85rem; color: var(--muted); }

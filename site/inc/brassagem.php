@@ -115,3 +115,22 @@ function dh_brix_sg(string $brix): ?string
     $bx = (float) $brix;
     return number_format(1 + $bx / (258.6 - (($bx / 258.2) * 227.1)), 3, ',', '');
 }
+
+// Cervejas do cadastro do site (Painel → Cervejas), em ordem de nome, para escolher a do tanque
+function dh_brassagem_cervejas(): array
+{
+    $l = array_values(array_filter(dh_carregar()['cervejas'] ?? [], fn($c) => ($c['nome'] ?? '') !== ''));
+    usort($l, fn($a, $b) => strnatcasecmp($a['nome'], $b['nome']));
+    return $l;
+}
+
+// A cerveja do cadastro de um lote (pelo id escolhido; lotes antigos, pelo nome)
+function dh_lote_cerveja(array $l, ?array $cervejas = null): ?array
+{
+    foreach ($cervejas ?? dh_brassagem_cervejas() as $c) {
+        if ((($l['cerveja_id'] ?? '') !== '' && $c['id'] === $l['cerveja_id']) || mb_strtolower($c['nome']) === mb_strtolower($l['cerveja'])) {
+            return $c;
+        }
+    }
+    return null;
+}
