@@ -66,7 +66,7 @@ O caderno de produção em versão digital (painel → 🧪 Brassagem). A fábri
 - **Tanques virtuais:** a tela mostra cada tanque com o lote que está nele (cerveja, lote, dia da produção, últimas medidas de Brix, pressão e temperatura e a última anotação) ou "Livre".
 - **Caderno do lote:** o cabeçalho do caderno de papel (cerveja, data, lote, levedura, tanque, PF e OG em °Brix com a litragem em cm, Obs.) e o acompanhamento da fermentação e maturação: data, Brix, pressão (bar), temperatura (°C) e anotação livre, com quem anotou. Dá para corrigir ou apagar uma anotação e imprimir o caderno.
 - **Fluxo:** Fermentando → Passar para maturação → Finalizar lote (libera o tanque). Um tanque recebe um lote por vez; o número do lote não se repete.
-- **Acesso:** administrador e a função **Cervejeiro** (que só vê a Brassagem).
+- **Acesso:** administrador e o perfil **Cervejaria** (que só vê a Brassagem).
 - Dados em `dados/brassagem.json` (só no servidor), com cópia diária em `dados/backup`.
 
 ## Contratos com assinatura eletrônica

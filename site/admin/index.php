@@ -10,7 +10,7 @@ require __DIR__ . '/modulo-brassagem.php';
 
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
 const DH_ARQ_USUARIOS = DH_RAIZ . '/dados/usuarios.json';
-const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejeiro' => 'Cervejeiro'];
+const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejaria' => 'Cervejaria'];
 // O que cada função pode fazer no painel
 const DH_PERMISSOES = [
     'taplist' => ['admin', 'barman'],
@@ -24,7 +24,7 @@ const DH_PERMISSOES = [
     'valores' => ['admin', 'financeiro'],
     'relatorio' => ['admin', 'financeiro'],
     'contratos' => ['admin', 'financeiro'],
-    'brassagem' => ['admin', 'cervejeiro'],
+    'brassagem' => ['admin', 'cervejaria'],
     'usuarios' => ['admin'],
     'importar' => ['admin'],
 ];
