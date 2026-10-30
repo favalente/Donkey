@@ -337,15 +337,14 @@ function brassagem_tela_lote(): void
           </dl>
           <h2 class="caderno-titulo">Anotações brassagem</h2>
           <div class="caderno-brassagem">
-            <div><span>PF</span><strong><?= $l['pf_brix'] !== '' ? e(dh_num($l['pf_brix'])) . ' °Bx' : '—' ?></strong><small>Litragem: <?= $l['pf_cm'] !== '' ? e(dh_num($l['pf_cm'])) . ' cm' . $litros($l['pf_cm']) : '—' ?></small></div>
-            <div><span>OG</span><strong><?= $l['og_brix'] !== '' ? e(dh_num($l['og_brix'])) . ' °Bx' : '—' ?></strong><small><?= $l['og_brix'] !== '' ? 'SG ≈ ' . e(dh_brix_sg($l['og_brix'])) . ' · ' : '' ?><?= !empty($l['receita']['og']) ? 'previsto ≈ ' . e(dh_sg_brix($l['receita']['og'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['og_cm'] !== '' ? e(dh_num($l['og_cm'])) . ' cm' . $litros($l['og_cm']) : '—' ?></small></div>
+            <div><span>PF</span><strong><?= $l['pf_brix'] !== '' ? e(dh_num($l['pf_brix'])) . ' °Bx' : '—' ?></strong><small><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['pre_fervura'] !== '' ? 'receita: ' . e(dh_num($rcl['pre_fervura'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['pf_cm'] !== '' ? e(dh_num($l['pf_cm'])) . ' cm' . $litros($l['pf_cm']) : '—' ?></small></div>
+            <div><span>OG</span><strong><?= $l['og_brix'] !== '' ? e(dh_num($l['og_brix'])) . ' °Bx' : '—' ?></strong><small><?= $l['og_brix'] !== '' ? 'SG ≈ ' . e(dh_brix_sg($l['og_brix'])) . ' · ' : '' ?><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['og'] !== '' ? 'receita: ' . e(dh_num($rcl['og'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['og_cm'] !== '' ? e(dh_num($l['og_cm'])) . ' cm' . $litros($l['og_cm']) : '—' ?></small></div>
           </div>
           <?php if ($l['obs'] !== ''): ?><p class="caderno-obs"><b>Obs.:</b> <?= nl2br(e($l['obs'])) ?></p><?php endif; ?>
-          <?php if (!empty($l['receita'])): $rc = $l['receita']; ?>
+          <?php if (!empty($l['receita'])): $rc = dh_receita_simplificar($l['receita']); ?>
             <details class="caderno-receita">
-              <summary>📖 Receita: <?= e($rc['nome']) ?><?= $rc['og'] !== '' ? ' · OG prevista ' . e(dh_sg_formatar($rc['og'])) . ' (≈ ' . e(dh_sg_brix($rc['og'])) . ' °Bx)' : '' ?></summary>
-              <?php receitas_resumo($rc, true); ?>
-              <?php if (trim($rc['notas']) !== ''): ?><h3>Notas</h3><p class="receita-notas"><?= nl2br(e($rc['notas'])) ?></p><?php endif; ?>
+              <summary>📖 Receita: <?= e($rc['nome']) ?><?= receitas_linha($rc) !== '' ? ' · ' . e(receitas_linha($rc)) : '' ?></summary>
+              <?php receitas_resumo($rc); ?>
             </details>
           <?php elseif ($cv): ?>
             <p class="dica sem-impressao">A <?= e($cv['nome']) ?> ainda não tem receita. <a href="./?acao=receita&amp;cerveja=<?= e(rawurlencode($cv['id'])) ?>">Adicionar em Receitas</a> (depois, é só salvar o cabeçalho para ela entrar no caderno).</p>
@@ -360,7 +359,7 @@ function brassagem_tela_lote(): void
               <label>Cerveja <small>(do cadastro de Cervejas)</small>
                 <select name="cerveja_id" id="cerveja-id" required>
                   <option value="">Escolha a cerveja</option>
-                  <?php foreach ($cervejas as $c): $rc = dh_receita_da_cerveja($receitas, $c['id']); ?><option value="<?= e($c['id']) ?>" data-levedura="<?= e($rc && $rc['leveduras'] ? $rc['leveduras'][0]['nome'] : '') ?>" <?= $c['id'] === $cidSel ? 'selected' : '' ?>><?= e($c['nome']) ?><?= ($c['estilo'] ?? '') !== '' ? ' · ' . e($c['estilo']) : '' ?><?= $rc ? ' · 📖 receita' : '' ?></option><?php endforeach; ?>
+                  <?php foreach ($cervejas as $c): $rc = dh_receita_da_cerveja($receitas, $c['id']); ?><option value="<?= e($c['id']) ?>" data-levedura="<?= e($rc['levedura'] ?? '') ?>" <?= $c['id'] === $cidSel ? 'selected' : '' ?>><?= e($c['nome']) ?><?= ($c['estilo'] ?? '') !== '' ? ' · ' . e($c['estilo']) : '' ?><?= $rc ? ' · 📖 receita' : '' ?></option><?php endforeach; ?>
                   <option value="outra" <?= $cidSel === 'outra' ? 'selected' : '' ?>>Outra (ainda não cadastrada)…</option>
                 </select>
               </label>

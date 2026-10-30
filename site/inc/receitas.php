@@ -1,16 +1,21 @@
 <?php
-// Receitas das cervejas (Painel → Receitas): uma por cerveja do cadastro, importadas do BeerSmith
-// (BeerXML .xml ou o arquivo nativo .bsmx) ou criadas à mão. A brassagem puxa a receita da cerveja
+// Receitas das cervejas (Painel → Receitas): uma por cerveja do cadastro, só com o que a fábrica usa:
+// insumos, pré-fervura, OG e FG (em °Brix, como no refratômetro), litragem da lavagem e, se quiser,
+// o print da receita. Dá para preencher à mão ou importar do BeerSmith (BeerXML .xml ou .bsmx). A brassagem puxa a receita da cerveja
 // escolhida e guarda uma cópia no lote (se a receita mudar depois, o caderno do lote não muda).
 // Dados em dados/receitas.json (só no servidor), com cópia diária em dados/backup.
 
 const DH_ARQ_RECEITAS = DH_RAIZ . '/dados/receitas.json';
 const DH_RECEITA_MAX_BYTES = 5 * 1024 * 1024;
+const DH_DIR_RECEITAS_IMG = DH_RAIZ . '/dados/receitas';
+const DH_RECEITA_IMG_TIPOS = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
 
 function dh_receitas(): array
 {
     $r = json_decode((string) @file_get_contents(DH_ARQ_RECEITAS), true);
-    return (is_array($r) ? $r : []) + ['receitas' => []];
+    $r = (is_array($r) ? $r : []) + ['receitas' => []];
+    $r['receitas'] = array_map('dh_receita_simplificar', $r['receitas']);
+    return $r;
 }
 
 function dh_receitas_salvar(array $r): void
@@ -30,9 +35,75 @@ function dh_receitas_salvar(array $r): void
 
 function dh_receita_vazia(): array
 {
-    return ['id' => '', 'cerveja_id' => '', 'nome' => '', 'estilo' => '', 'volume_l' => '', 'fervura_min' => '', 'eficiencia' => '',
-        'og' => '', 'fg' => '', 'abv' => '', 'ibu' => '', 'cor_ebc' => '', 'fermentaveis' => [], 'lupulos' => [], 'leveduras' => [],
-        'outros' => [], 'mostura' => [], 'notas' => '', 'origem' => 'manual', 'arquivo' => '', 'versoes' => []];
+    return ['id' => '', 'cerveja_id' => '', 'nome' => '', 'volume_l' => '', 'insumos' => [], 'pre_fervura' => '', 'og' => '', 'fg' => '', 'lavagem_l' => '',
+        'cor_ebc' => '', 'abv' => '', 'ibu' => '', 'levedura' => '', 'imagem' => '', 'origem' => 'manual', 'arquivo' => '', 'versoes' => []];
+}
+
+// Receita no formato da fábrica. A importação do BeerSmith (e receitas gravadas antes da simplificação)
+// vem com fermentáveis, lúpulos etc. e OG/FG em densidade: tudo vira a lista de insumos e °Brix.
+function dh_receita_simplificar(array $x): array
+{
+    if (!isset($x['insumos'])) {
+        $ins = [];
+        foreach ($x['fermentaveis'] ?? [] as $f) {
+            $ins[] = ['qtd' => $f['kg'], 'unidade' => 'kg', 'nome' => $f['nome']];
+        }
+        foreach ($x['lupulos'] ?? [] as $h) {
+            $ins[] = ['qtd' => $h['g'], 'unidade' => 'g', 'nome' => $h['nome'] . (($h['alfa'] ?? '') !== '' ? ' [' . dh_num($h['alfa']) . '%]' : '') . (($h['uso'] ?? '') !== '' ? ' – ' . dh_receita_uso_lupulo($h) : '')];
+        }
+        foreach ($x['leveduras'] ?? [] as $y) {
+            $x['levedura'] = ($x['levedura'] ?? '') !== '' ? $x['levedura'] : $y['nome'];
+            $ins[] = ['qtd' => $y['qtd'] ?? '', 'unidade' => ($y['qtd'] ?? '') !== '' ? 'pct' : '', 'nome' => trim($y['nome'] . ($y['lab'] !== '' || $y['produto'] !== '' ? ' (' . trim($y['lab'] . ' ' . $y['produto']) . ')' : ''))];
+        }
+        foreach ($x['outros'] ?? [] as $m) {
+            $ins[] = ['qtd' => $m['qtd'], 'unidade' => $m['unidade'], 'nome' => $m['nome'] . (($m['uso'] ?? '') !== '' && $m['uso'] !== 'Água' ? ' – ' . (['boil' => 'Fervura', 'mash' => 'Mostura', 'primary' => 'Fermentação', 'secondary' => 'Maturação', 'bottling' => 'Envase'][strtolower($m['uso'])] ?? $m['uso']) : '')];
+        }
+        $x['insumos'] = $ins;
+        // Receitas antigas tinham OG/FG em densidade; as importações novas já vêm em °Brix
+        foreach (empty($x['brix']) ? ['og', 'fg'] : [] as $k) {
+            $v = (float) ($x[$k] ?? 0);
+            $x[$k] = $v >= 1 && $v < 1.2 ? str_replace(',', '.', (string) dh_sg_brix((string) $v)) : (string) ($x[$k] ?? '');
+        }
+    }
+    $x = array_merge(dh_receita_vazia(), array_intersect_key($x, dh_receita_vazia()), array_intersect_key($x, array_flip(['atualizado_em', 'importado_por'])));
+    $x['versoes'] = array_map(fn($v) => array_diff_key(dh_receita_simplificar($v), ['versoes' => 1]), $x['versoes']);
+    return $x;
+}
+
+function dh_receita_uso_lupulo(array $h): string
+{
+    $uso = ['boil' => 'Fervura', 'dry hop' => 'Dry hop', 'mash' => 'Mostura', 'first wort' => 'First wort', 'aroma' => 'Whirlpool'][strtolower($h['uso'])] ?? $h['uso'];
+    if (($h['tempo_min'] ?? '') === '') {
+        return $uso;
+    }
+    $min = (float) $h['tempo_min'];
+    return $uso . ' ' . (strtolower($h['uso']) === 'dry hop' && $min >= 1440 ? dh_num(round($min / 1440, 1)) . ' dias' : dh_num($min) . ' min');
+}
+
+// Print da receita (foto ou captura do BeerSmith), guardado fora da parte pública do site
+function dh_receita_imagem_salvar(string $id, array $arq): string
+{
+    if (($arq['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($arq['tmp_name']) || ($arq['size'] ?? 0) > 15 * 1024 * 1024) {
+        throw new RuntimeException('Não foi possível receber o print da receita (máximo 15 MB).');
+    }
+    $tipo = (string) (new finfo(FILEINFO_MIME_TYPE))->file($arq['tmp_name']);
+    if (!isset(DH_RECEITA_IMG_TIPOS[$tipo])) {
+        throw new RuntimeException('O print da receita precisa ser uma imagem JPG, PNG ou WebP.');
+    }
+    if (!is_dir(DH_DIR_RECEITAS_IMG) && !@mkdir(DH_DIR_RECEITAS_IMG, 0755, true)) {
+        throw new RuntimeException('Não foi possível guardar o print agora. Confira a permissão da pasta dados.');
+    }
+    $nome = preg_replace('/[^a-z0-9]/', '', $id) . '-' . bin2hex(random_bytes(4)) . '.' . DH_RECEITA_IMG_TIPOS[$tipo];
+    if (!move_uploaded_file($arq['tmp_name'], DH_DIR_RECEITAS_IMG . '/' . $nome)) {
+        throw new RuntimeException('Não foi possível guardar o print agora. Tente de novo.');
+    }
+    return $nome;
+}
+
+function dh_receita_imagem_caminho(string $nome): ?string
+{
+    $f = DH_DIR_RECEITAS_IMG . '/' . basename($nome);
+    return $nome !== '' && is_file($f) ? $f : null;
 }
 
 // Receita da cerveja do cadastro (a mais recente, se houver mais de uma ligada a ela)
@@ -92,9 +163,14 @@ function dh_receitas_importar(string $conteudo, string $arquivo): array
     if (!preg_match('/^\s*(<\?xml[^>]*\?>\s*)?<([A-Za-z_][\w.-]*)[^>]*>.*<\/\2>\s*$/s', $conteudo)) {
         $conteudo = '<raiz>' . preg_replace('/<\?xml[^>]*\?>/', '', $conteudo) . '</raiz>';
     }
+    // Caracteres de controle (o BeerSmith grava alguns, como &#1;) não são aceitos no XML
+    $conteudo = preg_replace(['/&#0*([0-8]|1[124-9]|2\d|3[01]);/', '/&#x0*([0-8bcef]|1[0-9a-f]);/i', '/[\x00-\x08\x0B\x0C\x0E-\x1F]/'], '', $conteudo);
     $doc = new DOMDocument();
     $doc->recover = true;
-    $ok = @$doc->loadXML($conteudo, LIBXML_NONET | LIBXML_NOCDATA | LIBXML_COMPACT | LIBXML_PARSEHUGE);
+    $antes = libxml_use_internal_errors(true);
+    $ok = $doc->loadXML($conteudo, LIBXML_NONET | LIBXML_NOCDATA | LIBXML_COMPACT | LIBXML_PARSEHUGE);
+    libxml_clear_errors();
+    libxml_use_internal_errors($antes);
     if (!$ok || !$doc->documentElement) {
         throw new RuntimeException('Não consegui ler o arquivo. No BeerSmith, exporte a receita em BeerXML (.xml) ou envie o .bsmx.');
     }
@@ -112,10 +188,11 @@ function dh_receitas_importar(string $conteudo, string $arquivo): array
     if (!$lista) {
         throw new RuntimeException('Nenhuma receita encontrada no arquivo. No BeerSmith, use Arquivo → Exportar → BeerXML, ou envie o .bsmx da receita.');
     }
-    foreach ($lista as &$x) {
+    return array_map(function ($x) use ($arquivo) {
+        unset($x['insumos']);
         $x['arquivo'] = mb_substr($arquivo, 0, 120);
-    }
-    return $lista;
+        return dh_receita_simplificar($x);
+    }, $lista);
 }
 
 function dh_xml_txt(DOMXPath $xp, DOMNode $no, string $tag): string
@@ -167,68 +244,126 @@ function dh_receita_beerxml(DOMXPath $xp, DOMNode $r): array
     foreach ($xp->query('./*[local-name()="MASH"]/*[local-name()="MASH_STEPS"]/*[local-name()="MASH_STEP"]', $r) as $s) {
         $x['mostura'][] = ['nome' => $t($s, 'NAME'), 'temp_c' => dh_receita_num($t($s, 'STEP_TEMP')), 'tempo_min' => dh_receita_num($t($s, 'STEP_TIME'))];
     }
-    $x['notas'] = trim($t($r, 'NOTES') . "\n\n" . $t($r, 'TASTE_NOTES'));
+    // Pré-fervura: os pontos da OG espalhados no volume antes da fervura
+    $ferv = (float) dh_receita_num($t($r, 'BOIL_SIZE'));
+    if ($x['og'] !== '' && $ferv > 0 && (float) $x['volume_l'] > 0) {
+        $x['pre_fervura'] = dh_brix_de_sg(1 + ((float) $x['og'] - 1) * (float) $x['volume_l'] / $ferv);
+    }
+    foreach (['og', 'fg'] as $k) {
+        $x[$k] = $x[$k] !== '' ? dh_brix_de_sg((float) $x[$k]) : '';
+    }
+    $x['brix'] = true;
     return $x;
 }
 
-// .bsmx (BeerSmith 2/3): pesos em onças, volumes em onças fluidas, temperaturas em °F
+function dh_brix_de_sg(float $sg): string
+{
+    return $sg > 1 && $sg < 1.2 ? (string) round(-616.868 + 1111.14 * $sg - 630.272 * $sg ** 2 + 135.997 * $sg ** 3, 1) : '';
+}
+
+// .bsmx (BeerSmith 2/3): pesos em onças, volumes em onças fluidas, temperaturas em °F. O arquivo guarda
+// os ingredientes e o equipamento; OG, pré-fervura, FG, ABV e cor o BeerSmith calcula na tela, e aqui
+// são calculados do mesmo jeito (o IBU de cada lúpulo vem pronto no arquivo). °Brix ≈ °Plato no mosto.
 function dh_receita_bsmx(DOMXPath $xp, DOMNode $r): array
 {
     $t = fn(DOMNode $n, string $tag) => dh_xml_txt($xp, $n, $tag);
-    $todos = fn(string $tag) => iterator_to_array($xp->query('.//*[local-name()="' . $tag . '"]', $r));
-    $f2c = fn(string $f) => $f === '' ? '' : (string) round(((float) $f - 32) * 5 / 9, 1);
+    $num = fn(DOMNode $n, string $tag) => (float) str_replace(',', '.', $t($n, $tag));
+    $ing = fn(string $tag) => iterator_to_array($xp->query('./*[local-name()="Ingredients"]//*[local-name()="' . $tag . '"]', $r));
+    $L = 0.0295735;
     $x = dh_receita_vazia();
+    unset($x['insumos']);
     $x['origem'] = 'bsmx';
+    $x['brix'] = true;
     $x['nome'] = $t($r, 'F_R_NAME');
-    $estilo = $xp->query('.//*[local-name()="F_R_STYLE"]', $r)->item(0);
-    $x['estilo'] = $estilo ? $t($estilo, 'F_S_NAME') : '';
-    $equip = $xp->query('.//*[local-name()="F_R_EQUIPMENT"]', $r)->item(0);
-    if ($equip) {
-        $vol = (float) $t($equip, 'F_E_BATCH_VOL');
-        $x['volume_l'] = $vol > 0 ? (string) round($vol * 0.0295735, 1) : '';
-        $x['fervura_min'] = dh_receita_num($t($equip, 'F_E_BOIL_TIME'));
-        $x['eficiencia'] = dh_receita_num($t($equip, 'F_E_EFFICIENCY'));
-    }
-    foreach (['og' => ['F_R_DESIRED_OG', 'F_R_OG_MEASURED'], 'fg' => ['F_R_DESIRED_FG', 'F_R_FG_MEASURED']] as $k => $tags) {
-        foreach ($tags as $tag) {
-            $v = (float) $t($r, $tag);
-            if ($v > 1.0005 && $v < 1.2) {
-                $x[$k] = (string) round($v, 3);
-                break;
-            }
+    $equip = $xp->query('./*[local-name()="F_R_EQUIPMENT"]', $r)->item(0);
+    $lote = $equip ? $num($equip, 'F_E_BATCH_VOL') * $L : 0;
+    $ferv = $equip ? $num($equip, 'F_E_BOIL_VOL') * $L : 0;
+    $trub = $equip ? $num($equip, 'F_E_TRUB_LOSS') * $L : 0;
+    $efic = $equip ? $num($equip, 'F_E_EFFICIENCY') / 100 : 0.75;
+    $x['volume_l'] = $lote > 0 ? (string) round($lote, 1) : '';
+    // Grãos: pontos de densidade (lb × rendimento × 46,214 × eficiência; açúcar e extrato não passam pela mostura) e cor (Morey)
+    $pontos = $pontosDepois = $mcu = $kgGraos = 0;
+    foreach ($ing('Grain') as $g) {
+        $lb = $num($g, 'F_G_AMOUNT') / 16;
+        $tipo = (int) $num($g, 'F_G_TYPE');
+        $p = $lb * $num($g, 'F_G_YIELD') / 100 * 46.214 * (in_array($tipo, [1, 2, 4], true) ? 1 : $efic);
+        if ($num($g, 'F_G_ADD_AFTER_BOIL') > 0) {
+            $pontosDepois += $p;
+        } else {
+            $pontos += $p;
         }
-    }
-    $ibu = (float) $t($r, 'F_R_DESIRED_IBU');
-    $x['ibu'] = $ibu > 0 ? (string) round($ibu, 1) : '';
-    foreach ($todos('Grain') as $g) {
-        $x['fermentaveis'][] = ['nome' => $t($g, 'F_G_NAME'), 'kg' => (string) round((float) $t($g, 'F_G_AMOUNT') / 35.274, 3), 'tipo' => ''];
+        $mcu += $lb * $num($g, 'F_G_COLOR');
+        if (!in_array($tipo, [1, 2, 4], true)) {
+            $kgGraos += $lb * 0.453592;
+        }
+        $x['fermentaveis'][] = ['nome' => $t($g, 'F_G_NAME'), 'kg' => (string) round($lb * 0.453592, 2), 'tipo' => ''];
     }
     $usos = ['0' => 'Boil', '1' => 'Dry Hop', '2' => 'Mash', '3' => 'First Wort', '4' => 'Aroma'];
-    foreach ($todos('Hops') as $h) {
-        $uso = $t($h, 'F_H_USE');
-        $x['lupulos'][] = ['nome' => $t($h, 'F_H_NAME'), 'g' => (string) round((float) $t($h, 'F_H_AMOUNT') * 28.3495, 1), 'alfa' => dh_receita_num($t($h, 'F_H_ALPHA')),
-            'tempo_min' => $uso === '1' ? (string) round((float) $t($h, 'F_H_DRY_HOP_TIME') * 1440) : dh_receita_num($t($h, 'F_H_BOIL_TIME')), 'uso' => $usos[$uso] ?? ''];
+    $ibu = 0;
+    foreach ($ing('Hops') as $h) {
+        $uso = (string) (int) $num($h, 'F_H_USE');
+        $ibu += $num($h, 'F_H_IBU_CONTRIB');
+        $x['lupulos'][] = ['nome' => $t($h, 'F_H_NAME'), 'g' => (string) round($num($h, 'F_H_AMOUNT') * 28.3495, 1), 'alfa' => dh_receita_num($t($h, 'F_H_ALPHA')),
+            'tempo_min' => $uso === '1' ? (string) round($num($h, 'F_H_DRY_HOP_TIME') * 1440) : dh_receita_num($t($h, 'F_H_BOIL_TIME')), 'uso' => $usos[$uso] ?? ''];
     }
-    foreach ($todos('Yeast') as $y) {
-        $x['leveduras'][] = ['nome' => $t($y, 'F_Y_NAME'), 'lab' => $t($y, 'F_Y_LAB'), 'produto' => $t($y, 'F_Y_PRODUCT_ID')];
+    $aten = 0;
+    foreach ($ing('Yeast') as $y) {
+        $x['leveduras'][] = ['nome' => $t($y, 'F_Y_NAME'), 'lab' => $t($y, 'F_Y_LAB'), 'produto' => $t($y, 'F_Y_PRODUCT_ID'), 'qtd' => dh_receita_num($t($y, 'F_Y_AMOUNT'))];
+        $aten = $aten ?: ($num($y, 'F_Y_MIN_ATTENUATION') + $num($y, 'F_Y_MAX_ATTENUATION')) / 200;
     }
-    foreach ($todos('Misc') as $m) {
+    $agua = 0;
+    foreach ($ing('Water') as $w) {
+        $agua += $num($w, 'F_W_AMOUNT') * $L;
+        $x['outros'][] = ['nome' => $t($w, 'F_W_NAME'), 'qtd' => (string) round($num($w, 'F_W_AMOUNT') * $L, 1), 'unidade' => 'L', 'uso' => 'Água'];
+    }
+    foreach ($ing('Misc') as $m) {
         $x['outros'][] = ['nome' => $t($m, 'F_M_NAME'), 'qtd' => dh_receita_num($t($m, 'F_M_AMOUNT')), 'unidade' => '', 'uso' => ''];
     }
-    foreach ($todos('MashStep') as $s) {
-        $x['mostura'][] = ['nome' => $t($s, 'F_MS_NAME'), 'temp_c' => $f2c($t($s, 'F_MS_STEP_TEMP')), 'tempo_min' => dh_receita_num($t($s, 'F_MS_STEP_TIME'))];
+    // Volumes do BeerSmith: o mosto rende o lote + a perda de trub; antes da fervura está no volume de pré-fervura
+    $volFinal = ($lote + $trub) / 3.78541;
+    if ($volFinal > 0 && $pontos + $pontosDepois > 0) {
+        $og = 1 + ($pontos + $pontosDepois) / $volFinal / 1000;
+        $x['og'] = dh_brix_de_sg($og);
+        if ($ferv > 0) {
+            $x['pre_fervura'] = dh_brix_de_sg(1 + $pontos / ($ferv / 3.78541) / 1000);
+        }
+        if ($aten > 0) {
+            $fg = 1 + ($og - 1) * (1 - $aten);
+            $x['fg'] = dh_brix_de_sg($fg);
+            $x['abv'] = (string) round(($og - $fg) * 131.25, 1);
+        }
+        $x['cor_ebc'] = (string) round(1.4922 * (($mcu / ($lote / 3.78541)) ** 0.6859) * 1.97, 1);
     }
-    $x['notas'] = trim($t($r, 'F_R_NOTES'));
-    $x['fermentaveis'] = array_values(array_filter($x['fermentaveis'], fn($i) => $i['nome'] !== ''));
-    $x['lupulos'] = array_values(array_filter($x['lupulos'], fn($i) => $i['nome'] !== ''));
-    $x['leveduras'] = array_values(array_filter($x['leveduras'], fn($i) => $i['nome'] !== ''));
+    $x['ibu'] = $ibu > 0 ? (string) round($ibu, 1) : '';
+    // Lavagem: o que falta para chegar ao volume de pré-fervura depois da água da mostura (o grão segura ~1 L/kg)
+    $mostura = 0;
+    foreach ($xp->query('./*[local-name()="F_R_MASH"]//*[local-name()="MashStep"]', $r) as $ms) {
+        if ((int) $num($ms, 'F_MS_TYPE') === 0) {
+            $mostura += $num($ms, 'F_MS_INFUSION') * $L;
+        }
+    }
+    $mostura = $mostura ?: $agua;
+    // Se a lavagem estiver anotada no nome da água ("Agua (lavagem 37L)"), vale a anotação
+    foreach ($x['outros'] ?? [] as $o) {
+        if (preg_match('/lavagem\D{0,3}(\d+(?:[.,]\d+)?)\s*l/i', $o['nome'], $m)) {
+            $x['lavagem_l'] = str_replace(',', '.', $m[1]);
+        }
+    }
+    if ($x['lavagem_l'] === '' && $ferv > 0 && $mostura > 0) {
+        $lav = $ferv - ($mostura - $kgGraos);
+        $x['lavagem_l'] = $lav > 0 ? (string) round($lav) : '0';
+    }
+    foreach (['fermentaveis', 'lupulos', 'leveduras'] as $k) {
+        $x[$k] = array_values(array_filter($x[$k] ?? [], fn($i) => $i['nome'] !== ''));
+    }
     return $x;
 }
 
 // Cerveja do cadastro com o nome mais parecido com o da receita ("Premium Lager v3" → "DH Premium Lager")
 function dh_receita_casar_cerveja(string $nome, array $cervejas): string
 {
-    $norm = fn($s) => trim(preg_replace('/\s+/', ' ', preg_replace('/[^a-z0-9 ]/', ' ', strtolower(dh_sem_acento($s)))));
+    // "Galo Campina 420L 2026" → "galo campina" (tira litragem, eficiência e ano)
+    $norm = fn($s) => trim(preg_replace('/\s+/', ' ', preg_replace('/\b(\d+(l|kg)?|\d+ ?%|dh|c|com|sem|e|de|da|do)\b/', ' ', preg_replace('/[^a-z0-9% ]/', ' ', strtolower(dh_sem_acento($s))))));
     $alvo = $norm($nome);
     $melhor = '';
     $pontos = 0;
@@ -251,8 +386,8 @@ function dh_receita_casar_cerveja(string $nome, array $cervejas): string
     return $pontos >= 30 ? $melhor : '';
 }
 
-// Resumo da receita que vai para o lote (cópia do momento da brassagem)
+// Cópia da receita que vai para o lote (a do dia da brassagem)
 function dh_receita_copia(array $x): array
 {
-    return array_intersect_key($x, array_flip(['id', 'nome', 'estilo', 'volume_l', 'og', 'fg', 'abv', 'ibu', 'cor_ebc', 'fermentaveis', 'lupulos', 'leveduras', 'outros', 'mostura', 'notas', 'atualizado_em']));
+    return array_diff_key(dh_receita_simplificar($x), array_flip(['versoes', 'origem', 'arquivo']));
 }

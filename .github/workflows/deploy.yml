@@ -62,6 +62,7 @@ jobs:
             dados/*.json
             dados/backup/**
             dados/comprovantes/**
+            dados/receitas/**
             uploads/cervejas/*.jpg
             uploads/galeria/**/*.jpg
             uploads/bandas/**

@@ -71,13 +71,12 @@ O caderno de produção em versão digital (painel → 🧪 Brassagem). A fábri
 
 ## Receitas
 
-Uma receita para cada cerveja do cadastro (painel → 📖 Receitas), importada do BeerSmith.
+Uma receita para cada cerveja do cadastro (painel → 📖 Receitas), só com o que a fábrica usa: tamanho do lote, insumos, pré-fervura, OG e FG (em °Brix, como no refratômetro), litragem da lavagem, cor em EBC (com SRM entre parênteses), ABV, IBU e, opcional, o print da receita.
 
-- **Importar:** no BeerSmith, selecione as receitas e use **Exportar Sel** (ou **Exportar Tudo**) em formato **BeerXML (.xml)**; um arquivo pode ter várias receitas. O arquivo nativo **.bsmx** também é aceito, mas o BeerXML traz OG, FG, IBU e ABV previstos.
-- Cada receita é ligada à cerveja de nome parecido do cadastro (dá para trocar). Importar de novo a receita de uma cerveja substitui a atual e guarda a anterior em "versões".
-- Mostra OG/FG (também em °Brix, para comparar com o refratômetro), ABV, IBU, cor, volume, fermentáveis com %, lúpulos, levedura, outros (água, clarificantes…), mostura e notas.
-- **Na Brassagem**, a cerveja escolhida traz a receita: a levedura entra sozinha, o caderno mostra a receita e a OG prevista em °Brix ao lado da medida. O lote guarda uma cópia da receita do dia.
-- Acesso: administrador e o perfil Cervejaria. Dados em `dados/receitas.json` (só no servidor), com cópia diária em `dados/backup`.
+- **Importar do BeerSmith:** o arquivo **.bsmx** (pode ter várias receitas) ou BeerXML. O .bsmx guarda os ingredientes e o equipamento, mas não os números que o BeerSmith calcula na tela; OG, pré-fervura, FG, ABV e cor são calculados do mesmo jeito (diferença de alguns décimos para o BeerSmith), o IBU vem pronto do arquivo e a lavagem vem da anotação no nome da água ("Agua (lavagem 37L)") ou é calculada. Tudo pode ser corrigido à mão.
+- Cada receita é ligada à cerveja de nome parecido do cadastro (ignora litragem, eficiência e ano). Duas receitas do mesmo arquivo para a mesma cerveja: a segunda fica em "Sem cerveja ligada". Importar de novo a receita de uma cerveja substitui a atual e guarda a anterior em "versões".
+- **Na Brassagem**, a cerveja escolhida traz a receita: a levedura entra sozinha, o caderno mostra a receita e a pré-fervura e a OG da receita ao lado das medidas. O lote guarda uma cópia da receita do dia.
+- Acesso: administrador e o perfil Cervejaria. Dados em `dados/receitas.json` e prints em `dados/receitas/` (só no servidor), com cópia diária em `dados/backup`.
 
 ## Contratos com assinatura eletrônica
 

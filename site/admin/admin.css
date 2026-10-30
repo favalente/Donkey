@@ -510,3 +510,10 @@ h3 small { font-weight: 400; color: var(--muted); }
   .tabela-receita td:first-child { grid-column: 1 / -1; color: var(--text); }
   .tabela-receita td:nth-child(2) { text-align: left; }
 }
+.linha-insumo { display: grid; grid-template-columns: 74px 64px minmax(0, 1fr) 36px; gap: 6px; align-items: center; margin-bottom: 6px; }
+.linha-insumo input { margin-top: 0 !important; padding: 10px 8px !important; }
+.tirar-insumo { border: 0; background: none; color: var(--erro); font-size: 1.4rem; cursor: pointer; }
+.tabela-receita.insumos td:first-child { white-space: nowrap; text-align: right; color: var(--muted); width: 1%; }
+.tabela-receita.insumos td:last-child { text-align: left; color: var(--text); white-space: normal; }
+@media (max-width: 600px) { .tabela-receita.insumos tr { display: table-row; } .tabela-receita.insumos td { border-bottom: 1px solid var(--line); padding: 7px 6px; } }
+.receita-print img { max-width: 100%; border-radius: 10px; border: 1px solid var(--line); }
