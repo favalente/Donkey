@@ -49,13 +49,13 @@ Endereço: `/admin/`
 
 ## Orçamentos
 
-Painel → **📄 Orçamentos** (administrador e financeiro): a proposta que vai antes do contrato, no modelo da casa (PDF com cabeçalho escuro, "Para:", data do evento, itens com valor unitário, quantidade e total, condições de pagamento, validade e dados bancários).
+Painel → **📄 Orçamentos** (administrador e financeiro): a proposta que vai antes do contrato, no mesmo visual do contrato (timbre, nome e CPF/CNPJ do cliente, data do evento, itens com valor unitário, quantidade e total, desconto em R$ abatido no fim, pagamento Pix antecipado, validade, dados bancários e assinatura). Todos os campos são opcionais.
 
-- **Cliente da base:** o campo "Cliente da base" puxa nome, CPF/CNPJ, telefone e e-mail; cliente novo com CPF/CNPJ válido entra na base ao salvar.
+- **Cliente da base:** o campo "Cliente da base" puxa nome e CPF/CNPJ (e o WhatsApp e o e-mail para envio, que não aparecem na proposta); cliente novo com CPF/CNPJ válido entra na base ao salvar.
 - **Itens sugeridos:** chope da tabela do Chope Delivery (já com o valor do litro), tirador de chope, copos personalizados e frete; o total é valor × quantidade ("300L" conta como 300) ou digitado.
 - **Envio:** PDF, link pelo WhatsApp ou e-mail com o PDF anexo. Pelo link (`/orcamento/?t=...`) o cliente vê, baixa e **aprova** (a equipe recebe o aviso por e-mail).
-- **Virar contrato:** cria o contrato de venda de chope com comodato (rascunho) com o cliente, o chope (itens em litros), o frete e os demais itens nas observações.
-- Padrões (condições, validade e dados bancários) em "⚙ Padrões do orçamento". Dados em `dados/orcamentos.json`.
+- **Virar contrato:** cria o contrato de venda de chope com comodato (rascunho) com o cliente, o chope (itens em litros), o frete, o desconto e os demais itens nas observações.
+- Padrões (validade e dados bancários) em "⚙ Padrões do orçamento". Dados em `dados/orcamentos.json`.
 
 ## Contratos com assinatura eletrônica
 

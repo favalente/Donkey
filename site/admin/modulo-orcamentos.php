@@ -19,9 +19,9 @@ function orcamentos_ler_form(array $p): array
         'cliente' => ['nome' => $txt('contratante_nome', 120), 'doc' => dh_so_digitos($txt('contratante_doc', 30)), 'telefone' => $txt('contratante_telefone', 30),
             'email' => strtolower($txt('contratante_email', 120)), 'endereco' => $txt('contratante_endereco', 250)],
         'data_evento' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($p['data_evento'] ?? '')) ? $p['data_evento'] : '',
-        'local' => $txt('local', 160),
+        'local' => '',
         'itens' => $itens,
-        'condicoes' => $txt('condicoes', 500),
+        'desconto' => dh_valor($p['desconto'] ?? ''),
         'validade' => max(1, min(120, (int) ($p['validade'] ?? 15))),
         'banco' => mb_substr(trim(str_replace("\r", '', (string) ($p['banco'] ?? ''))), 0, 600),
         'observacoes' => mb_substr(trim(str_replace("\r", '', (string) ($p['observacoes'] ?? ''))), 0, 1000),
@@ -46,12 +46,6 @@ function orcamentos_acao(string $acao): bool
             $o = dh_orcamentos();
             $i = dh_orcamento_indice($o, (string) ($_POST['id'] ?? ''));
             $f = orcamentos_ler_form($_POST);
-            if ($f['cliente']['nome'] === '') {
-                throw new RuntimeException('Informe para quem é o orçamento.');
-            }
-            if (!$f['itens']) {
-                throw new RuntimeException('Coloque ao menos um item.');
-            }
             if ($i === null) {
                 $k = ['id' => dh_id_novo('o'), 'token' => bin2hex(random_bytes(16)), 'numero' => dh_orcamento_numero($o), 'status' => 'rascunho',
                     'criado_em' => date('Y-m-d H:i:s'), 'criado_por' => $usuario['nome'], 'emitido_em' => date('Y-m-d H:i:s')] + $f;
@@ -95,7 +89,7 @@ function orcamentos_acao(string $acao): bool
             $k = $o['orcamentos'][$i];
             $link = dh_url_site() . 'orcamento/?t=' . $k['token'];
             $ok = dh_email($k['cliente']['email'], 'Orçamento ' . $k['numero'] . ' · Donkey Head Cervejaria',
-                '<p>Olá, ' . e($k['cliente']['nome']) . '!</p><p>Segue o orçamento da Donkey Head Cervejaria' . ($k['data_evento'] ? ' para o seu evento de ' . e(dh_data_br($k['data_evento'])) : '') . ', no valor de <b>' . e(dh_moeda(dh_orcamento_total($k))) . '</b>, em PDF anexo.</p>'
+                '<p>Olá' . ($k['cliente']['nome'] !== '' ? ', ' . e($k['cliente']['nome']) : '') . '!</p><p>Segue o orçamento da Donkey Head Cervejaria' . ($k['data_evento'] ? ' para o seu evento de ' . e(dh_data_br($k['data_evento'])) : '') . ', no valor de <b>' . e(dh_moeda(dh_orcamento_total($k))) . '</b>, em PDF anexo.</p>'
                 . '<p><a href="' . e($link) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:bold">Ver e aprovar o orçamento</a></p>',
                 $erroEmail, [['nome' => dh_orcamento_pdf_nome($k), 'tipo' => 'application/pdf', 'dados' => dh_orcamento_pdf($k)]]);
             if (!$ok) {
@@ -156,7 +150,7 @@ function orcamentos_acao(string $acao): bool
             $k = $o['orcamentos'][$i];
             $f = dh_contrato_campos_padrao('comodato');
             $f = array_merge($f, ['contratante_nome' => $k['cliente']['nome'], 'contratante_doc' => $k['cliente']['doc'], 'contratante_telefone' => $k['cliente']['telefone'],
-                'contratante_email' => $k['cliente']['email'], 'contratante_endereco' => $k['cliente']['endereco'], 'entrega_endereco' => $k['local'] ?: $k['cliente']['endereco'],
+                'contratante_email' => $k['cliente']['email'], 'contratante_endereco' => $k['cliente']['endereco'], 'entrega_endereco' => $k['cliente']['endereco'],
                 'entrega_data' => $k['data_evento'], 'devolucao_data' => $k['data_evento'] ? date('Y-m-d', strtotime($k['data_evento'] . ' +1 day')) : '', 'itens' => []]);
             $outros = [];
             foreach ($k['itens'] as $it) {
@@ -170,7 +164,11 @@ function orcamentos_acao(string $acao): bool
                     $outros[] = $it['descricao'] . ($it['quant'] !== '' ? ' (' . $it['quant'] . ')' : '') . ': ' . dh_moeda(dh_orcamento_item_total($it));
                 }
             }
-            $f['observacoes'] = trim(($outros ? "Também incluso: " . implode('; ', $outros) . '.' : '') . "\nPagamento: " . $k['condicoes'] . "\nConforme orçamento " . $k['numero'] . '.');
+            // Desconto do orçamento vai para o desconto do contrato (abatido do chope)
+            if (dh_orcamento_desconto($k) > 0) {
+                $f['desconto'] = number_format(dh_orcamento_desconto($k), 2, '.', '');
+            }
+            $f['observacoes'] = trim(($outros ? "Também incluso: " . implode('; ', $outros) . '.' : '') . "\nPagamento: " . DH_ORCAMENTO_PAGAMENTO . "\nConforme orçamento " . $k['numero'] . '.');
             $c = dh_contratos();
             $novo = ['id' => dh_id_novo('c'), 'token' => bin2hex(random_bytes(16)), 'numero' => '', 'tipo' => 'comodato', 'status' => 'rascunho',
                 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'assinaturas' => [], 'campos' => $f, 'orcamento' => $k['numero']];
@@ -185,7 +183,7 @@ function orcamentos_acao(string $acao): bool
             exigir_post();
             exigir('contratos');
             $o = dh_orcamentos();
-            $o['config'] = ['condicoes' => mb_substr(trim((string) ($_POST['condicoes'] ?? '')), 0, 500), 'validade' => max(1, min(120, (int) ($_POST['validade'] ?? 15))),
+            $o['config'] = ['validade' => max(1, min(120, (int) ($_POST['validade'] ?? 15))),
                 'banco' => mb_substr(trim(str_replace("\r", '', (string) ($_POST['banco'] ?? ''))), 0, 600)];
             dh_orcamentos_salvar($o);
             ir('./?acao=orcamentos', 'Padrões do orçamento salvos.');
@@ -225,15 +223,15 @@ function orcamentos_tela_lista(): void
         <?php foreach ($lista as $k): $link = dh_url_site() . 'orcamento/?t=' . $k['token']; $vencido = $k['status'] === 'rascunho' && dh_orcamento_validade($k) < date('Y-m-d'); ?>
           <article class="card-contrato st-<?= $k['status'] === 'contrato' || $k['status'] === 'aprovado' ? 'assinado' : ($k['status'] === 'recusado' ? 'cancelado' : 'enviado') ?>">
             <a class="card-topo" href="./?acao=orcamento&amp;id=<?= e($k['id']) ?>">
-              <strong><?= e($k['cliente']['nome']) ?></strong>
-              <span><?= e($k['numero']) ?><?= $k['local'] !== '' ? ' · ' . e($k['local']) : '' ?></span>
+              <strong><?= e($k['cliente']['nome'] ?: 'Sem nome') ?></strong>
+              <span><?= e($k['numero']) ?></span>
               <span><?= $k['data_evento'] ? '📅 ' . e(dh_data_br($k['data_evento'])) . ' · ' : '' ?><strong class="valor"><?= e(dh_moeda(dh_orcamento_total($k))) ?></strong></span>
               <span class="tags"><em class="tag <?= in_array($k['status'], ['aprovado', 'contrato'], true) ? 'ct-ok' : ($k['status'] === 'recusado' ? 'ct-cancelado' : 'ct-enviado') ?>"><?= e(DH_ORCAMENTO_STATUS[$k['status']]) ?></em>
                 <?php if ($vencido): ?><em class="tag cinza">Validade vencida</em><?php endif; ?></span>
             </a>
             <div class="card-botoes">
               <a class="btn primario" href="./?acao=orcamento-pdf&amp;id=<?= e($k['id']) ?>">⬇ PDF</a>
-              <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($k['cliente']['telefone'])) ?>?text=<?= e(rawurlencode('Olá, ' . $k['cliente']['nome'] . ", aqui é a Donkey Head Cervejaria.\n\nSegue o orçamento " . $k['numero'] . ' (' . dh_moeda(dh_orcamento_total($k)) . "). Você pode ver, baixar em PDF e aprovar por este link:\n" . $link)) ?>">📲 Enviar</a>
+              <a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($k['cliente']['telefone'])) ?>?text=<?= e(rawurlencode('Olá' . ($k['cliente']['nome'] !== '' ? ', ' . $k['cliente']['nome'] : '') . ", aqui é a Donkey Head Cervejaria.\n\nSegue o orçamento " . $k['numero'] . ' (' . dh_moeda(dh_orcamento_total($k)) . "). Você pode ver, baixar em PDF e aprovar por este link:\n" . $link)) ?>">📲 Enviar</a>
               <?php if (filter_var($k['cliente']['email'], FILTER_VALIDATE_EMAIL)): ?>
                 <form method="post" action="./?acao=orcamento-email" onsubmit="return confirm('Enviar o orçamento com o PDF para <?= e(addslashes($k['cliente']['email'])) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">✉️ E-mail</button></form>
               <?php endif; ?>
@@ -251,7 +249,7 @@ function orcamentos_tela_lista(): void
           </article>
         <?php endforeach; ?>
       </div>
-      <p><a class="voltar" href="./?acao=orcamentos-config">⚙ Padrões do orçamento (dados bancários, condições, validade)</a></p>
+      <p><a class="voltar" href="./?acao=orcamentos-config">⚙ Padrões do orçamento (dados bancários e validade)</a></p>
     <?php
 }
 
@@ -262,7 +260,7 @@ function orcamentos_tela_form(): void
     $i = dh_orcamento_indice($o, (string) ($_GET['id'] ?? $_POST['id'] ?? ''));
     $cfg = $o['config'];
     $k = $i !== null ? $o['orcamentos'][$i] : ['id' => '', 'numero' => '', 'status' => 'rascunho', 'cliente' => ['nome' => '', 'doc' => '', 'telefone' => '', 'email' => '', 'endereco' => ''],
-        'data_evento' => '', 'local' => '', 'itens' => [], 'condicoes' => $cfg['condicoes'], 'validade' => $cfg['validade'], 'banco' => $cfg['banco'], 'observacoes' => '',
+        'data_evento' => '', 'local' => '', 'itens' => [], 'desconto' => '', 'validade' => $cfg['validade'], 'banco' => $cfg['banco'], 'observacoes' => '',
         'assinante' => dh_contratos()['config']['representante_nome'] ?? ''];
     if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $k = array_merge($k, orcamentos_ler_form($_POST));
@@ -278,20 +276,22 @@ function orcamentos_tela_form(): void
       <?php if ($k['status'] === 'contrato'): ?><p class="aviso">Este orçamento já virou contrato. Para mudar, use "Duplicar" na lista.</p><?php endif; ?>
       <form method="post" action="./?acao=orcamento-salvar" class="form-cerveja form-contrato" id="form-orc">
         <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>">
+        <p class="dica">Todos os campos são opcionais.</p>
         <h2>Para quem</h2>
         <?= contratos_campo_cliente('', 'Cliente da base', 'escolha para preencher os dados') ?>
-        <label>Nome ou empresa <input name="contratante_nome" required maxlength="120" value="<?= e($c['nome']) ?>"></label>
+        <label>Nome ou empresa <input name="contratante_nome" maxlength="120" value="<?= e($c['nome']) ?>"></label>
         <div class="duas">
-          <label>CPF ou CNPJ <small>(opcional)</small><input name="contratante_doc" inputmode="numeric" value="<?= e($c['doc'] !== '' ? dh_cpf_formatar($c['doc']) : '') ?>"></label>
-          <label>Telefone / WhatsApp <input name="contratante_telefone" inputmode="tel" value="<?= e($c['telefone']) ?>"></label>
-        </div>
-        <label>E-mail <small>(opcional; para mandar o PDF)</small><input type="email" name="contratante_email" value="<?= e($c['email']) ?>"></label>
-        <input type="hidden" name="contratante_endereco" value="<?= e($c['endereco']) ?>">
-        <h2>Evento</h2>
-        <div class="duas">
+          <label>CPF ou CNPJ <input name="contratante_doc" inputmode="numeric" value="<?= e($c['doc'] !== '' ? dh_cpf_formatar($c['doc']) : '') ?>"></label>
           <label>Data do evento <input type="date" name="data_evento" value="<?= e($k['data_evento']) ?>"></label>
-          <label>Local <small>(opcional)</small><input name="local" maxlength="160" value="<?= e($k['local']) ?>" placeholder="Ex.: Sede da empresa, Aldeota"></label>
         </div>
+        <details class="contato-envio"<?= $c['telefone'] !== '' || $c['email'] !== '' ? ' open' : '' ?>>
+          <summary>Contato para envio <small>(opcional; não aparece na proposta)</small></summary>
+          <div class="duas">
+            <label>WhatsApp <input name="contratante_telefone" inputmode="tel" value="<?= e($c['telefone']) ?>"></label>
+            <label>E-mail <input type="email" name="contratante_email" value="<?= e($c['email']) ?>"></label>
+          </div>
+        </details>
+        <input type="hidden" name="contratante_endereco" value="<?= e($c['endereco']) ?>">
         <h2>Itens</h2>
         <p class="dica">Escreva ou escolha uma sugestão (o chope já vem com o valor do litro da tabela do delivery). O total de cada item é valor × quantidade ("300L" conta como 300); se preferir, digite o total direto.</p>
         <datalist id="sug-itens"><?php foreach ($sug as $s): ?><option value="<?= e($s['descricao']) ?>"><?php endforeach; ?></datalist>
@@ -309,9 +309,10 @@ function orcamentos_tela_form(): void
           <?php endforeach; ?>
         </div>
         <button type="button" class="btn secundario" id="mais-item">+ Adicionar item</button>
+        <label>Desconto (R$) <small>(abatido no total)</small><input name="desconto" id="desconto-orc" inputmode="decimal" value="<?= $v($k['desconto'] ?? '') ?>" placeholder="Ex.: 200,00"></label>
         <p class="aviso" id="total-orc"></p>
         <h2>Condições</h2>
-        <label>Condições de pagamento <textarea name="condicoes" rows="2"><?= e($k['condicoes']) ?></textarea></label>
+        <p class="dica">Pagamento: <strong><?= e(DH_ORCAMENTO_PAGAMENTO) ?></strong>.</p>
         <div class="duas">
           <label>Validade (dias) <input name="validade" inputmode="numeric" value="<?= (int) $k['validade'] ?>"></label>
           <label>Quem assina <input name="assinante" maxlength="100" value="<?= e($k['assinante'] ?? '') ?>"></label>
@@ -337,7 +338,8 @@ function orcamentos_tela_form(): void
               l.querySelector('.it-total').placeholder = sub ? brl(sub) : 'automático';
               t += sub;
             });
-            document.getElementById('total-orc').textContent = 'Total do orçamento: ' + brl(t);
+            var d = Math.min(t, num(document.getElementById('desconto-orc').value));
+            document.getElementById('total-orc').textContent = d ? 'Subtotal ' + brl(t) + ' − desconto ' + brl(d) + ' = Total do orçamento: ' + brl(t - d) : 'Total do orçamento: ' + brl(t);
           }
           caixa.addEventListener('change', function (e) {
             if (!e.target.classList.contains('it-desc') || !sug[e.target.value]) return;
@@ -369,7 +371,7 @@ function orcamentos_tela_config(): void
       <p class="dica">Vêm preenchidos em cada orçamento novo (dá para mudar em cada um).</p>
       <form method="post" action="./?acao=orcamentos-config-salvar" class="form-cerveja">
         <?= $csrf ?>
-        <label>Condições de pagamento <textarea name="condicoes" rows="2"><?= e($cfg['condicoes']) ?></textarea></label>
+        <p class="dica">Pagamento dos orçamentos: <strong><?= e(DH_ORCAMENTO_PAGAMENTO) ?></strong>.</p>
         <label>Validade (dias) <input name="validade" inputmode="numeric" value="<?= (int) $cfg['validade'] ?>"></label>
         <label>Dados bancários <small>(banco, agência, conta, titular e chave Pix; ficam só no servidor, não vão para o código do site)</small><textarea name="banco" rows="6" placeholder="Banco: …&#10;Agência: …&#10;Conta: …&#10;Titular e CNPJ (chave Pix)"><?= e($cfg['banco']) ?></textarea></label>
         <div class="barra-salvar"><button class="btn primario">Salvar</button></div>

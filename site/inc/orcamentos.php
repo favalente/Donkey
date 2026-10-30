@@ -5,7 +5,6 @@
 const DH_ARQ_ORCAMENTOS = DH_RAIZ . '/dados/orcamentos.json';
 const DH_ORCAMENTO_STATUS = ['rascunho' => 'Em aberto', 'aprovado' => 'Aprovado pelo cliente', 'recusado' => 'Recusado', 'contrato' => 'Virou contrato'];
 const DH_ORCAMENTO_PADRAO = [
-    'condicoes' => '50% para reserva de data e 50% até 7 dias antes do evento',
     'validade' => 15,
     // Dados bancários: preenchidos no painel (⚙ Padrões do orçamento); ficam só no servidor
     'banco' => '',
@@ -68,9 +67,23 @@ function dh_orcamento_item_total(array $it): float
     return round((float) ($it['valor'] ?: 0) * $qtd, 2);
 }
 
-function dh_orcamento_total(array $k): float
+// Pagamento dos orçamentos: sempre Pix, antecipado
+const DH_ORCAMENTO_PAGAMENTO = 'Pix, antecipado';
+
+function dh_orcamento_subtotal(array $k): float
 {
     return array_sum(array_map('dh_orcamento_item_total', $k['itens']));
+}
+
+// Desconto digitado em R$, abatido no fim (nunca maior que o subtotal)
+function dh_orcamento_desconto(array $k): float
+{
+    return min(dh_orcamento_subtotal($k), max(0, (float) (($k['desconto'] ?? '') ?: 0)));
+}
+
+function dh_orcamento_total(array $k): float
+{
+    return dh_orcamento_subtotal($k) - dh_orcamento_desconto($k);
 }
 
 function dh_orcamento_validade(array $k): string
@@ -101,21 +114,26 @@ function dh_orcamento_html(array $k, string $raiz = ''): string
     $h = '<div class="orc">';
     $h .= '<div class="timbre"><img src="' . e($raiz) . 'assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria"><span>' . e(DH_EMPRESA['razao']) . '<br>CNPJ ' . e(DH_EMPRESA['cnpj']) . '</span></div>';
     $h .= '<h1>PROPOSTA COMERCIAL</h1><p class="numero">Orçamento nº ' . e($k['numero']) . ' · emitido em ' . e(dh_data_br(substr($emitido, 0, 10))) . '</p>';
-    $h .= '<h2>DADOS DA PROPOSTA</h2><table class="quadro">'
-        . $linha('PARA:', $c['nome']) . ($c['doc'] !== '' ? $linha('CPF/CNPJ:', dh_cpf_formatar($c['doc'])) : '')
-        . ($c['telefone'] !== '' ? $linha('TELEFONE:', $c['telefone']) : '') . ($c['email'] !== '' ? $linha('E-MAIL:', $c['email']) : '')
-        . $linha('DATA DO EVENTO:', $k['data_evento'] !== '' ? dh_data_br($k['data_evento']) : 'A definir') . ($k['local'] !== '' ? $linha('LOCAL:', $k['local']) : '')
-        . '</table>';
+    // Só nome e CPF/CNPJ do cliente (e a data do evento, se houver); tudo opcional
+    $dados = ($c['nome'] !== '' ? $linha('PARA:', $c['nome']) : '') . ($c['doc'] !== '' ? $linha('CPF/CNPJ:', dh_cpf_formatar($c['doc'])) : '')
+        . ($k['data_evento'] !== '' ? $linha('DATA DO EVENTO:', dh_data_br($k['data_evento'])) : '');
+    if ($dados !== '') {
+        $h .= '<h2>DADOS DA PROPOSTA</h2><table class="quadro">' . $dados . '</table>';
+    }
     $h .= '<h2>ITENS</h2><table class="itens"><tr><th class="n">#</th><th>Descrição</th><th class="num vu">Valor un.</th><th class="num">Quant.</th><th class="num">Total</th></tr>';
     foreach (array_values($k['itens']) as $n => $it) {
         $h .= '<tr><td class="n">' . ($n + 1) . '</td><td><strong>' . e($it['descricao']) . '</strong>' . ($it['detalhe'] !== '' ? '<br><small>' . e($it['detalhe']) . '</small>' : '') . '</td>'
             . '<td class="num vu">' . ($it['valor'] !== '' ? e(dh_moeda($it['valor'])) : '') . '</td><td class="num">' . e($it['quant']) . '</td><td class="num">' . e(dh_moeda(dh_orcamento_item_total($it))) . '</td></tr>';
     }
+    if (dh_orcamento_desconto($k) > 0) {
+        $h .= '<tr><td class="n"></td><td>Subtotal</td><td class="vu"></td><td></td><td class="num">' . e(dh_moeda(dh_orcamento_subtotal($k))) . '</td></tr>'
+            . '<tr><td class="n"></td><td>Desconto</td><td class="vu"></td><td></td><td class="num">− ' . e(dh_moeda(dh_orcamento_desconto($k))) . '</td></tr>';
+    }
     $h .= '<tr class="total"><td class="n"></td><td>VALOR TOTAL</td><td class="vu"></td><td></td><td class="num">' . e(dh_moeda(dh_orcamento_total($k))) . '</td></tr></table>';
     if (trim($k['observacoes']) !== '') {
         $h .= '<p><strong>Observações:</strong> ' . nl2br(e($k['observacoes'])) . '</p>';
     }
-    $h .= '<h2>CONDIÇÕES</h2><table class="quadro">' . $linha('PAGAMENTO:', $k['condicoes'])
+    $h .= '<h2>CONDIÇÕES</h2><table class="quadro">' . $linha('PAGAMENTO:', DH_ORCAMENTO_PAGAMENTO)
         . $linha('VALIDADE:', (int) $k['validade'] . ' dias (até ' . dh_data_br(dh_orcamento_validade($k)) . ')') . '</table>';
     // Dados bancários e assinatura lado a lado (no celular, um embaixo do outro)
     $h .= '<table class="fim"><tr><td class="fim-banco">' . (trim($k['banco']) !== '' ? '<h3>Dados bancários</h3><p class="banco">' . nl2br(e($k['banco'])) . '</p>' : '') . '</td>'
