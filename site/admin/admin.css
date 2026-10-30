@@ -409,3 +409,9 @@ h1, h2, h3 { overflow-wrap: anywhere; }
 .alertas-importacao summary { cursor: pointer; font-weight: 600; }
 .alertas-importacao li { margin: 8px 0; font-size: .88rem; overflow-wrap: anywhere; }
 .alertas-importacao li span { color: var(--muted); }
+/* Enquadramento da foto da banda (4:3, como na agenda do site) */
+.moldura-foto { position: relative; aspect-ratio: 4 / 3; max-width: 520px; overflow: hidden; border-radius: 14px; border: 2px solid var(--amber); cursor: grab; touch-action: none; user-select: none; background: #0e0b08; }
+.moldura-foto.arrastando { cursor: grabbing; }
+.moldura-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.moldura-dica { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); background: rgba(0, 0, 0, .7); color: #fff; font-size: .85rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; pointer-events: none; white-space: nowrap; }
+.form-foco { margin: 12px 0 20px; }

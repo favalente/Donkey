@@ -688,6 +688,19 @@ function agenda_acao(string $acao): bool
             dh_agenda_salvar($a);
             ir('./?acao=banda&id=' . $a['bandas'][$i]['id'] . '#fotos', 'Fotos atualizadas.');
 
+        case 'banda-foco':
+            // Enquadramento da foto principal na agenda do site (posição em %)
+            exigir_post();
+            exigir('bandas_editar');
+            $telaErro = 'banda';
+            $a = dh_agenda();
+            $i = dh_buscar_banda($a, (string) ($_POST['id'] ?? ''));
+            if ($a['bandas'][$i]['fotos']) {
+                $a['bandas'][$i]['fotos'][0]['foco'] = [max(0, min(100, (int) round((float) ($_POST['x'] ?? 50)))), max(0, min(100, (int) round((float) ($_POST['y'] ?? 35))))];
+                dh_agenda_salvar($a);
+            }
+            ir('./?acao=banda&id=' . $a['bandas'][$i]['id'] . '#fotos', 'Enquadramento salvo. É assim que a foto aparece na agenda do site.');
+
         case 'banda-link':
             exigir_post();
             exigir('bandas_editar');
@@ -1572,6 +1585,18 @@ function agenda_tela_banda(): void
       <?php if ($b['fotos']): ?>
         <h2 id="fotos">Fotos <small><?= count($b['fotos']) ?></small></h2>
         <p><a class="btn primario largo" href="./?acao=banda-zip&id=<?= e($b['id']) ?>">Baixar todas as fotos (originais)</a></p>
+        <?php if (pode('bandas_editar')): $foco = $b['fotos'][0]['foco'] ?? [50, 35]; ?>
+          <h3>Como a foto principal aparece no site</h3>
+          <p class="dica">Arraste a foto dentro da moldura para centralizar a banda e toque em Salvar enquadramento. A foto original continua inteira para baixar.</p>
+          <div class="moldura-foto" id="moldura"><img src="../<?= e($b['fotos'][0]['media']) ?>" alt="Foto principal" id="foto-foco" style="object-position:<?= (int) $foco[0] ?>% <?= (int) $foco[1] ?>%" draggable="false"><span class="moldura-dica">✋ Arraste para ajustar</span></div>
+          <form method="post" action="./?acao=banda-foco" class="form-foco">
+            <?= $csrf ?><input type="hidden" name="id" value="<?= e($b['id']) ?>"><input type="hidden" name="x" id="foco-x" value="<?= (int) $foco[0] ?>"><input type="hidden" name="y" id="foco-y" value="<?= (int) $foco[1] ?>">
+            <button class="btn primario">Salvar enquadramento</button>
+          </form>
+          <script src="../assets/js/enquadrar.js?v=1"></script>
+          <script>dhEnquadrar(document.getElementById('moldura'), document.getElementById('foto-foco'), document.getElementById('foco-x'), document.getElementById('foco-y'));</script>
+          <h3>Todas as fotos</h3>
+        <?php endif; ?>
         <ul class="grade-fotos">
           <?php foreach ($b['fotos'] as $n => $f): ?>
             <li>

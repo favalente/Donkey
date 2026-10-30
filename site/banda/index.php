@@ -184,27 +184,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
             <?= $csrf ?><input type="hidden" name="op" value="foco"><input type="hidden" name="x" id="foco-x" value="<?= (int) $foco[0] ?>"><input type="hidden" name="y" id="foco-y" value="<?= (int) $foco[1] ?>">
             <button class="btn btn-primary">Salvar enquadramento</button>
           </form>
-          <script>
-            // Arrastar muda o ponto da foto que fica no centro da moldura (object-position, em %)
-            (function () {
-              var m = document.getElementById('moldura'), img = document.getElementById('foto-foco'), ix = document.getElementById('foco-x'), iy = document.getElementById('foco-y');
-              var x = +ix.value, y = +iy.value, ini = null;
-              function sobra() {
-                var fw = m.clientWidth, fh = m.clientHeight, nw = img.naturalWidth || fw, nh = img.naturalHeight || fh, esc = Math.max(fw / nw, fh / nh);
-                return [nw * esc - fw, nh * esc - fh];
-              }
-              function aplicar() { img.style.objectPosition = x + '% ' + y + '%'; ix.value = Math.round(x); iy.value = Math.round(y); }
-              m.addEventListener('pointerdown', function (e) { ini = [e.clientX, e.clientY, x, y]; m.setPointerCapture(e.pointerId); m.classList.add('arrastando'); });
-              m.addEventListener('pointermove', function (e) {
-                if (!ini) return;
-                var s = sobra();
-                if (s[0] > 1) x = Math.max(0, Math.min(100, ini[2] - (e.clientX - ini[0]) / s[0] * 100));
-                if (s[1] > 1) y = Math.max(0, Math.min(100, ini[3] - (e.clientY - ini[1]) / s[1] * 100));
-                aplicar();
-              });
-              ['pointerup', 'pointercancel'].forEach(function (t) { m.addEventListener(t, function () { ini = null; m.classList.remove('arrastando'); }); });
-            })();
-          </script>
+          <script src="../assets/js/enquadrar.js?v=1"></script>
+          <script>dhEnquadrar(document.getElementById('moldura'), document.getElementById('foto-foco'), document.getElementById('foco-x'), document.getElementById('foco-y'));</script>
 
           <h2 style="font-size:2rem;margin:40px 0 12px">Fotos enviadas <small>(<?= count($b['fotos']) ?>)</small></h2>
           <p><small>A foto principal é a que aparece no site. Ao trocar a principal, ajuste o enquadramento dela acima.</small></p>
