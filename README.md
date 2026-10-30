@@ -75,6 +75,7 @@ Uma receita para cada cerveja do cadastro (painel → 📖 Receitas), só com o 
 
 - **Importar do BeerSmith:** o arquivo **.bsmx** (pode ter várias receitas) ou BeerXML. O .bsmx guarda os ingredientes e o equipamento, mas não os números que o BeerSmith calcula na tela; OG, pré-fervura, FG, ABV e cor são calculados do mesmo jeito (diferença de alguns décimos para o BeerSmith), o IBU vem pronto do arquivo e a lavagem vem da anotação no nome da água ("Agua (lavagem 37L)") ou é calculada. Tudo pode ser corrigido à mão.
 - Cada receita é ligada à cerveja de nome parecido do cadastro (ignora litragem, eficiência e ano). Duas receitas do mesmo arquivo para a mesma cerveja: a segunda fica em "Sem cerveja ligada". Importar de novo a receita de uma cerveja substitui a atual e guarda a anterior em "versões".
+- **FG no refratômetro:** a FG da receita é a leitura esperada no refratômetro no fim da fermentação, já com a correção de álcool (fórmula de Sean Terrill; °Brix tratado como °Plato, fator 1,0); a densidade real aparece embaixo. No caderno, cada Brix anotado depois da brassagem mostra a densidade corrigida e o álcool até ali, a partir da OG do caderno (ou da receita).
 - **Na Brassagem**, a cerveja escolhida traz a receita: a levedura entra sozinha, o caderno mostra a receita e a pré-fervura e a OG da receita ao lado das medidas. O lote guarda uma cópia da receita do dia.
 - Acesso: administrador e o perfil Cervejaria. Dados em `dados/receitas.json` e prints em `dados/receitas/` (só no servidor), com cópia diária em `dados/backup`.
 

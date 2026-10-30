@@ -517,3 +517,5 @@ h3 small { font-weight: 400; color: var(--muted); }
 .tabela-receita.insumos td:last-child { text-align: left; color: var(--text); white-space: normal; }
 @media (max-width: 600px) { .tabela-receita.insumos tr { display: table-row; } .tabela-receita.insumos td { border-bottom: 1px solid var(--line); padding: 7px 6px; } }
 .receita-print img { max-width: 100%; border-radius: 10px; border: 1px solid var(--line); }
+.linha-corrigida { display: block; color: var(--teal-txt); font-size: .85rem; }
+.tanque-medidas b small { font-weight: 400; color: var(--muted); font-size: .8rem; }

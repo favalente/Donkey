@@ -36,7 +36,7 @@ function dh_receitas_salvar(array $r): void
 function dh_receita_vazia(): array
 {
     return ['id' => '', 'cerveja_id' => '', 'nome' => '', 'volume_l' => '', 'insumos' => [], 'pre_fervura' => '', 'og' => '', 'fg' => '', 'lavagem_l' => '',
-        'cor_ebc' => '', 'abv' => '', 'ibu' => '', 'levedura' => '', 'imagem' => '', 'origem' => 'manual', 'arquivo' => '', 'versoes' => []];
+        'cor_ebc' => '', 'abv' => '', 'ibu' => '', 'levedura' => '', 'fg_refr' => false, 'imagem' => '', 'origem' => 'manual', 'arquivo' => '', 'versoes' => []];
 }
 
 // Receita no formato da fábrica. A importação do BeerSmith (e receitas gravadas antes da simplificação)
@@ -66,6 +66,12 @@ function dh_receita_simplificar(array $x): array
         }
     }
     $x = array_merge(dh_receita_vazia(), array_intersect_key($x, dh_receita_vazia()), array_intersect_key($x, array_flip(['atualizado_em', 'importado_por'])));
+    // FG como o refratômetro lê no fim da fermentação (o álcool faz a leitura subir). A FG do BeerSmith
+    // é o extrato real (°Plato): vira a leitura esperada no refratômetro, com a correção de álcool.
+    if (!$x['fg_refr'] && $x['fg'] !== '' && $x['og'] !== '') {
+        $x['fg'] = (string) round(dh_refratometro_leitura((float) $x['og'], dh_plato_sg((float) $x['fg'])), 1);
+    }
+    $x['fg_refr'] = true;
     $x['versoes'] = array_map(fn($v) => array_diff_key(dh_receita_simplificar($v), ['versoes' => 1]), $x['versoes']);
     return $x;
 }
@@ -254,6 +260,43 @@ function dh_receita_beerxml(DOMXPath $xp, DOMNode $r): array
     }
     $x['brix'] = true;
     return $x;
+}
+
+function dh_plato_sg(float $p): float
+{
+    return 1 + $p / (258.6 - ($p / 258.2) * 227.1);
+}
+
+// Correção de álcool do refratômetro (Sean Terrill, 2011). Fator de correção do mosto 1,0: a fábrica
+// trata °Brix do refratômetro como °Plato (o mesmo do BeerSmith). Leituras em °Brix → densidade real (SG).
+const DH_REFRATOMETRO_FATOR = 1.0;
+
+function dh_refratometro_sg(float $ogBrix, float $leituraBrix): float
+{
+    $o = $ogBrix / DH_REFRATOMETRO_FATOR;
+    $f = $leituraBrix / DH_REFRATOMETRO_FATOR;
+    return 1 - 0.0044993 * $o + 0.011774 * $f + 0.00027581 * $o ** 2 - 0.0012717 * $f ** 2 - 0.0000072800 * $o ** 3 + 0.000063293 * $f ** 3;
+}
+
+// O inverso: que leitura o refratômetro vai mostrar quando a densidade real chegar a $sg
+function dh_refratometro_leitura(float $ogBrix, float $sg): float
+{
+    [$a, $b] = [0.0, max($ogBrix, 1.0)];
+    for ($n = 0; $n < 50; $n++) {
+        $m = ($a + $b) / 2;
+        if (dh_refratometro_sg($ogBrix, $m) < $sg) {
+            $a = $m;
+        } else {
+            $b = $m;
+        }
+    }
+    return ($a + $b) / 2;
+}
+
+// OG em °Brix (refratômetro, mosto sem álcool) → densidade
+function dh_refratometro_og_sg(float $ogBrix): float
+{
+    return dh_plato_sg($ogBrix / DH_REFRATOMETRO_FATOR);
 }
 
 function dh_brix_de_sg(float $sg): string

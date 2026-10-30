@@ -221,6 +221,20 @@ function brassagem_tela(string $tela): bool
     return false;
 }
 
+// Brix lido no refratômetro durante a fermentação, corrigido pelo álcool: "≈ 1,007 · 3,7% álcool".
+// Usa a OG medida no caderno (ou a da receita, se ainda não mediu).
+function brassagem_brix_corrigido(array $l, array $r): string
+{
+    $og = ($l['og_brix'] ?? '') !== '' ? (float) $l['og_brix'] : (float) (dh_receita_simplificar($l['receita'] ?? [])['og'] ?: 0);
+    $bx = (float) ($r['brix'] ?? '');
+    if ($og <= 0 || ($r['brix'] ?? '') === '' || $bx >= $og || ($r['data'] ?? '') <= ($l['data'] ?? '')) {
+        return '';
+    }
+    $sg = dh_refratometro_sg($og, $bx);
+    $abv = max(0, (dh_refratometro_og_sg($og) - $sg) * 131.25);
+    return '≈ ' . number_format($sg, 3, ',', '') . ' · ' . dh_num(round($abv, 1)) . '% álcool';
+}
+
 // Resumo de medidas de uma linha: "7 °Bx · 0,5 bar · 4 °C"
 function brassagem_medidas(array $r): string
 {
@@ -259,7 +273,7 @@ function brassagem_tela_tanques(): void
                 <strong class="tanque-cerveja"><?php $cv = dh_lote_cerveja($l, $cadastro); if (!empty($cv['imagem'])): ?><img src="../<?= e($cv['imagem']) ?>" alt="" width="44" height="44" loading="lazy"><?php endif; ?><?= e($l['cerveja']) ?></strong>
                 <span>Lote <?= e($l['lote']) ?><?= !empty($l['unidade']) ? ' · ' . e(DH_UNIDADES[$l['unidade']]) : '' ?> · dia <?= dh_lote_dia($l) ?> <small>(<?= e(dh_data_br($l['data'])) ?>)</small></span>
                 <span class="tanque-medidas">
-                  <?php if ($ub): ?><b><?= e(dh_num($ub['brix'])) ?> °Bx</b><?php endif; ?>
+                  <?php if ($ub): $corr = brassagem_brix_corrigido($l, $ub); ?><b><?= e(dh_num($ub['brix'])) ?> °Bx<?= $corr !== '' ? ' <small>' . e($corr) . '</small>' : '' ?></b><?php endif; ?>
                   <?php if ($up): ?><b><?= e(dh_num($up['pressao'])) ?> bar</b><?php endif; ?>
                   <?php if ($ut): ?><b><?= e(dh_num($ut['temp'])) ?> °C</b><?php endif; ?>
                 </span>
@@ -432,6 +446,7 @@ function brassagem_tela_lote(): void
                 <span class="linha-data"><?= e(date('d/m', strtotime($r['data']))) ?><small>dia <?= dh_lote_dia($l, $r['data']) ?></small></span>
                 <span class="linha-texto">
                   <?php if ($med !== ''): ?><b class="linha-medidas"><?= e($med) ?></b><?php endif; ?>
+                  <?php if (($corr = brassagem_brix_corrigido($l, $r)) !== ''): ?><small class="linha-corrigida">refratômetro corrigido: <?= e($corr) ?></small><?php endif; ?>
                   <?= nl2br(e($r['texto'])) ?>
                   <small class="linha-autor"><?= e($r['por']) ?></small>
                   <details class="sem-impressao">

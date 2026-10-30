@@ -114,7 +114,7 @@ function receitas_acao(string $acao): bool
                 }
             }
             $x = array_merge($x, ['nome' => mb_substr(trim((string) ($_POST['nome'] ?? '')), 0, 100), 'cerveja_id' => isset(array_column(dh_brassagem_cervejas(), null, 'id')[$cid]) ? $cid : '',
-                'insumos' => $insumos, 'pre_fervura' => brassagem_num($_POST['pre_fervura'] ?? ''), 'og' => brassagem_num($_POST['og'] ?? ''), 'fg' => brassagem_num($_POST['fg'] ?? ''),
+                'insumos' => $insumos, 'pre_fervura' => brassagem_num($_POST['pre_fervura'] ?? ''), 'og' => brassagem_num($_POST['og'] ?? ''), 'fg' => brassagem_num($_POST['fg'] ?? ''), 'fg_refr' => true,
                 'lavagem_l' => brassagem_num($_POST['lavagem_l'] ?? ''), 'volume_l' => brassagem_num($_POST['volume_l'] ?? ''),
                 'cor_ebc' => brassagem_num($_POST['cor_ebc'] ?? ''), 'abv' => brassagem_num($_POST['abv'] ?? ''), 'ibu' => brassagem_num($_POST['ibu'] ?? ''), 'atualizado_em' => date('Y-m-d H:i:s')]);
             if ($x['nome'] === '') {
@@ -298,7 +298,7 @@ function receitas_tela_receita(): void
           <div class="quatro receita-numeros">
             <label>Pré-fervura <small>(°Brix)</small><input name="pre_fervura" inputmode="decimal" value="<?= $n('pre_fervura') ?>"></label>
             <label>OG <small>(°Brix)</small><input name="og" inputmode="decimal" value="<?= $n('og') ?>"></label>
-            <label>FG <small>(°Brix)</small><input name="fg" inputmode="decimal" value="<?= $n('fg') ?>"></label>
+            <label>FG <small>(°Brix lido no refratômetro)</small><input name="fg" inputmode="decimal" value="<?= $n('fg') ?>"></label>
             <label>Lavagem <small>(litros)</small><input name="lavagem_l" inputmode="decimal" value="<?= $n('lavagem_l') ?>"></label>
           </div>
           <div class="quatro receita-numeros">
@@ -348,10 +348,15 @@ function receitas_resumo(array $x): void
     if (($x['volume_l'] ?? '') !== '') {
         $met[] = ['Tamanho do lote', dh_num($x['volume_l']) . ' L'];
     }
-    foreach (['pre_fervura' => 'Pré-fervura', 'og' => 'OG', 'fg' => 'FG'] as $k => $rot) {
+    foreach (['pre_fervura' => 'Pré-fervura', 'og' => 'OG'] as $k => $rot) {
         if (($x[$k] ?? '') !== '') {
             $met[] = [$rot, dh_num($x[$k]) . ' °Bx'];
         }
+    }
+    if (($x['fg'] ?? '') !== '') {
+        // FG como o refratômetro lê (com álcool) e a densidade real corrigida
+        $real = $x['og'] !== '' ? dh_refratometro_sg((float) $x['og'], (float) $x['fg']) : null;
+        $met[] = ['FG no refratômetro', dh_num($x['fg']) . ' °Bx', $real ? 'real ≈ ' . number_format($real, 3, ',', '') . ' (' . dh_num(dh_brix_de_sg($real)) . ' °P)' : ''];
     }
     if (($x['lavagem_l'] ?? '') !== '') {
         $met[] = ['Lavagem', dh_num($x['lavagem_l']) . ' L'];
@@ -368,7 +373,7 @@ function receitas_resumo(array $x): void
     ?>
       <?php if ($met): ?>
         <div class="grade-metricas receita-metricas">
-          <?php foreach ($met as [$rot, $val]): ?><div class="cartao-metrica"><span><?= e($rot) ?></span><strong><?= e($val) ?></strong></div><?php endforeach; ?>
+          <?php foreach ($met as $m): ?><div class="cartao-metrica"><span><?= e($m[0]) ?></span><strong><?= e($m[1]) ?></strong><?php if (($m[2] ?? '') !== ''): ?><small><?= e($m[2]) ?></small><?php endif; ?></div><?php endforeach; ?>
         </div>
       <?php endif; ?>
       <?php if ($x['insumos']): ?>
