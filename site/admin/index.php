@@ -5,6 +5,7 @@ require __DIR__ . '/modulo-agenda.php';
 require __DIR__ . '/modulo-usuarios.php';
 require __DIR__ . '/modulo-contratos.php';
 require __DIR__ . '/modulo-relatorios.php';
+require __DIR__ . '/modulo-orcamentos.php';
 
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
 const DH_ARQ_USUARIOS = DH_RAIZ . '/dados/usuarios.json';
@@ -482,7 +483,7 @@ if (!$usuarios) {
 
             default:
                 // Agenda, bandas, relatório, importação e usuários ficam em arquivos próprios
-                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao)) {
+                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao)) {
                     $tela = $inicio;
                 }
         }
@@ -505,7 +506,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=35">
+  <link rel="stylesheet" href="admin.css?v=37">
   <script>
     // Tema escolhido neste aparelho (claro é o padrão)
     try { if (localStorage.getItem('dh-tema') === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}
@@ -542,6 +543,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (pode('agenda')): ?><a href="./?acao=agenda" class="<?= in_array($tela, ['agenda', 'show'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📅</span>Agenda</a><?php endif; ?>
       <?php if (pode('bandas')): ?><a href="./?acao=bandas" class="<?= in_array($tela, ['bandas', 'banda'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🎸</span>Bandas</a><?php endif; ?>
       <?php if (pode('relatorio')): ?><a href="./?acao=relatorio" class="<?= $tela === 'relatorio' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">💰</span>Financeiro</a><?php endif; ?>
+      <?php if (pode('contratos')): ?><a href="./?acao=orcamentos" class="<?= in_array($tela, ['orcamentos', 'orcamento', 'orcamentos-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📄</span>Orçamentos</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=contratos" class="<?= in_array($tela, ['contratos', 'contrato', 'contratos-config', 'contratos-cupons'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📝</span>Contratos</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=relatorios" class="<?= $tela === 'relatorios' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📊</span>Relatórios</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=clientes" class="<?= $tela === 'clientes' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👤</span>Clientes</a><?php endif; ?>
@@ -746,7 +748,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <label>Repita a nova senha <input type="password" name="senha2" required autocomplete="new-password"></label>
         <button class="btn primario">Trocar senha</button>
       </form>
-    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela); endif; ?>
+    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela); endif; ?>
 
     <footer class="rodape">
       <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a> · <button type="button" class="botao-tema" id="botao-tema"></button></span>

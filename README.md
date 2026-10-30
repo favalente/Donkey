@@ -47,6 +47,16 @@ Endereço: `/admin/`
 - **Google Agenda:** `/agenda/ics.php` (pública) e o link da equipe (com valores), criado em Agenda → Configurações. Para importar o que já existe: Usuários → Importar Google Agenda (endereço secreto iCal ou arquivo .ics, uma agenda por vez, escolhendo a unidade dela), com revisão antes de gravar. Só os shows **de hoje em diante** entram na agenda. Os eventos antigos servem para cadastrar as bandas e completar tributos, cachê e consumação: quando o evento traz só o nome da banda, vale o tributo completo escrito em outro evento dela. Reservas, contas, fretes, pedidos de barril e dias "sem música" são ignorados, e erros de digitação no nome da banda ("Black Pepers" e "Black Peppers") viram um cadastro só.
 - Dados em `dados/agenda.json` (com backup diário) e fotos em `uploads/bandas/`. Limites de envio em `site/admin/.user.ini`.
 
+## Orçamentos
+
+Painel → **📄 Orçamentos** (administrador e financeiro): a proposta que vai antes do contrato, no modelo da casa (PDF com cabeçalho escuro, "Para:", data do evento, itens com valor unitário, quantidade e total, condições de pagamento, validade e dados bancários).
+
+- **Cliente da base:** o campo "Cliente da base" puxa nome, CPF/CNPJ, telefone e e-mail; cliente novo com CPF/CNPJ válido entra na base ao salvar.
+- **Itens sugeridos:** chope da tabela do Chope Delivery (já com o valor do litro), tirador de chope, copos personalizados e frete; o total é valor × quantidade ("300L" conta como 300) ou digitado.
+- **Envio:** PDF, link pelo WhatsApp ou e-mail com o PDF anexo. Pelo link (`/orcamento/?t=...`) o cliente vê, baixa e **aprova** (a equipe recebe o aviso por e-mail).
+- **Virar contrato:** cria o contrato de venda de chope com comodato (rascunho) com o cliente, o chope (itens em litros), o frete e os demais itens nas observações.
+- Padrões (condições, validade e dados bancários) em "⚙ Padrões do orçamento". Dados em `dados/orcamentos.json`.
+
 ## Contratos com assinatura eletrônica
 
 Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento corporativo no pub** (texto do contrato jurídico da casa, com o Anexo I – Menu) e **Venda de chope com comodato de equipamentos** (equipamentos com valor de reposição já preenchidos).
