@@ -365,3 +365,6 @@ a.filtro { text-decoration: none; color: var(--text); }
 .btn-grande { font-size: 1.15rem; padding: 16px 34px; }
 .delivery-duvidas { text-align: center; color: var(--muted); margin-top: 14px; }
 .delivery-pedido-topo { margin: -8px 0 36px; }
+/* Foto do show sempre no formato 4:3 (a foto em pé não estica a moldura) */
+.show-foto { min-height: 0; overflow: hidden; flex: none; }
+.show-foto img { position: absolute; inset: 0; }

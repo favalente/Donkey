@@ -262,6 +262,14 @@ function dh_banda_foto(?array $b): string
     return $b['fotos'][0]['media'] ?? 'assets/img/rotulo-padrao.png';
 }
 
+// Enquadramento da foto principal no formato do site (4:3), escolhido pela banda: "X% Y%".
+// Sem escolha, centraliza um pouco acima do meio (onde costumam ficar os rostos).
+function dh_banda_foto_foco(?array $b): string
+{
+    $f = $b['fotos'][0]['foco'] ?? null;
+    return is_array($f) ? (int) $f[0] . '% ' . (int) $f[1] . '%' : '50% 35%';
+}
+
 // "2026-11-07" -> "Sábado, 07/11"
 function dh_data_curta(string $data): string
 {
@@ -291,6 +299,7 @@ function dh_shows_publicos(array $a, string $de, ?string $ate = null, ?string $u
             'tributo' => $s['tributo'],
             'instagram' => $b['instagram'] ?? '',
             'foto' => dh_banda_foto($b),
+            'foco' => dh_banda_foto_foco($b),
         ];
     }
     return $lista;
@@ -361,7 +370,7 @@ function dh_cartao_show(array $s, string $raiz = ''): string
 {
     $t = strtotime($s['data']);
     $html = '<article class="show">';
-    $html .= '<div class="show-foto"><img src="' . e($raiz . $s['foto']) . '" alt="' . e($s['banda']) . '" loading="lazy">';
+    $html .= '<div class="show-foto"><img src="' . e($raiz . $s['foto']) . '" alt="' . e($s['banda']) . '" loading="lazy" style="object-position:' . e($s['foco'] ?? '50% 35%') . '">';
     $html .= '<span class="show-data"><strong>' . date('d', $t) . '</strong>' . e(mb_strtoupper(mb_substr(DH_MESES[(int) date('n', $t)], 0, 3))) . '</span></div>';
     $html .= '<div class="show-info"><p class="show-quando">' . e(DH_DIAS_SEMANA[(int) date('w', $t)]) . ' · ' . e(str_replace(':', 'h', $s['hora'])) . ' · <span>' . e(DH_UNIDADES[$s['unidade']]) . '</span></p>';
     $html .= '<h3>' . e($s['banda']) . '</h3>';

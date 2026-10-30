@@ -31,6 +31,12 @@ if ($i !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 dh_banda_foto_apagar(array_splice($b['fotos'], $k, 1)[0]);
             }
             $msg = 'Foto excluída.';
+        } elseif ($op === 'foco') {
+            // Enquadramento da foto principal no site (posição em %, de 0 a 100)
+            if ($b['fotos']) {
+                $b['fotos'][0]['foco'] = [max(0, min(100, (int) round((float) ($_POST['x'] ?? 50)))), max(0, min(100, (int) round((float) ($_POST['y'] ?? 35))))];
+            }
+            $msg = 'Enquadramento salvo. É assim que a foto aparece na agenda do site.';
         } elseif ($op === 'principal') {
             $k = array_search((string) ($_POST['foto'] ?? ''), array_column($b['fotos'], 'id'), true);
             if ($k !== false) {
@@ -100,9 +106,14 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="theme-color" content="#16110d">
   <link rel="icon" href="../favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=25">
+  <link rel="stylesheet" href="../assets/css/style.css?v=26">
   <style>
     .pg-banda { max-width: 640px; }
+    .moldura-foto { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 14px; border: 2px solid var(--amber); cursor: grab; touch-action: none; user-select: none; background: #0e0b08; }
+    .moldura-foto.arrastando { cursor: grabbing; }
+    .moldura-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    .moldura-dica { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); background: rgba(0, 0, 0, .7); color: #fff; font-size: .85rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; pointer-events: none; }
+    .form-foco { margin: 12px 0 0; }
     .pg-banda label { display: block; font-weight: 600; margin-bottom: 18px; }
     .pg-banda input[type=text], .pg-banda input[type=file] { display: block; width: 100%; margin-top: 6px; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: #0f0b08; color: var(--text); font: inherit; }
     .pg-banda small { color: var(--muted); font-weight: 400; }
@@ -165,9 +176,38 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
           <p class="enviando" id="enviando">Enviando… não feche a página.</p>
         </form>
 
-        <?php if ($b['fotos']): ?>
+        <?php if ($b['fotos']): $foco = $b['fotos'][0]['foco'] ?? [50, 35]; ?>
+          <h2 style="font-size:2rem;margin:40px 0 12px">Como a foto aparece no site</h2>
+          <p><small>A agenda mostra a foto principal neste formato. <strong>Arraste a foto dentro da moldura</strong> para deixar a banda bem centralizada e toque em Salvar enquadramento.</small></p>
+          <div class="moldura-foto" id="moldura"><img src="../<?= e($b['fotos'][0]['media']) ?>" alt="Foto principal" id="foto-foco" style="object-position:<?= (int) $foco[0] ?>% <?= (int) $foco[1] ?>%" draggable="false"><span class="moldura-dica">✋ Arraste para ajustar</span></div>
+          <form method="post" class="form-foco">
+            <?= $csrf ?><input type="hidden" name="op" value="foco"><input type="hidden" name="x" id="foco-x" value="<?= (int) $foco[0] ?>"><input type="hidden" name="y" id="foco-y" value="<?= (int) $foco[1] ?>">
+            <button class="btn btn-primary">Salvar enquadramento</button>
+          </form>
+          <script>
+            // Arrastar muda o ponto da foto que fica no centro da moldura (object-position, em %)
+            (function () {
+              var m = document.getElementById('moldura'), img = document.getElementById('foto-foco'), ix = document.getElementById('foco-x'), iy = document.getElementById('foco-y');
+              var x = +ix.value, y = +iy.value, ini = null;
+              function sobra() {
+                var fw = m.clientWidth, fh = m.clientHeight, nw = img.naturalWidth || fw, nh = img.naturalHeight || fh, esc = Math.max(fw / nw, fh / nh);
+                return [nw * esc - fw, nh * esc - fh];
+              }
+              function aplicar() { img.style.objectPosition = x + '% ' + y + '%'; ix.value = Math.round(x); iy.value = Math.round(y); }
+              m.addEventListener('pointerdown', function (e) { ini = [e.clientX, e.clientY, x, y]; m.setPointerCapture(e.pointerId); m.classList.add('arrastando'); });
+              m.addEventListener('pointermove', function (e) {
+                if (!ini) return;
+                var s = sobra();
+                if (s[0] > 1) x = Math.max(0, Math.min(100, ini[2] - (e.clientX - ini[0]) / s[0] * 100));
+                if (s[1] > 1) y = Math.max(0, Math.min(100, ini[3] - (e.clientY - ini[1]) / s[1] * 100));
+                aplicar();
+              });
+              ['pointerup', 'pointercancel'].forEach(function (t) { m.addEventListener(t, function () { ini = null; m.classList.remove('arrastando'); }); });
+            })();
+          </script>
+
           <h2 style="font-size:2rem;margin:40px 0 12px">Fotos enviadas <small>(<?= count($b['fotos']) ?>)</small></h2>
-          <p><small>A foto principal é a que aparece no site.</small></p>
+          <p><small>A foto principal é a que aparece no site. Ao trocar a principal, ajuste o enquadramento dela acima.</small></p>
           <ul class="fotos-banda">
             <?php foreach ($b['fotos'] as $n => $f): ?>
               <li>
