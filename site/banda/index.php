@@ -97,10 +97,10 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <title><?= $b ? e($b['nome']) . ' · ' : '' ?>Donkey Head Cervejaria</title>
-  <meta name="theme-color" content="#16110d">
+  <meta name="theme-color" content="#9885a5">
   <link rel="icon" href="../favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=10">
+  <link rel="stylesheet" href="../assets/css/style.css?v=24">
   <style>
     .pg-banda { max-width: 640px; }
     .pg-banda label { display: block; font-weight: 600; margin-bottom: 18px; }
