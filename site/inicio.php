@@ -79,7 +79,7 @@ function detalhe(array $c): string
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Donkey Head Cervejaria · Mais cerveja, menos arenga!</title>
   <meta name="description" content="Donkey Head Cervejaria: produção local de cerveja artesanal em Fortaleza, garantindo uma cerveja extremamente fresca. Unidades Aldeota e Maraponga.">
-  <meta name="theme-color" content="#9885a5">
+  <meta name="theme-color" content="#16110d">
   <link rel="canonical" href="https://www.donkeyheadcervejaria.com.br/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Donkey Head Cervejaria">
@@ -90,7 +90,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=24">
+  <link rel="stylesheet" href="assets/css/style.css?v=23">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",

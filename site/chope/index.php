@@ -34,13 +34,13 @@ function detalhe_delivery(array $c): string
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Chope delivery · Donkey Head Cervejaria</title>
   <meta name="description" content="Leve o chope da Donkey Head Cervejaria para o seu evento em Fortaleza: rótulos, preço do litro, chopeira em comodato, instalação e retirada.">
-  <meta name="theme-color" content="#9885a5">
+  <meta name="theme-color" content="#16110d">
   <link rel="canonical" href="https://www.donkeyheadcervejaria.com.br/chope/">
   <link rel="icon" href="../favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=24">
+  <link rel="stylesheet" href="../assets/css/style.css?v=23">
 </head>
 <body>
   <header class="site-header">

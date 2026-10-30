@@ -1,16 +1,12 @@
 :root {
-  /* Identidade 2026: lilás e bege das artes da Donkey Head Cervejaria, letras pretas */
-  --lilas: #9885a5;
-  --bege: #e2d3bc;
-  --bg: var(--lilas);
-  --bg-alt: var(--bege);
-  --surface: #efe5d4;
-  --line: rgba(20, 16, 20, .22);
-  --text: #141014;
-  --muted: #2b2231;
-  --amber: #141014; /* destaque: preto (o laranja não tem contraste no lilás) */
-  --laranja: #e9a23b;
-  --cream: #141014;
+  --bg: #16110d;
+  --bg-alt: #1e1712;
+  --surface: #261e18;
+  --line: #3d3128;
+  --text: #f4ece1;
+  --muted: #bcab97;
+  --amber: #e9a23b;
+  --cream: #f6e7c8;
   --whats: #25d366;
   --radius: 14px;
   --max: 1160px;
@@ -369,33 +365,3 @@ a.filtro { text-decoration: none; color: var(--text); }
 .btn-grande { font-size: 1.15rem; padding: 16px 34px; }
 .delivery-duvidas { text-align: center; color: var(--muted); margin-top: 14px; }
 .delivery-pedido-topo { margin: -8px 0 36px; }
-
-/* ===== Tema lilás e bege (out/2026): ajustes do que tinha cor fixa do tema escuro ===== */
-.eyebrow { color: var(--text); font-weight: 700; display: flex; align-items: center; gap: .6em; }
-.eyebrow::before { content: ""; width: 22px; height: 2px; background: currentColor; flex: none; }
-.centro .eyebrow, .section-head.centro .eyebrow { justify-content: center; }
-.btn-primary, .tab[aria-selected="true"], .tap-num, .selo, .show-data, .cal-dia.hoje .cal-num { background: var(--text); color: var(--bege); border-color: var(--text); }
-.btn-primary:hover { background: #2e2430; }
-.site-header { background: rgba(152, 133, 165, .94); border-bottom-color: rgba(20, 16, 20, .18); }
-.hero::after { background: linear-gradient(90deg, rgba(14, 10, 16, .88) 0%, rgba(14, 10, 16, .62) 50%, rgba(14, 10, 16, .3) 100%); }
-@media (max-width: 760px) { .hero::after { background: rgba(14, 10, 16, .7); } }
-.hero .lead { color: #f4ece1; }
-.section-feature { background: var(--bege); border-block: 0; }
-.section-alt { background: var(--bege); }
-.section-alt .beer-img, .section-alt .tap, .section-feature .btn-ghost { background: #f7f0e3; }
-.tap { background: var(--surface); }
-.contagem { background: rgba(20, 16, 20, .12); }
-.ficha div { background: rgba(20, 16, 20, .07); }
-.modal .onde { background: rgba(152, 133, 165, .25); color: var(--text); }
-.agenda-card, .delivery-rotulo { background: var(--surface); }
-.historia-modal { background: var(--surface); }
-.site-footer { background: var(--text); color: var(--bege); border-top: 0; }
-.site-footer a { color: var(--bege); }
-.cal-u-aldeota { --cal-cor: var(--laranja); }
-.cal-vazio, .cal-dia { background: var(--surface); }
-.cal-sede { background: rgba(255, 255, 255, .16); }
-.cal-sede-titulo { color: var(--text); }
-.cal-linha-onde { color: var(--text); }
-.delivery-mais { color: var(--bege); }
-.filtro.ativo { background: var(--text); color: var(--bege); border-color: var(--text); }
-.btn-ghost:hover, .agenda-card:hover .btn-ghost { background: var(--text); color: var(--bege); border-color: var(--text); }

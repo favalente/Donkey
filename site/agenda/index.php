@@ -30,13 +30,13 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agenda de shows · Donkey Head Cervejaria</title>
   <meta name="description" content="Programação de música ao vivo da Donkey Head Cervejaria em Fortaleza: unidades Aldeota e Maraponga.">
-  <meta name="theme-color" content="#9885a5">
+  <meta name="theme-color" content="#16110d">
   <link rel="canonical" href="https://www.donkeyheadcervejaria.com.br/agenda/">
   <link rel="icon" href="../favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=24">
+  <link rel="stylesheet" href="../assets/css/style.css?v=23">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
   <script type="application/ld+json">
   <?= json_encode(array_map(fn($s) => [
