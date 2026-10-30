@@ -426,3 +426,55 @@ h1, h2, h3 { overflow-wrap: anywhere; }
 fieldset.produto { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px 4px; margin: 0 0 14px; background: var(--surface); }
 fieldset.produto legend { font-weight: 700; padding: 0 6px; }
 fieldset.produto.fixo { border-style: dashed; }
+/* Brassagem: tanques virtuais e o caderno do lote */
+.grade-tanques { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px; margin: 14px 0 26px; }
+.tanque { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); border-top: 8px solid var(--amber); color: var(--text); text-decoration: none; box-shadow: 0 1px 3px rgba(0, 0, 0, .06); }
+.tanque:hover { background: var(--hover); }
+.tanque.st-maturando { border-top-color: var(--azul-txt); }
+.tanque.livre { border-top-color: var(--line); border-style: dashed; border-top-style: solid; }
+.tanque.livre .tanque-cerveja { color: var(--ambar-txt); }
+.tanque > span { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+.tanque-nome { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700; color: var(--text) !important; }
+.tanque-cerveja { font-size: 1.3rem; line-height: 1.2; overflow-wrap: anywhere; }
+.tanque-medidas { display: flex; flex-wrap: wrap; gap: 6px; }
+.tanque-medidas b { background: var(--caixa); border: 1px solid var(--line); border-radius: 8px; padding: 2px 8px; color: var(--text); font-size: .95rem; }
+.tanque-ultima { font-style: italic; }
+.busca-lotes { display: flex; gap: 8px; align-items: center; }
+.busca-lotes input { margin-top: 0; }
+.lista-lotes { list-style: none; padding: 0; margin: 10px 0 24px; }
+.lista-lotes > li { border-bottom: 1px solid var(--line); }
+.lista-lotes > li > a, .lista-lotes summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 12px 6px; color: var(--text); text-decoration: none; cursor: pointer; }
+.lista-lotes > li > a strong { flex: 1 1 100%; }
+.lista-lotes > li > a span, .lista-lotes summary span { color: var(--muted); font-size: .9rem; }
+.caderno { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 24px; }
+.caderno details { margin: 6px 0 14px; }
+.caderno details > summary { cursor: pointer; color: var(--ambar-txt); font-weight: 600; }
+.caderno details > summary.escondido { display: none; }
+.caderno-cabecalho { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 16px; margin: 0 0 8px; }
+.caderno-cabecalho dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.caderno-cabecalho dd { margin: 0; font-weight: 700; font-size: 1.1rem; overflow-wrap: anywhere; }
+.caderno-titulo { text-align: center; font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 10px; }
+.caderno-brassagem { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.caderno-brassagem > div { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; }
+.caderno-brassagem span { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.caderno-brassagem strong { font-size: 1.4rem; }
+.caderno-brassagem small { color: var(--muted); }
+.caderno-obs { margin: 10px 0 0; overflow-wrap: anywhere; }
+.form-registro { background: var(--caixa); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.form-registro label { margin-bottom: 10px; }
+@media (max-width: 520px) { .form-registro .quatro, .caderno .quatro { grid-template-columns: 1fr 1fr; gap: 0 10px; } }
+.caderno-linhas { list-style: none; padding: 0; margin: 0; }
+.caderno-linhas > li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.linha-data { font-weight: 700; display: flex; flex-direction: column; }
+.linha-data small, .linha-autor { color: var(--muted); font-weight: 400; font-size: .78rem; }
+.linha-texto { overflow-wrap: anywhere; }
+.linha-medidas { display: inline-block; margin-right: 6px; color: var(--ambar-txt); }
+.linha-autor { display: block; }
+.caderno-linhas details { margin: 4px 0 0; }
+.caderno-linhas details > summary { font-size: .85rem; font-weight: 400; }
+.perigo-link { color: var(--erro); }
+@media print {
+  .topo, .sem-impressao, .ok, .erro, footer, .rodape { display: none !important; }
+  body { background: #fff; color: #000; }
+  .caderno { border: 0; padding: 0; }
+}

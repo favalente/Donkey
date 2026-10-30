@@ -69,6 +69,7 @@ function usuarios_tela(string $tela): bool
         'financeiro' => 'Agenda e bandas com cachê e consumação, relatório financeiro',
         'designer' => 'Só visualiza: agenda do mês e bandas (nome, tributo, Instagram e fotos para baixar)',
         'barman' => 'Tap list e cervejas',
+        'cervejeiro' => 'Brassagem: tanques e cadernos dos lotes',
     ];
     ?>
       <div class="titulo-acao">

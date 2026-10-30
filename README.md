@@ -58,6 +58,17 @@ Painel → **📄 Orçamentos** (administrador e financeiro): a proposta que vai
 - **Gerar pedido para cliente preencher:** gera o link do pedido com os mesmos itens e preços travados. O cliente só confere o pedido, completa os dados (CPF ou CNPJ, endereço, contato, horário), anexa o comprovante do Pix e assina. Se o orçamento não tiver frete, ele escolhe Fortaleza ou outra cidade como no pedido normal.
 - Padrões (validade e dados bancários) em "⚙ Padrões do orçamento". Dados em `dados/orcamentos.json`.
 
+## Brassagem
+
+O caderno de produção em versão digital (painel → 🧪 Brassagem). A fábrica é única e atende as duas sedes.
+
+- **Tanques:** cadastre em ⚙ Tanques (nome, capacidade e, se quiser, "litros por cm" para converter a litragem em cm para litros). Tanque com histórico não se exclui: marque "Fora de uso".
+- **Tanques virtuais:** a tela mostra cada tanque com o lote que está nele (cerveja, lote, dia da produção, últimas medidas de Brix, pressão e temperatura e a última anotação) ou "Livre".
+- **Caderno do lote:** o cabeçalho do caderno de papel (cerveja, data, lote, levedura, tanque, PF e OG em °Brix com a litragem em cm, Obs.) e o acompanhamento da fermentação e maturação: data, Brix, pressão (bar), temperatura (°C) e anotação livre, com quem anotou. Dá para corrigir ou apagar uma anotação e imprimir o caderno.
+- **Fluxo:** Fermentando → Passar para maturação → Finalizar lote (libera o tanque). Um tanque recebe um lote por vez; o número do lote não se repete.
+- **Acesso:** administrador e a função **Cervejeiro** (que só vê a Brassagem).
+- Dados em `dados/brassagem.json` (só no servidor), com cópia diária em `dados/backup`.
+
 ## Contratos com assinatura eletrônica
 
 Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento corporativo no pub** (texto do contrato jurídico da casa, com o Anexo I – Menu) e **Venda de chope com comodato de equipamentos** (equipamentos com valor de reposição já preenchidos).
