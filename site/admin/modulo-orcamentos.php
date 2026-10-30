@@ -29,6 +29,42 @@ function orcamentos_ler_form(array $p): array
     ];
 }
 
+// Campos do contrato a partir do orçamento: itens com quantidade em litros ("50 L") viram chope,
+// o item de frete vira o frete e os demais (copos, tirador…) entram como adicionais com o preço do orçamento
+function orcamentos_campos_contrato(array $k): array
+{
+    $f = array_merge(dh_contrato_campos_padrao('comodato'), ['contratante_nome' => $k['cliente']['nome'], 'contratante_doc' => $k['cliente']['doc'], 'contratante_telefone' => $k['cliente']['telefone'],
+        'contratante_email' => $k['cliente']['email'], 'contratante_endereco' => $k['cliente']['endereco'], 'entrega_endereco' => $k['cliente']['endereco'],
+        'entrega_data' => $k['data_evento'], 'devolucao_data' => $k['data_evento'] ? date('Y-m-d', strtotime($k['data_evento'] . ' +1 day')) : '', 'itens' => [], 'extras' => [], 'pagamento' => 'pix']);
+    $produtos = dh_produtos_adicionais();
+    foreach ($k['itens'] as $n => $it) {
+        $total = dh_orcamento_item_total($it);
+        $litros = preg_match('/^\s*(\d+(?:[.,]\d+)?)\s*l\s*$/i', $it['quant'], $m) ? str_replace(',', '.', $m[1]) : '';
+        if ($litros !== '' && (float) $litros > 0) {
+            $f['itens'][] = ['descricao' => trim(preg_replace('/^barril\s+(de\s+)?chope\s+/iu', '', $it['descricao'])), 'litros' => $litros,
+                'valor_litro' => $it['valor'] !== '' ? $it['valor'] : number_format($total / (float) $litros, 2, '.', ''), 'comodato' => false];
+        } elseif (stripos(dh_sem_acento($it['descricao']), 'frete') !== false) {
+            $f['frete'] = number_format((float) $f['frete'] + $total, 2, '.', '');
+        } elseif ($total > 0) {
+            // Quantidade inteira ("2") vira a quantidade do adicional; senão, 1 pelo total da linha
+            $qtd = preg_match('/^\s*(\d+)\s*$/', $it['quant'], $m) && (int) $m[1] > 0 ? (int) $m[1] : 1;
+            $id = 'orc-' . $n;
+            foreach ($produtos as $p) {
+                if (dh_sem_acento(mb_strtolower($p['nome'])) === dh_sem_acento(mb_strtolower($it['descricao']))) {
+                    $id = $p['id'];
+                }
+            }
+            $f['extras'][] = ['id' => $id, 'descricao' => $it['descricao'], 'detalhe' => $it['detalhe'], 'valor' => number_format($total / $qtd, 2, '.', ''), 'unidade' => '', 'qtd' => $qtd];
+        }
+    }
+    // Desconto do orçamento vai para o desconto do contrato (abatido do chope)
+    if (dh_orcamento_desconto($k) > 0) {
+        $f['desconto'] = number_format(dh_orcamento_desconto($k), 2, '.', '');
+    }
+    $f['observacoes'] = 'Pagamento: ' . DH_ORCAMENTO_PAGAMENTO . "\nConforme orçamento " . $k['numero'] . '.';
+    return $f;
+}
+
 function orcamentos_acao(string $acao): bool
 {
     global $usuario, $telaErro;
@@ -139,7 +175,10 @@ function orcamentos_acao(string $acao): bool
             ir('./?acao=orcamentos');
 
         case 'orcamento-contrato':
-            // Vira um contrato de venda de chope com comodato (rascunho), já com cliente, chope e frete
+        case 'orcamento-pedido':
+            // Contrato de venda de chope com comodato, já com cliente, chope, adicionais, frete e desconto.
+            // "Virar contrato": rascunho que a Donkey revisa. "Cliente preenche": link de pedido com os itens
+            // e os preços do orçamento travados; o cliente completa os dados, anexa o comprovante e assina.
             exigir_post();
             exigir('contratos');
             $o = dh_orcamentos();
@@ -148,36 +187,29 @@ function orcamentos_acao(string $acao): bool
                 throw new RuntimeException('Orçamento não encontrado.');
             }
             $k = $o['orcamentos'][$i];
-            $f = dh_contrato_campos_padrao('comodato');
-            $f = array_merge($f, ['contratante_nome' => $k['cliente']['nome'], 'contratante_doc' => $k['cliente']['doc'], 'contratante_telefone' => $k['cliente']['telefone'],
-                'contratante_email' => $k['cliente']['email'], 'contratante_endereco' => $k['cliente']['endereco'], 'entrega_endereco' => $k['cliente']['endereco'],
-                'entrega_data' => $k['data_evento'], 'devolucao_data' => $k['data_evento'] ? date('Y-m-d', strtotime($k['data_evento'] . ' +1 day')) : '', 'itens' => []]);
-            $outros = [];
-            foreach ($k['itens'] as $it) {
-                $litros = preg_match('/^\s*(\d+(?:[.,]\d+)?)\s*l\s*$/i', $it['quant'], $m) ? str_replace(',', '.', $m[1]) : '';
-                if ($litros !== '') {
-                    $f['itens'][] = ['descricao' => trim(preg_replace('/^barril\s+(de\s+)?chope\s+/iu', '', $it['descricao'])), 'litros' => $litros,
-                        'valor_litro' => $it['valor'] !== '' ? $it['valor'] : number_format(dh_orcamento_item_total($it) / (float) $litros, 2, '.', ''), 'comodato' => false];
-                } elseif (stripos(dh_sem_acento($it['descricao']), 'frete') !== false) {
-                    $f['frete'] = number_format(dh_orcamento_item_total($it), 2, '.', '');
-                } else {
-                    $outros[] = $it['descricao'] . ($it['quant'] !== '' ? ' (' . $it['quant'] . ')' : '') . ': ' . dh_moeda(dh_orcamento_item_total($it));
-                }
+            if ($k['status'] === 'contrato') {
+                throw new RuntimeException('Este orçamento já virou contrato. Para mudar, use "Duplicar".');
             }
-            // Desconto do orçamento vai para o desconto do contrato (abatido do chope)
-            if (dh_orcamento_desconto($k) > 0) {
-                $f['desconto'] = number_format(dh_orcamento_desconto($k), 2, '.', '');
+            $paraCliente = $acao === 'orcamento-pedido';
+            $f = orcamentos_campos_contrato($k);
+            if ($paraCliente && !array_filter($f['itens'])) {
+                throw new RuntimeException('O orçamento não tem chope em litros (ex.: "50 L" na quantidade). Sem isso, use "Virar contrato".');
             }
-            $f['observacoes'] = trim(($outros ? "Também incluso: " . implode('; ', $outros) . '.' : '') . "\nPagamento: " . DH_ORCAMENTO_PAGAMENTO . "\nConforme orçamento " . $k['numero'] . '.');
             $c = dh_contratos();
-            $novo = ['id' => dh_id_novo('c'), 'token' => bin2hex(random_bytes(16)), 'numero' => '', 'tipo' => 'comodato', 'status' => 'rascunho',
+            $novo = ['id' => dh_id_novo('c'), 'token' => bin2hex(random_bytes(16)), 'numero' => '', 'tipo' => 'comodato', 'status' => $paraCliente ? 'preenchimento' : 'rascunho',
                 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'assinaturas' => [], 'campos' => $f, 'orcamento' => $k['numero']];
+            if ($paraCliente) {
+                $novo['campos']['travado'] = true;
+                $novo['referencia'] = $k['cliente']['nome'] !== '' ? $k['cliente']['nome'] : $k['numero'];
+            }
             $c['contratos'][] = $novo;
             dh_contratos_salvar($c);
             $o['orcamentos'][$i]['status'] = 'contrato';
             $o['orcamentos'][$i]['contrato_id'] = $novo['id'];
             dh_orcamentos_salvar($o);
-            ir('./?acao=contrato&id=' . $novo['id'], 'Contrato criado a partir do orçamento ' . $k['numero'] . '. Confira os itens, complete o que faltar e gere para assinatura.');
+            ir('./?acao=contrato&id=' . $novo['id'], $paraCliente
+                ? 'Pedido criado a partir do orçamento ' . $k['numero'] . '. Envie o link: o cliente completa os dados, anexa o comprovante e assina.'
+                : 'Contrato criado a partir do orçamento ' . $k['numero'] . '. Confira os itens, complete o que faltar e gere para assinatura.');
 
         case 'orcamentos-config-salvar':
             exigir_post();
@@ -237,6 +269,7 @@ function orcamentos_tela_lista(): void
               <?php endif; ?>
               <?php if ($k['status'] !== 'contrato'): ?>
                 <form method="post" action="./?acao=orcamento-contrato" onsubmit="return confirm('Criar o contrato a partir do orçamento <?= e($k['numero']) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">📝 Virar contrato</button></form>
+                <form method="post" action="./?acao=orcamento-pedido" onsubmit="return confirm('Gerar o link para o cliente preencher os dados e assinar, com os itens e preços do orçamento <?= e($k['numero']) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">🧾 Cliente preenche</button></form>
               <?php elseif (!empty($k['contrato_id'])): ?>
                 <a class="btn secundario" href="./?acao=contrato&amp;id=<?= e($k['contrato_id']) ?>">📝 Ver contrato</a>
               <?php endif; ?>

@@ -40,6 +40,15 @@ function dh_contrato_ler_form(string $tipo, array $p): array
             $f['extras'][] = dh_produto_extra($ad, $q);
         }
     }
+    // Adicionais que vieram do orçamento e não estão no cadastro: mantêm a descrição e o preço do orçamento
+    foreach ((array) ($p['extras_outros'] ?? []) as $x) {
+        $q = min(200, max(0, (int) ($x['qtd'] ?? 0)));
+        $d = mb_substr(trim((string) ($x['descricao'] ?? '')), 0, 160);
+        if ($q > 0 && $d !== '' && dh_valor($x['valor'] ?? '') !== '') {
+            $f['extras'][] = ['id' => mb_substr((string) ($x['id'] ?? 'orc'), 0, 30), 'descricao' => $d, 'detalhe' => mb_substr(trim((string) ($x['detalhe'] ?? '')), 0, 160),
+                'valor' => dh_valor($x['valor']), 'unidade' => '', 'qtd' => $q];
+        }
+    }
     $f['observacoes'] = mb_substr(trim((string) ($p['observacoes'] ?? '')), 0, 2000);
     $f['itens'] = [];
     foreach ((array) ($p['itens'] ?? []) as $it) {
@@ -584,7 +593,7 @@ function contratos_card(array $k): void
           <?php if ($k['status'] === 'rascunho'): ?>
             <a class="btn primario" href="<?= e($abrir) ?>">✏️ <?= $k['numero'] !== '' ? 'Continuar editando' : 'Editar rascunho' ?></a>
           <?php elseif ($k['status'] === 'preenchimento'): ?>
-            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\nPara fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n" . $link)) ?>">📲 Enviar link</a>
+            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\n" . (!empty($k['campos']['travado']) ? "Para fechar o pedido de chope do orçamento, preencha os seus dados, anexe o comprovante do Pix e assine o contrato por este link:\n" : "Para fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n") . $link)) ?>">📲 Enviar link</a>
             <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($link) ?>').then(function(){ alert('Link copiado!'); })">🔗 Copiar link</button>
           <?php elseif ($k['status'] === 'consulta'): ?>
             <a class="btn primario" href="<?= e($abrir) ?>">🚚 Definir frete</a>
@@ -807,13 +816,26 @@ function contratos_tela_contrato(): void
     $link = dh_url_site() . 'contrato/?t=' . $k['token'];
     if ($k['status'] === 'preenchimento') {
         ?>
+          <?php if (!empty($k['campos']['travado'])): $f = $k['campos']; ?>
+            <p class="dica">Pedido do orçamento <?= e($k['orcamento'] ?? '') ?>: o chope, os adicionais, o frete e o desconto já estão definidos e o cliente não muda. Ele completa os dados (CPF/CNPJ, endereço, contato, horário), anexa o comprovante e assina. Você recebe um e-mail quando ele terminar.</p>
+            <ul class="resumo-pedido">
+              <?php foreach ($f['itens'] as $it): ?><li><?= e($it['descricao']) ?>: <?= e(dh_litros($it['litros'])) ?> L × <?= e(dh_moeda($it['valor_litro'])) ?></li><?php endforeach; ?>
+              <?php foreach (dh_comodato_extras($f) as $x): ?><li><?= (int) $x['qtd'] ?> × <?= e($x['descricao']) ?>: <?= e(dh_moeda((float) $x['valor'] * (int) $x['qtd'])) ?></li><?php endforeach; ?>
+              <?php if ((float) ($f['desconto'] ?? 0) > 0): ?><li>Desconto: − <?= e(dh_moeda($f['desconto'])) ?></li><?php endif; ?>
+              <li>Frete: <?= $f['frete'] !== '' ? e(dh_moeda($f['frete'])) : 'o cliente escolhe (Fortaleza ' . e(dh_moeda(dh_frete_fortaleza())) . ')' ?></li>
+              <li>Total: <strong><?= e(dh_moeda(dh_comodato_total($f))) ?></strong><?= $f['frete'] === '' ? ' + frete' : '' ?></li>
+            </ul>
+          <?php else: ?>
           <p class="dica">O cliente abre o link, escolhe os rótulos e a litragem, preenche os dados dele e já assina. Você recebe um e-mail quando ele terminar; depois é só assinar pela Donkey aqui.</p>
+          <?php endif; ?>
           <?php if (!empty($k['referencia'])): ?><p>Referência: <strong><?= e($k['referencia']) ?></strong></p><?php endif; ?>
+          <?php if (empty($k['campos']['travado'])): ?>
           <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= e(dh_moeda(dh_frete_fortaleza())) ?> em Fortaleza</strong>; em outras cidades, o cliente digita o valor combinado com o vendedor. O cliente anexa o comprovante de pagamento no pedido.</p>
+          <?php endif; ?>
           <h2>Enviar ao cliente</h2>
           <input class="link-banda" value="<?= e($link) ?>" readonly onclick="this.select()">
           <p class="botoes-link">
-            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\nPara fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n" . $link)) ?>">Enviar pelo WhatsApp</a>
+            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\n" . (!empty($k['campos']['travado']) ? "Para fechar o pedido de chope do orçamento, preencha os seus dados, anexe o comprovante do Pix e assine o contrato por este link:\n" : "Para fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n") . $link)) ?>">Enviar pelo WhatsApp</a>
             <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($link) ?>').then(function(){ alert('Link copiado!'); })">Copiar link</button>
           </p>
           <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('Excluir este pedido? O link deixa de funcionar.');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo">Excluir pedido</button></form>
@@ -982,6 +1004,10 @@ function contratos_form(array $k): void
           <label>Frete de ida e volta (R$) <small>(em branco = incluso)</small><input name="frete" value="<?= $v($f['frete']) ?>" inputmode="decimal" class="calc"></label>
           <?php $qtdAtual = array_column(dh_comodato_extras($f), 'qtd', 'id'); foreach (dh_produtos_adicionais() as $ad): ?>
             <label><?= e($ad['nome']) ?> <small>(<?= e(dh_moeda($ad['preco'])) ?><?= $ad['unidade'] !== '' ? ' por ' . e($ad['unidade']) : '' ?><?= $ad['detalhe'] !== '' ? ' · ' . e($ad['detalhe']) : '' ?>; 0 = não)</small><input name="extras[<?= e($ad['id']) ?>]" value="<?= (int) ($qtdAtual[$ad['id']] ?? 0) ?>" inputmode="numeric" class="calc qtd-extra" data-preco="<?= e($ad['preco']) ?>"></label>
+          <?php endforeach; ?>
+          <?php $ids = array_column(dh_produtos_adicionais(), 'id'); foreach (array_values(array_filter(dh_comodato_extras($f), fn($x) => !in_array($x['id'], $ids, true))) as $n => $x): ?>
+            <label><?= e($x['descricao']) ?> <small>(<?= e(dh_moeda($x['valor'])) ?> cada, do orçamento; 0 = tirar)</small><input name="extras_outros[<?= $n ?>][qtd]" value="<?= (int) $x['qtd'] ?>" inputmode="numeric" class="calc qtd-extra" data-preco="<?= e($x['valor']) ?>"></label>
+            <?php foreach (['id', 'descricao', 'detalhe', 'valor'] as $campo): ?><input type="hidden" name="extras_outros[<?= $n ?>][<?= $campo ?>]" value="<?= e($x[$campo] ?? '') ?>"><?php endforeach; ?>
           <?php endforeach; ?>
           <label>Desconto no chope (R$) <small>(opcional<?= !empty($f['cupom']) ? '; cupom ' . e($f['cupom']) : '' ?>)</small><input name="desconto" value="<?= $v($f['desconto'] ?? '') ?>" inputmode="decimal" class="calc"></label>
           <p class="aviso" id="total-comodato"></p>

@@ -4,7 +4,6 @@
 
 const DH_PERIODOS = ['12m' => 'Últimos 12 meses', '6m' => 'Últimos 6 meses', '3m' => 'Últimos 3 meses', 'ano' => 'Este ano', 'ano-passado' => 'Ano passado', 'tudo' => 'Todo o histórico'];
 const DH_MESES_CURTOS = [1 => 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-const DH_DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 function relatorios_acao(string $acao): bool
 {

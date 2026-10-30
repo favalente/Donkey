@@ -25,14 +25,29 @@ $adicionais = dh_produtos_pedido();
 $qtdExtra = fn(string $id) => max(0, (int) ($_POST['extras'][$id] ?? 0));
 $freteFortaleza = dh_frete_fortaleza();
 $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
+// Pedido de um orçamento: o chope, os adicionais, o desconto e o frete (se definido) já vêm prontos
+$travado = !empty($f['travado']);
+$freteTravado = $travado && (string) $f['frete'] !== '';
+$baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (float) ($f['desconto'] ?? 0)) + dh_comodato_extras_total($f) : 0;
 ?>
 <form method="post" class="papel pedido" id="pedido" enctype="multipart/form-data">
   <?= $csrf ?><input type="hidden" name="op" value="preencher">
   <header class="timbre"><img src="../assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="56"><span><?= e(DH_EMPRESA['razao']) ?><br>CNPJ <?= e(DH_EMPRESA['cnpj']) ?></span></header>
   <h1>Pedido de chope</h1>
-  <p class="numero">Escolha o chope, preencha os seus dados e, em seguida, assine o contrato.</p>
+  <p class="numero"><?= $travado ? 'Confira o pedido, preencha os seus dados e, em seguida, assine o contrato.' : 'Escolha o chope, preencha os seus dados e, em seguida, assine o contrato.' ?></p>
 
   <h2>1. Chope</h2>
+  <?php if ($travado): ?>
+    <p class="legal">Conforme o orçamento<?= !empty($k['orcamento']) ? ' ' . e($k['orcamento']) : '' ?> da Donkey Head Cervejaria. Para mudar algum item, fale com o vendedor.</p>
+    <table class="itens"><tr><th>Item</th><th>Qtd.</th><th>Valor</th></tr>
+      <?php foreach ($f['itens'] as $it): ?><tr><td><?= e($it['descricao']) ?><?= !empty($it['comodato']) ? ' (em comodato)' : '' ?></td><td><?= e(dh_litros($it['litros'])) ?> L × <?= e(dh_moeda($it['valor_litro'])) ?></td><td><?= !empty($it['comodato']) ? '—' : e(dh_moeda((float) $it['litros'] * (float) $it['valor_litro'])) ?></td></tr><?php endforeach; ?>
+      <?php foreach (dh_comodato_extras($f) as $x): ?><tr><td><?= e($x['descricao']) ?><?= ($x['detalhe'] ?? '') !== '' ? ' <small>(' . e($x['detalhe']) . ')</small>' : '' ?></td><td><?= (int) $x['qtd'] ?></td><td><?= e(dh_moeda((float) $x['valor'] * (int) $x['qtd'])) ?></td></tr><?php endforeach; ?>
+    </table>
+    <table class="itens resumo"><tr><td>Chope</td><td><?= e(dh_moeda(dh_comodato_chope($f))) ?></td></tr>
+      <?php if ((float) ($f['desconto'] ?? 0) > 0): ?><tr><td>Desconto</td><td>− <?= e(dh_moeda(min(dh_comodato_chope($f), (float) $f['desconto']))) ?></td></tr><?php endif; ?>
+      <?php if (dh_comodato_extras($f)): ?><tr><td>Adicionais</td><td><?= e(dh_moeda(dh_comodato_extras_total($f))) ?></td></tr><?php endif; ?>
+      <tr><td>Frete (instalação e retirada)</td><td id="t-frete"><?= $freteTravado ? e(dh_moeda($f['frete'])) : '—' ?></td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
+  <?php else: ?>
   <?php if (!$cervejas): ?><p class="msg erro">Os rótulos para evento ainda não foram cadastrados. Fale com a Donkey Head Cervejaria.</p><?php endif; ?>
   <div id="linhas-chope">
     <?php foreach ($itens as $n => $it): ?>
@@ -84,6 +99,7 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
   </div>
 
   <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr id="l-desconto" hidden><td id="t-desconto-rot">Desconto</td><td id="t-desconto">R$ 0,00</td></tr><tr id="l-extras" hidden><td>Adicionais</td><td id="t-extras">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
+  <?php endif; ?>
 
   <h2>2. Equipamentos em comodato</h2>
   <p class="legal">Já incluídos no pedido, com o valor de reposição em caso de dano ou perda.</p>
@@ -94,25 +110,25 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
   <h2>3. Seus dados</h2>
   <label>Nome completo <input name="nome" required autocomplete="name" value="<?= $v('nome', $f['contratante_nome']) ?>"></label>
   <div class="duas">
-    <label>CPF <input name="cpf" required inputmode="numeric" placeholder="000.000.000-00" value="<?= $v('cpf', $doc !== '' ? dh_cpf_formatar($doc) : '') ?>"></label>
+    <label><?= $travado ? 'CPF ou CNPJ' : 'CPF' ?> <input name="cpf" required inputmode="numeric" placeholder="<?= $travado ? 'CPF ou CNPJ' : '000.000.000-00' ?>" value="<?= $v('cpf', $doc !== '' ? dh_cpf_formatar($doc) : '') ?>"></label>
     <label>Celular <input name="celular" required inputmode="tel" autocomplete="tel" placeholder="(85) 99999-9999" value="<?= $v('celular', $f['contratante_telefone']) ?>"></label>
   </div>
   <label>Endereço de entrega <input name="endereco" required autocomplete="street-address" value="<?= $v('endereco', $f['entrega_endereco']) ?>"></label>
   <div class="duas">
-    <label>Data de recebimento do equipamento <input type="date" name="entrega_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('entrega_data') ?>"></label>
-    <label>Horário de entrega estimado <input type="time" name="entrega_hora" required value="<?= $v('entrega_hora') ?>"></label>
+    <label>Data de recebimento do equipamento <input type="date" name="entrega_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('entrega_data', $f['entrega_data'] ?? '') ?>"></label>
+    <label>Horário de entrega estimado <input type="time" name="entrega_hora" required value="<?= $v('entrega_hora', $f['entrega_hora'] ?? '') ?>"></label>
   </div>
   <p class="obs">O horário é apenas uma estimativa; o mesmo deve ser combinado diretamente com o entregador.</p>
-  <label>Data de devolução do equipamento <input type="date" name="devolucao_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('devolucao_data') ?>"></label>
+  <label>Data de devolução do equipamento <input type="date" name="devolucao_data" required min="<?= date('Y-m-d') ?>" value="<?= $v('devolucao_data', $f['devolucao_data'] ?? '') ?>"></label>
   <p class="obs">O equipamento deve ser devolvido no máximo no dia seguinte ao evento, exceto quando acordado com a Donkey Head Cervejaria.</p>
   <p class="rotulo-pedido">A entrega é em Fortaleza?</p>
   <div class="opcoes-local">
-    <label class="check"><input type="radio" name="local" value="fortaleza" required <?= $local === 'fortaleza' ? 'checked' : '' ?>> Sim, em Fortaleza <small>(frete de <?= e(dh_moeda($freteFortaleza)) ?>, instalação e retirada)</small></label>
-    <label class="check"><input type="radio" name="local" value="outra" <?= $local === 'outra' ? 'checked' : '' ?>> Não, em outra cidade <small>(digite o valor combinado com o vendedor)</small></label>
+    <label class="check"><input type="radio" name="local" value="fortaleza" required <?= $local === 'fortaleza' ? 'checked' : '' ?>> Sim, em Fortaleza <small>(<?= $freteTravado ? 'frete conforme o orçamento' : 'frete de ' . e(dh_moeda($freteFortaleza)) . ', instalação e retirada' ?>)</small></label>
+    <label class="check"><input type="radio" name="local" value="outra" <?= $local === 'outra' ? 'checked' : '' ?>> Não, em outra cidade <small>(<?= $freteTravado ? 'frete conforme o orçamento' : 'digite o valor combinado com o vendedor' ?>)</small></label>
   </div>
   <div class="duas" id="campo-cidade" <?= $local === 'outra' ? '' : 'hidden' ?>>
     <label>Cidade da entrega <input name="cidade" value="<?= $v('cidade', $local === 'outra' ? $cidadeBase : '') ?>" placeholder="Ex.: Guaramiranga/CE"></label>
-    <label>Valor do frete (R$) <input name="frete_outra" id="frete-outra" inputmode="decimal" value="<?= $v('frete_outra') ?>" placeholder="Combinado com o vendedor"></label>
+    <label <?= $freteTravado ? 'hidden' : '' ?>>Valor do frete (R$) <input name="frete_outra" id="frete-outra" inputmode="decimal" value="<?= $v('frete_outra') ?>" placeholder="Combinado com o vendedor"></label>
   </div>
   <label>E-mail <small>(para a cópia do contrato e o código de assinatura)</small><input type="email" name="email" required autocapitalize="none" autocomplete="email" value="<?= $v('email', $f['contratante_email']) ?>"></label>
 
@@ -128,6 +144,29 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
   <?php endif; ?>
   <button class="btn grande" id="bt-pedido">Continuar para o contrato</button>
 </form>
+<?php if ($travado): ?>
+<script>
+  // Pedido do orçamento: só o frete (quando não veio definido) e a cidade mudam o total
+  (function () {
+    var form = document.getElementById('pedido'), base = <?= json_encode(round($baseTravada, 2)) ?>, freteFortaleza = <?= json_encode($freteFortaleza) ?>, freteFixo = <?= json_encode($freteTravado ? (float) $f['frete'] : null) ?>;
+    function brl(n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+    function num(x) { x = (x || '').trim(); if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); return parseFloat(x) || 0; }
+    function total() {
+      var local = (form.querySelector('[name=local]:checked') || {}).value;
+      var frete = freteFixo !== null ? freteFixo : (local === 'fortaleza' ? freteFortaleza : (local === 'outra' ? num(document.getElementById('frete-outra').value) : 0));
+      if (freteFixo === null) document.getElementById('t-frete').textContent = local ? brl(frete) : 'Fortaleza: ' + brl(freteFortaleza);
+      document.getElementById('t-total').textContent = brl(base + frete);
+      document.getElementById('t-pagar').textContent = brl(base + frete);
+      document.getElementById('campo-cidade').hidden = local !== 'outra';
+      document.querySelector('#campo-cidade [name=cidade]').required = local === 'outra';
+      document.getElementById('frete-outra').required = local === 'outra' && freteFixo === null;
+    }
+    form.addEventListener('input', total);
+    form.addEventListener('change', total);
+    total();
+  })();
+</script>
+<?php else: ?>
 <script>
   (function () {
     var form = document.getElementById('pedido'), freteFortaleza = <?= json_encode($freteFortaleza) ?>, cupom = null;
@@ -231,3 +270,4 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
     total();
   })();
 </script>
+<?php endif; ?>

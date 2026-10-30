@@ -80,6 +80,9 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         }
         $txt = fn($n, $max = 200) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($_POST[$n] ?? ''))), 0, $max);
         $f = $k['campos'];
+        // Pedido vindo de um orçamento: chope, adicionais, desconto e frete (se definido) ficam como estão
+        $travado = !empty($f['travado']);
+        $freteTravado = $travado && (string) $f['frete'] !== '';
         $f['contratante_nome'] = $txt('nome', 120);
         $f['contratante_doc'] = dh_so_digitos((string) ($_POST['cpf'] ?? ''));
         $f['contratante_telefone'] = $txt('celular', 30);
@@ -91,18 +94,22 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         $f['entrega_hora'] = (string) ($_POST['entrega_hora'] ?? '');
         $f['entrega_hora_estimada'] = true;
         // Adicionais pedidos (copos, tirador…), com o preço do cadastro neste momento
-        $f['copos_pacotes'] = 0;
-        $f['extras'] = [];
-        foreach (dh_produtos_pedido() as $ad) {
-            $q = min(200, max(0, (int) ($_POST['extras'][$ad['id']] ?? 0)));
-            if ($q > 0) {
-                $f['extras'][] = dh_produto_extra($ad, $q);
+        if (!$travado) {
+            $f['copos_pacotes'] = 0;
+            $f['extras'] = [];
+            foreach (dh_produtos_pedido() as $ad) {
+                $q = min(200, max(0, (int) ($_POST['extras'][$ad['id']] ?? 0)));
+                if ($q > 0) {
+                    $f['extras'][] = dh_produto_extra($ad, $q);
+                }
             }
         }
         // Fortaleza: frete fixo; outra cidade: o cliente digita o valor combinado com o vendedor
         $foraDeFortaleza = ($_POST['local'] ?? '') === 'outra';
         $f['cidade'] = $foraDeFortaleza ? $txt('cidade', 80) : 'Fortaleza/CE';
-        $f['frete'] = $foraDeFortaleza ? dh_valor($_POST['frete_outra'] ?? '') : number_format(dh_frete_fortaleza(), 2, '.', '');
+        if (!$freteTravado) {
+            $f['frete'] = $foraDeFortaleza ? dh_valor($_POST['frete_outra'] ?? '') : number_format(dh_frete_fortaleza(), 2, '.', '');
+        }
         // O comprovante é guardado assim que chega, para o cliente não ter de anexar de novo se algo no formulário estiver errado
         if (($_FILES['comprovante']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
             $cp = dh_comprovante_salvar($k['id'], $_FILES['comprovante']);
@@ -119,8 +126,10 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
             $f['comprovante'] = $cp;
         }
         $porId = array_column($cervejas, null, 'id');
-        $f['itens'] = [];
-        foreach (['itens' => false, 'comodato' => true] as $campo => $emComodato) {
+        if (!$travado) {
+            $f['itens'] = [];
+        }
+        foreach ($travado ? [] : ['itens' => false, 'comodato' => true] as $campo => $emComodato) {
             foreach ((array) ($_POST[$campo] ?? []) as $it) {
                 $cid = (string) ($it['cerveja'] ?? '');
                 $litros = dh_valor($it['litros'] ?? '');
@@ -136,8 +145,8 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         if (mb_strlen($f['contratante_nome']) < 5 || strpos($f['contratante_nome'], ' ') === false) {
             throw new RuntimeException('Escreva o seu nome completo.');
         }
-        if (!dh_cpf_valido($f['contratante_doc'])) {
-            throw new RuntimeException('CPF inválido. Confira os números.');
+        if (!dh_cpf_valido($f['contratante_doc']) && !($travado && dh_cnpj_valido($f['contratante_doc']))) {
+            throw new RuntimeException($travado ? 'CPF ou CNPJ inválido. Confira os números.' : 'CPF inválido. Confira os números.');
         }
         if (strlen(dh_so_digitos($f['contratante_telefone'])) < 10) {
             throw new RuntimeException('Informe o celular com DDD.');
@@ -169,12 +178,14 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         if ($foraDeFortaleza && mb_strlen($f['cidade']) < 3) {
             throw new RuntimeException('Informe a cidade da entrega.');
         }
-        if ($foraDeFortaleza && ($f['frete'] === '' || (float) $f['frete'] > 20000)) {
+        if ($foraDeFortaleza && !$freteTravado && ($f['frete'] === '' || (float) $f['frete'] > 20000)) {
             throw new RuntimeException('Digite o valor do frete combinado com o vendedor (use 0 se for grátis).');
         }
-        $f['cupom'] = '';
-        $f['desconto'] = '';
-        if (trim((string) ($_POST['cupom'] ?? '')) !== '') {
+        if (!$travado) {
+            $f['cupom'] = '';
+            $f['desconto'] = '';
+        }
+        if (!$travado && trim((string) ($_POST['cupom'] ?? '')) !== '') {
             $cp = dh_cupom_valido(dh_contratos(), (string) $_POST['cupom']);
             $f['cupom'] = $cp['codigo'];
             $f['desconto'] = number_format(dh_cupom_desconto($cp, dh_comodato_chope($f)), 2, '.', '');
@@ -190,7 +201,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         if (empty($c['config']['representante_cpf'])) {
             throw new RuntimeException('Não foi possível gerar o contrato agora. Fale com a Donkey Head Cervejaria.');
         }
-        if ($f['cupom'] !== '') {
+        if (($f['cupom'] ?? '') !== '') {
             // Confere de novo (outro pedido pode ter usado o último cupom) e conta o uso
             dh_cupom_valido($c, $f['cupom']);
             $c['cupons'][$f['cupom']]['usos'] = (int) $c['cupons'][$f['cupom']]['usos'] + 1;
@@ -206,7 +217,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         dh_email_equipe('Pedido de chope preenchido nº ' . $k['numero'],
             '<p>' . e($f['contratante_nome']) . ' preencheu o pedido de chope nº <b>' . e($k['numero']) . '</b> (entrega em ' . e($f['cidade']) . ', ' . e(dh_data_br($f['entrega_data'])) . ', total ' . e(dh_moeda(dh_comodato_total($f)))
             . ($f['extras'] ? ', ' . implode(', ', array_map(fn($x) => $x['qtd'] . ' × ' . $x['descricao'], $f['extras'])) : '')
-            . ($f['cupom'] !== '' ? ', com o cupom ' . e($f['cupom']) . ' (− ' . e(dh_moeda($f['desconto'])) . ')' : '') . ($foraDeFortaleza ? ', frete combinado de ' . e(dh_moeda($f['frete'])) : '') . ').</p>'
+            . (($f['cupom'] ?? '') !== '' ? ', com o cupom ' . e($f['cupom']) . ' (− ' . e(dh_moeda($f['desconto'])) . ')' : '') . ($foraDeFortaleza && !$freteTravado ? ', frete combinado de ' . e(dh_moeda($f['frete'])) : '') . ').</p>'
             . '<p><a href="' . e(dh_url_site() . 'admin/?acao=contrato-comprovante&id=' . $k['id']) . '">Ver o comprovante de pagamento</a> (entre no painel) e confira se o valor caiu.</p>'
             . '<p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>');
         $_SESSION['contrato_aviso'] = 'Pedido registrado! Confira o contrato abaixo e assine no final da página.';
