@@ -49,7 +49,7 @@ if ($k && $_SERVER['REQUEST_METHOD'] === 'POST') {
         dh_orcamentos_salvar($o);
         dh_email_equipe('Orçamento aprovado: ' . $k['numero'] . ' · ' . $k['cliente']['nome'],
             '<p><b>' . e($nome) . '</b> aprovou o orçamento <b>' . e($k['numero']) . '</b> (' . e($k['cliente']['nome']) . ', ' . e(dh_moeda(dh_orcamento_total($k))) . ').</p>'
-            . '<p>No painel, em Orçamentos, toque em "Virar contrato" para gerar o contrato.</p>');
+            . '<p>No painel, em Orçamentos, toque em "Gerar pedido a partir deste orçamento (eu preencho)" ou "Gerar pedido para cliente preencher".</p>');
         $_SESSION['orc_aviso'] = 'Orçamento aprovado! A Donkey Head Cervejaria vai entrar em contato para enviar o contrato.';
         header('Location: ./?t=' . $token, true, 303);
         exit;

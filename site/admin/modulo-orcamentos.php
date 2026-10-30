@@ -1,7 +1,7 @@
 <?php
 // Painel → Orçamentos: proposta antes do contrato. Puxa o cliente da base, sugere os itens (chope da
 // tabela do delivery, frete, copos, tirador), gera o PDF no modelo da casa, manda o link para o
-// cliente aprovar e vira contrato com um toque. Ver inc/orcamentos.php.
+// cliente aprovar e gera o pedido (contrato) com um toque. Ver inc/orcamentos.php.
 
 function orcamentos_ler_form(array $p): array
 {
@@ -88,7 +88,7 @@ function orcamentos_acao(string $acao): bool
                 $o['orcamentos'][] = $k;
             } else {
                 if ($o['orcamentos'][$i]['status'] === 'contrato') {
-                    throw new RuntimeException('Este orçamento já virou contrato. Use "Duplicar" para fazer outro.');
+                    throw new RuntimeException('Este orçamento já gerou um pedido. Use "Duplicar" para fazer outro.');
                 }
                 $k = array_merge($o['orcamentos'][$i], $f, ['emitido_em' => date('Y-m-d H:i:s'), 'editado_por' => $usuario['nome']]);
                 $o['orcamentos'][$i] = $k;
@@ -177,7 +177,7 @@ function orcamentos_acao(string $acao): bool
         case 'orcamento-contrato':
         case 'orcamento-pedido':
             // Contrato de venda de chope com comodato, já com cliente, chope, adicionais, frete e desconto.
-            // "Virar contrato": rascunho que a Donkey revisa. "Cliente preenche": link de pedido com os itens
+            // "Gerar pedido a partir deste orçamento (eu preencho)": rascunho que a Donkey revisa. "Gerar pedido para cliente preencher": link de pedido com os itens
             // e os preços do orçamento travados; o cliente completa os dados, anexa o comprovante e assina.
             exigir_post();
             exigir('contratos');
@@ -188,12 +188,12 @@ function orcamentos_acao(string $acao): bool
             }
             $k = $o['orcamentos'][$i];
             if ($k['status'] === 'contrato') {
-                throw new RuntimeException('Este orçamento já virou contrato. Para mudar, use "Duplicar".');
+                throw new RuntimeException('Este orçamento já gerou um pedido. Para mudar, use "Duplicar".');
             }
             $paraCliente = $acao === 'orcamento-pedido';
             $f = orcamentos_campos_contrato($k);
             if ($paraCliente && !array_filter($f['itens'])) {
-                throw new RuntimeException('O orçamento não tem chope em litros (ex.: "50 L" na quantidade). Sem isso, use "Virar contrato".');
+                throw new RuntimeException('O orçamento não tem chope em litros (ex.: "50 L" na quantidade). Sem isso, use "Gerar pedido a partir deste orçamento (eu preencho)".');
             }
             $c = dh_contratos();
             $novo = ['id' => dh_id_novo('c'), 'token' => bin2hex(random_bytes(16)), 'numero' => '', 'tipo' => 'comodato', 'status' => $paraCliente ? 'preenchimento' : 'rascunho',
@@ -209,7 +209,7 @@ function orcamentos_acao(string $acao): bool
             dh_orcamentos_salvar($o);
             ir('./?acao=contrato&id=' . $novo['id'], $paraCliente
                 ? 'Pedido criado a partir do orçamento ' . $k['numero'] . '. Envie o link: o cliente completa os dados, anexa o comprovante e assina.'
-                : 'Contrato criado a partir do orçamento ' . $k['numero'] . '. Confira os itens, complete o que faltar e gere para assinatura.');
+                : 'Pedido criado a partir do orçamento ' . $k['numero'] . '. Confira os itens, complete o que faltar e gere para assinatura.');
 
         case 'orcamentos-config-salvar':
             exigir_post();
@@ -268,10 +268,10 @@ function orcamentos_tela_lista(): void
                 <form method="post" action="./?acao=orcamento-email" onsubmit="return confirm('Enviar o orçamento com o PDF para <?= e(addslashes($k['cliente']['email'])) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">✉️ E-mail</button></form>
               <?php endif; ?>
               <?php if ($k['status'] !== 'contrato'): ?>
-                <form method="post" action="./?acao=orcamento-contrato" onsubmit="return confirm('Criar o contrato a partir do orçamento <?= e($k['numero']) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">📝 Virar contrato</button></form>
-                <form method="post" action="./?acao=orcamento-pedido" onsubmit="return confirm('Gerar o link para o cliente preencher os dados e assinar, com os itens e preços do orçamento <?= e($k['numero']) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">🧾 Cliente preenche</button></form>
+                <form method="post" action="./?acao=orcamento-contrato" onsubmit="return confirm('Gerar o pedido a partir do orçamento <?= e($k['numero']) ?>? Você confere e completa os dados antes de mandar para assinatura.');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">📝 Gerar pedido a partir deste orçamento (eu preencho)</button></form>
+                <form method="post" action="./?acao=orcamento-pedido" onsubmit="return confirm('Gerar o link para o cliente preencher os dados e assinar, com os itens e preços do orçamento <?= e($k['numero']) ?>?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">🧾 Gerar pedido para cliente preencher</button></form>
               <?php elseif (!empty($k['contrato_id'])): ?>
-                <a class="btn secundario" href="./?acao=contrato&amp;id=<?= e($k['contrato_id']) ?>">📝 Ver contrato</a>
+                <a class="btn secundario" href="./?acao=contrato&amp;id=<?= e($k['contrato_id']) ?>">📝 Ver pedido</a>
               <?php endif; ?>
               <form method="post" action="./?acao=orcamento-duplicar"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn secundario">⧉ Duplicar</button></form>
               <?php if (in_array($k['status'], ['rascunho', 'aprovado'], true)): ?>
@@ -306,7 +306,7 @@ function orcamentos_tela_form(): void
       <p><a class="voltar" href="./?acao=orcamentos">‹ Voltar para Orçamentos</a></p>
       <h1><?= $k['numero'] ? 'Orçamento ' . e($k['numero']) : 'Novo orçamento' ?></h1>
       <?php if ($k['status'] === 'aprovado' && !empty($k['aprovado'])): ?><p class="aviso">✅ Aprovado pelo cliente (<?= e($k['aprovado']['nome']) ?>) em <?= e(date('d/m/Y H:i', strtotime($k['aprovado']['em']))) ?>.</p><?php endif; ?>
-      <?php if ($k['status'] === 'contrato'): ?><p class="aviso">Este orçamento já virou contrato. Para mudar, use "Duplicar" na lista.</p><?php endif; ?>
+      <?php if ($k['status'] === 'contrato'): ?><p class="aviso">Este orçamento já gerou um pedido. Para mudar, use "Duplicar" na lista.</p><?php endif; ?>
       <form method="post" action="./?acao=orcamento-salvar" class="form-cerveja form-contrato" id="form-orc">
         <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>">
         <p class="dica">Todos os campos são opcionais.</p>

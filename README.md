@@ -54,8 +54,8 @@ Painel → **📄 Orçamentos** (administrador e financeiro): a proposta que vai
 - **Cliente da base:** o campo "Cliente da base" puxa nome e CPF/CNPJ (e o WhatsApp e o e-mail para envio, que não aparecem na proposta); cliente novo com CPF/CNPJ válido entra na base ao salvar.
 - **Itens sugeridos:** chope da tabela do Chope Delivery (já com o valor do litro), tirador de chope, copos personalizados e frete; o total é valor × quantidade ("300L" conta como 300) ou digitado.
 - **Envio:** PDF, link pelo WhatsApp ou e-mail com o PDF anexo. Pelo link (`/orcamento/?t=...`) o cliente vê, baixa e **aprova** (a equipe recebe o aviso por e-mail).
-- **Virar contrato:** cria o contrato de venda de chope com comodato (rascunho, você revisa e gera para assinatura) com o cliente, o chope (itens com quantidade em litros, ex.: "50 L"), o frete, o desconto e os demais itens como adicionais, pelo preço do orçamento.
-- **Cliente preenche:** gera o link do pedido com os mesmos itens e preços travados. O cliente só confere o pedido, completa os dados (CPF ou CNPJ, endereço, contato, horário), anexa o comprovante do Pix e assina. Se o orçamento não tiver frete, ele escolhe Fortaleza ou outra cidade como no pedido normal.
+- **Gerar pedido a partir deste orçamento (eu preencho):** cria o contrato de venda de chope com comodato (rascunho, você revisa e gera para assinatura) com o cliente, o chope (itens com quantidade em litros, ex.: "50 L"), o frete, o desconto e os demais itens como adicionais, pelo preço do orçamento.
+- **Gerar pedido para cliente preencher:** gera o link do pedido com os mesmos itens e preços travados. O cliente só confere o pedido, completa os dados (CPF ou CNPJ, endereço, contato, horário), anexa o comprovante do Pix e assina. Se o orçamento não tiver frete, ele escolhe Fortaleza ou outra cidade como no pedido normal.
 - Padrões (validade e dados bancários) em "⚙ Padrões do orçamento". Dados em `dados/orcamentos.json`.
 
 ## Contratos com assinatura eletrônica

@@ -3,7 +3,7 @@
 // /orcamento/?t=..., baixa o PDF e pode aprovar. Dados em dados/orcamentos.json (só no servidor).
 
 const DH_ARQ_ORCAMENTOS = DH_RAIZ . '/dados/orcamentos.json';
-const DH_ORCAMENTO_STATUS = ['rascunho' => 'Em aberto', 'aprovado' => 'Aprovado pelo cliente', 'recusado' => 'Recusado', 'contrato' => 'Virou contrato'];
+const DH_ORCAMENTO_STATUS = ['rascunho' => 'Em aberto', 'aprovado' => 'Aprovado pelo cliente', 'recusado' => 'Recusado', 'contrato' => 'Pedido gerado'];
 const DH_ORCAMENTO_PADRAO = [
     'validade' => 15,
     // Dados bancários: preenchidos no painel (⚙ Padrões do orçamento); ficam só no servidor
