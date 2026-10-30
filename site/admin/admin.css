@@ -422,3 +422,7 @@ h1, h2, h3 { overflow-wrap: anywhere; }
 .linha-orc .tres { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 .linha-orc .tres label:last-child { grid-column: 1 / -1; }
 @media (min-width: 640px) { .linha-orc .tres { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } .linha-orc .tres label:last-child { grid-column: auto; } }
+/* Produtos e preços */
+fieldset.produto { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px 4px; margin: 0 0 14px; background: var(--surface); }
+fieldset.produto legend { font-weight: 700; padding: 0 6px; }
+fieldset.produto.fixo { border-style: dashed; }

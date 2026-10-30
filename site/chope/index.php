@@ -103,14 +103,16 @@ function detalhe_delivery(array $c): string
         <section>
           <h2>Frete</h2>
           <ul>
-            <li>Fortaleza: <strong><?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?></strong> (instalação e retirada)</li>
+            <li>Fortaleza: <strong><?= e(dh_moeda(dh_frete_fortaleza())) ?></strong> (instalação e retirada)</li>
             <li>Outras cidades: a combinar</li>
           </ul>
         </section>
         <section>
-          <h2>Copos personalizados</h2>
+          <h2>Adicionais</h2>
           <ul>
-            <li>Pacote com <?= DH_COPOS['qtd'] ?> copos: <strong><?= e(dh_moeda(DH_COPOS['valor'])) ?></strong></li>
+            <?php foreach (dh_produtos_adicionais() as $ad): ?>
+              <li><?= e($ad['nome']) ?><?= $ad['detalhe'] !== '' ? ' (' . e($ad['detalhe']) . ')' : '' ?>: <strong><?= e(dh_moeda($ad['preco'])) ?></strong><?= $ad['unidade'] !== '' ? ' por ' . e($ad['unidade']) : '' ?></li>
+            <?php endforeach; ?>
           </ul>
         </section>
       </div>

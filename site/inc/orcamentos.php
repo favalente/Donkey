@@ -98,9 +98,12 @@ function dh_orcamento_sugestoes(): array
     foreach (dh_cervejas_evento() as $c) {
         $s[] = ['descricao' => 'BARRIL CHOPE ' . mb_strtoupper($c['nome']), 'detalhe' => 'inclui locação/instalação/retirada da chopeira', 'valor' => $c['preco_evento'], 'unidade' => 'L'];
     }
-    $s[] = ['descricao' => 'TIRADOR DE CHOPE FREELANCER', 'detalhe' => '', 'valor' => '', 'unidade' => ''];
-    $s[] = ['descricao' => 'COPOS PERSONALIZADOS (PACOTE COM ' . DH_COPOS['qtd'] . ')', 'detalhe' => '', 'valor' => number_format(DH_COPOS['valor'], 2, '.', ''), 'unidade' => ''];
-    $s[] = ['descricao' => 'FRETE FORTALEZA', 'detalhe' => 'instalação e retirada', 'valor' => number_format(DH_FRETE_FORTALEZA, 2, '.', ''), 'unidade' => ''];
+    // Produtos e serviços do cadastro (copos, tirador, frete…), com o preço de lá
+    foreach (dh_produtos() as $p) {
+        if ($p['ativo']) {
+            $s[] = ['descricao' => mb_strtoupper($p['nome']), 'detalhe' => $p['detalhe'], 'valor' => number_format((float) $p['preco'], 2, '.', ''), 'unidade' => ''];
+        }
+    }
     return $s;
 }
 

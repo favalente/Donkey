@@ -90,11 +90,19 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         $f['devolucao_data'] = (string) ($_POST['devolucao_data'] ?? '');
         $f['entrega_hora'] = (string) ($_POST['entrega_hora'] ?? '');
         $f['entrega_hora_estimada'] = true;
-        $f['copos_pacotes'] = min(200, max(0, (int) ($_POST['copos_pacotes'] ?? 0)));
+        // Adicionais pedidos (copos, tirador…), com o preço do cadastro neste momento
+        $f['copos_pacotes'] = 0;
+        $f['extras'] = [];
+        foreach (dh_produtos_pedido() as $ad) {
+            $q = min(200, max(0, (int) ($_POST['extras'][$ad['id']] ?? 0)));
+            if ($q > 0) {
+                $f['extras'][] = dh_produto_extra($ad, $q);
+            }
+        }
         // Fortaleza: frete fixo; outra cidade: o cliente digita o valor combinado com o vendedor
         $foraDeFortaleza = ($_POST['local'] ?? '') === 'outra';
         $f['cidade'] = $foraDeFortaleza ? $txt('cidade', 80) : 'Fortaleza/CE';
-        $f['frete'] = $foraDeFortaleza ? dh_valor($_POST['frete_outra'] ?? '') : number_format(DH_FRETE_FORTALEZA, 2, '.', '');
+        $f['frete'] = $foraDeFortaleza ? dh_valor($_POST['frete_outra'] ?? '') : number_format(dh_frete_fortaleza(), 2, '.', '');
         // O comprovante é guardado assim que chega, para o cliente não ter de anexar de novo se algo no formulário estiver errado
         if (($_FILES['comprovante']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
             $cp = dh_comprovante_salvar($k['id'], $_FILES['comprovante']);
@@ -197,7 +205,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         dh_contratos_salvar($c);
         dh_email_equipe('Pedido de chope preenchido nº ' . $k['numero'],
             '<p>' . e($f['contratante_nome']) . ' preencheu o pedido de chope nº <b>' . e($k['numero']) . '</b> (entrega em ' . e($f['cidade']) . ', ' . e(dh_data_br($f['entrega_data'])) . ', total ' . e(dh_moeda(dh_comodato_total($f)))
-            . ($f['copos_pacotes'] > 0 ? ', ' . $f['copos_pacotes'] . ' pacote(s) de copos personalizados' : '')
+            . ($f['extras'] ? ', ' . implode(', ', array_map(fn($x) => $x['qtd'] . ' × ' . $x['descricao'], $f['extras'])) : '')
             . ($f['cupom'] !== '' ? ', com o cupom ' . e($f['cupom']) . ' (− ' . e(dh_moeda($f['desconto'])) . ')' : '') . ($foraDeFortaleza ? ', frete combinado de ' . e(dh_moeda($f['frete'])) : '') . ').</p>'
             . '<p><a href="' . e(dh_url_site() . 'admin/?acao=contrato-comprovante&id=' . $k['id']) . '">Ver o comprovante de pagamento</a> (entre no painel) e confira se o valor caiu.</p>'
             . '<p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>');

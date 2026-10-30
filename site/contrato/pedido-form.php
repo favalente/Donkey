@@ -20,7 +20,10 @@ $cidadeBase = (string) ($f['cidade'] ?? '');
 $local = (string) ($_POST['local'] ?? ($cidadeBase === '' ? '' : (stripos($cidadeBase, 'fortaleza') !== false ? 'fortaleza' : 'outra')));
 $doc = dh_so_digitos($f['contratante_doc']);
 $comprovante = $k['campos']['comprovante'] ?? null;
-$copos = max(0, (int) ($_POST['copos_pacotes'] ?? 0));
+// Produtos que o pedido pergunta ("Deseja copos personalizados?", "Deseja tirador de chope?"…)
+$adicionais = dh_produtos_pedido();
+$qtdExtra = fn(string $id) => max(0, (int) ($_POST['extras'][$id] ?? 0));
+$freteFortaleza = dh_frete_fortaleza();
 $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
 ?>
 <form method="post" class="papel pedido" id="pedido" enctype="multipart/form-data">
@@ -59,18 +62,20 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
     </div>
   </div>
 
-  <div class="caixa-comodato caixa-copos">
-    <label class="check"><input type="checkbox" id="quer-copos" <?= $copos ? 'checked' : '' ?>> <strong>Deseja copos personalizados?</strong></label>
-    <p class="legal">Pacote com <?= DH_COPOS['qtd'] ?> copos personalizados por <?= e(dh_moeda(DH_COPOS['valor'])) ?>. Peça quantos pacotes quiser.</p>
-    <div id="area-copos" <?= $copos ? '' : 'hidden' ?>>
-      <div class="contador">
-        <button type="button" class="menos" data-copos="-1" aria-label="Menos um pacote">−</button>
-        <input name="copos_pacotes" id="copos" inputmode="numeric" value="<?= $copos ?: 1 ?>" aria-label="Pacotes de copos">
-        <button type="button" class="mais" data-copos="1" aria-label="Mais um pacote">+</button>
-        <span id="copos-info"></span>
+  <?php foreach ($adicionais as $ad): $q = $qtdExtra($ad['id']); ?>
+    <div class="caixa-comodato caixa-extra" data-extra="<?= e($ad['id']) ?>" data-preco="<?= e($ad['preco']) ?>" data-nome="<?= e($ad['nome']) ?>" data-unidade="<?= e($ad['unidade']) ?>">
+      <label class="check"><input type="checkbox" class="quer-extra" <?= $q ? 'checked' : '' ?>> <strong>Deseja <?= e(mb_strtolower($ad['nome'])) ?>?</strong></label>
+      <p class="legal"><?= $ad['detalhe'] !== '' ? e(mb_strtoupper(mb_substr($ad['detalhe'], 0, 1)) . mb_substr($ad['detalhe'], 1)) . '. ' : '' ?><?= e(dh_moeda($ad['preco'])) ?><?= $ad['unidade'] !== '' ? ' por ' . e($ad['unidade']) : '' ?>.</p>
+      <div class="area-extra" <?= $q ? '' : 'hidden' ?>>
+        <div class="contador">
+          <button type="button" class="menos" data-passo="-1" aria-label="Menos um">−</button>
+          <input name="extras[<?= e($ad['id']) ?>]" class="qtd-extra" inputmode="numeric" value="<?= $q ?>" aria-label="Quantidade de <?= e(mb_strtolower($ad['nome'])) ?>">
+          <button type="button" class="mais" data-passo="1" aria-label="Mais um">+</button>
+          <span class="info-extra"></span>
+        </div>
       </div>
     </div>
-  </div>
+  <?php endforeach; ?>
 
   <div class="cupom">
     <label for="cupom">Tem cupom de desconto?</label>
@@ -78,7 +83,7 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
     <p class="cupom-msg" id="cupom-msg" aria-live="polite"></p>
   </div>
 
-  <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr id="l-desconto" hidden><td id="t-desconto-rot">Desconto</td><td id="t-desconto">R$ 0,00</td></tr><tr id="l-copos" hidden><td>Copos personalizados</td><td id="t-copos">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
+  <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr id="l-desconto" hidden><td id="t-desconto-rot">Desconto</td><td id="t-desconto">R$ 0,00</td></tr><tr id="l-extras" hidden><td>Adicionais</td><td id="t-extras">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
 
   <h2>2. Equipamentos em comodato</h2>
   <p class="legal">Já incluídos no pedido, com o valor de reposição em caso de dano ou perda.</p>
@@ -102,7 +107,7 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
   <p class="obs">O equipamento deve ser devolvido no máximo no dia seguinte ao evento, exceto quando acordado com a Donkey Head Cervejaria.</p>
   <p class="rotulo-pedido">A entrega é em Fortaleza?</p>
   <div class="opcoes-local">
-    <label class="check"><input type="radio" name="local" value="fortaleza" required <?= $local === 'fortaleza' ? 'checked' : '' ?>> Sim, em Fortaleza <small>(frete de <?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?>, instalação e retirada)</small></label>
+    <label class="check"><input type="radio" name="local" value="fortaleza" required <?= $local === 'fortaleza' ? 'checked' : '' ?>> Sim, em Fortaleza <small>(frete de <?= e(dh_moeda($freteFortaleza)) ?>, instalação e retirada)</small></label>
     <label class="check"><input type="radio" name="local" value="outra" <?= $local === 'outra' ? 'checked' : '' ?>> Não, em outra cidade <small>(digite o valor combinado com o vendedor)</small></label>
   </div>
   <div class="duas" id="campo-cidade" <?= $local === 'outra' ? '' : 'hidden' ?>>
@@ -125,7 +130,15 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
 </form>
 <script>
   (function () {
-    var form = document.getElementById('pedido'), freteFortaleza = <?= json_encode(DH_FRETE_FORTALEZA) ?>, cupom = null, coposValor = <?= json_encode(DH_COPOS['valor']) ?>, coposQtd = <?= json_encode(DH_COPOS['qtd']) ?>;
+    var form = document.getElementById('pedido'), freteFortaleza = <?= json_encode($freteFortaleza) ?>, cupom = null;
+    // Plural simples em português: tirador → tiradores, taça → taças, barril → barris
+    function plural(u) {
+      if (/[rz]$/i.test(u)) return u + 'es';
+      if (/l$/i.test(u)) return u.slice(0, -1) + 'is';
+      if (/m$/i.test(u)) return u.slice(0, -1) + 'ns';
+      if (/s$/i.test(u)) return u;
+      return u + 's';
+    }
     function brl(n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
     function num(x) { x = (x || '').trim(); if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); return parseFloat(x) || 0; }
     function total() {
@@ -136,10 +149,15 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
       });
       var local = (form.querySelector('[name=local]:checked') || {}).value;
       var frete = local === 'fortaleza' ? freteFortaleza : (local === 'outra' ? num(document.getElementById('frete-outra').value) : 0);
-      var querCopos = document.getElementById('quer-copos').checked, pc = querCopos ? Math.max(0, parseInt(document.getElementById('copos').value, 10) || 0) : 0, copos = pc * coposValor;
-      document.getElementById('l-copos').hidden = !copos;
-      document.getElementById('t-copos').textContent = brl(copos);
-      document.getElementById('copos-info').textContent = pc + (pc === 1 ? ' pacote' : ' pacotes') + ' = ' + (pc * coposQtd) + ' copos · ' + brl(copos);
+      // Adicionais (copos, tirador…): quantidade × preço do cadastro
+      var copos = 0;
+      document.querySelectorAll('.caixa-extra').forEach(function (cx) {
+        var q = cx.querySelector('.quer-extra').checked ? Math.max(0, parseInt(cx.querySelector('.qtd-extra').value, 10) || 0) : 0, v = q * parseFloat(cx.dataset.preco);
+        cx.querySelector('.info-extra').textContent = q + (cx.dataset.unidade ? ' ' + (q === 1 ? cx.dataset.unidade : plural(cx.dataset.unidade)) : '') + ' · ' + brl(v);
+        copos += v;
+      });
+      document.getElementById('l-extras').hidden = !copos;
+      document.getElementById('t-extras').textContent = brl(copos);
       var desc = cupom ? Math.min(s, Math.round((cupom.tipo === 'pct' ? s * cupom.valor / 100 : cupom.valor) * 100) / 100) : 0;
       document.getElementById('t-chope').textContent = brl(s);
       document.getElementById('l-desconto').hidden = !desc;
@@ -189,20 +207,19 @@ $instrucoes = trim((string) ($c['config']['pagamento_instrucoes'] ?? ''));
       else linha.querySelectorAll('select, input').forEach(function (c) { c.value = ''; });
       total();
     });
-    // Copos personalizados: marcar mostra o contador (começa em 1 pacote); desmarcar zera
-    var querCopos = document.getElementById('quer-copos'), campoCopos = document.getElementById('copos');
-    querCopos.addEventListener('change', function () {
-      document.getElementById('area-copos').hidden = !querCopos.checked;
-      campoCopos.value = querCopos.checked ? Math.max(1, parseInt(campoCopos.value, 10) || 0) : 0;
-      total();
-    });
-    document.querySelectorAll('[data-copos]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        campoCopos.value = Math.max(1, (parseInt(campoCopos.value, 10) || 0) + parseInt(b.dataset.copos, 10));
+    // Adicionais: marcar mostra o contador (começa em 1); desmarcar zera
+    document.querySelectorAll('.caixa-extra').forEach(function (cx) {
+      var quer = cx.querySelector('.quer-extra'), campo = cx.querySelector('.qtd-extra');
+      quer.addEventListener('change', function () {
+        cx.querySelector('.area-extra').hidden = !quer.checked;
+        campo.value = quer.checked ? Math.max(1, parseInt(campo.value, 10) || 0) : 0;
         total();
       });
+      cx.querySelectorAll('[data-passo]').forEach(function (b) {
+        b.addEventListener('click', function () { campo.value = Math.max(1, (parseInt(campo.value, 10) || 0) + parseInt(b.dataset.passo, 10)); total(); });
+      });
+      if (!quer.checked) campo.value = 0;
     });
-    if (!querCopos.checked) campoCopos.value = 0;
     var quer = document.getElementById('quer-comodato'), area = document.getElementById('area-comodato');
     quer.addEventListener('change', function () {
       area.hidden = !quer.checked;

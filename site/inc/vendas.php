@@ -345,7 +345,7 @@ function dh_vendas_pedidos(): array
             'nome' => $f['contratante_nome'], 'doc' => dh_so_digitos($f['contratante_doc']), 'telefone' => $f['contratante_telefone'], 'email' => $f['contratante_email'],
             'endereco' => $f['entrega_endereco'], 'bairro' => $bairro, 'cidade' => $cidade, 'rotulos' => array_values(array_unique($rotulos)),
             'litros' => $litros ?: null, 'valor' => dh_comodato_total($f), 'valor_litro' => null,
-            'consignado' => (bool) array_filter($f['itens'], fn($it) => !empty($it['comodato'])), 'copos' => (int) ($f['copos_pacotes'] ?? 0) > 0,
+            'consignado' => (bool) array_filter($f['itens'], fn($it) => !empty($it['comodato'])), 'copos' => in_array('copos', array_column(dh_comodato_extras($f), 'id'), true),
             'descricao' => '', 'alertas' => [], 'duplicado' => false, 'numero' => $k['numero'],
         ];
     }

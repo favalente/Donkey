@@ -31,7 +31,15 @@ function dh_contrato_ler_form(string $tipo, array $p): array
     }
     $f['frete'] = dh_valor($p['frete'] ?? '');
     $f['desconto'] = dh_valor($p['desconto'] ?? '');
-    $f['copos_pacotes'] = min(200, max(0, (int) ($p['copos_pacotes'] ?? 0)));
+    // Adicionais do cadastro de produtos (copos, tirador…), com o preço de agora
+    $f['copos_pacotes'] = 0;
+    $f['extras'] = [];
+    foreach (dh_produtos_adicionais() as $ad) {
+        $q = min(200, max(0, (int) ($p['extras'][$ad['id']] ?? 0)));
+        if ($q > 0) {
+            $f['extras'][] = dh_produto_extra($ad, $q);
+        }
+    }
     $f['observacoes'] = mb_substr(trim((string) ($p['observacoes'] ?? '')), 0, 2000);
     $f['itens'] = [];
     foreach ((array) ($p['itens'] ?? []) as $it) {
@@ -58,6 +66,7 @@ function contratos_acao(string $acao): bool
         case 'contrato':
         case 'contratos-config':
         case 'contratos-cupons':
+        case 'produtos':
         case 'clientes':
             exigir('contratos');
             return true;
@@ -102,6 +111,37 @@ function contratos_acao(string $acao): bool
                 throw new RuntimeException('O e-mail não saiu: ' . $erroEmail);
             }
             ir('./?acao=contratos-config', 'E-mail de teste enviado para ' . $para . '. Confira a caixa de entrada (e o spam).');
+
+        case 'produtos-salvar':
+            // Lista inteira de uma vez: linhas sem nome são descartadas (o frete de Fortaleza sempre fica)
+            exigir_post();
+            exigir('contratos');
+            $telaErro = 'produtos';
+            $atuais = array_column(dh_produtos(), null, 'id');
+            $lista = [];
+            foreach ((array) ($_POST['produtos'] ?? []) as $p) {
+                $id = preg_replace('/[^a-z0-9-]/', '', (string) ($p['id'] ?? ''));
+                $nome = mb_substr(trim((string) ($p['nome'] ?? '')), 0, 80);
+                $fixo = !empty($atuais[$id]['fixo']);
+                if ($nome === '' && !$fixo) {
+                    continue;
+                }
+                $preco = dh_valor($p['preco'] ?? '');
+                if ($preco === '') {
+                    throw new RuntimeException('Informe o preço de "' . ($nome ?: $id) . '".');
+                }
+                if ($id === '' || !isset($atuais[$id])) {
+                    $base = dh_slug($nome) ?: 'produto';
+                    $id = $base;
+                    for ($n = 2; isset($atuais[$id]) || in_array($id, array_column($lista, 'id'), true); $n++) {
+                        $id = $base . '-' . $n;
+                    }
+                }
+                $lista[] = ['id' => $id, 'nome' => $nome ?: $atuais[$id]['nome'], 'detalhe' => mb_substr(trim((string) ($p['detalhe'] ?? '')), 0, 120), 'preco' => $preco,
+                    'unidade' => mb_substr(trim((string) ($p['unidade'] ?? '')), 0, 30), 'no_pedido' => !$fixo && !empty($p['no_pedido']), 'fixo' => $fixo, 'ativo' => $fixo || !empty($p['ativo'])];
+            }
+            dh_produtos_salvar($lista);
+            ir('./?acao=produtos', 'Produtos e preços salvos. Valem para os próximos pedidos, orçamentos e contratos.');
 
         case 'cupom-ativo':
         case 'cupom-apagar':
@@ -494,6 +534,9 @@ function contratos_tela(string $tela): bool
         case 'contratos-cupons':
             contratos_tela_cupons();
             return true;
+        case 'produtos':
+            contratos_tela_produtos();
+            return true;
         case 'clientes':
             contratos_tela_clientes();
             return true;
@@ -587,7 +630,7 @@ function contratos_tela_lista(): void
       <div class="cards-contrato">
         <?php foreach ($lista as $k): contratos_card($k); endforeach; ?>
       </div>
-      <p class="botoes-link"><a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a></p>
+      <p class="botoes-link"><a class="voltar" href="./?acao=produtos">🧾 Produtos e preços</a> <a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a></p>
     <?php
 }
 
@@ -618,6 +661,42 @@ function contratos_tela_config(): void
       </form>
     <?php
     contratos_email_teste();
+}
+
+function contratos_tela_produtos(): void
+{
+    global $csrf;
+    $lista = dh_produtos();
+    $lista[] = ['id' => '', 'nome' => '', 'detalhe' => '', 'preco' => '', 'unidade' => '', 'no_pedido' => true, 'fixo' => false, 'ativo' => true];
+    ?>
+      <p><a class="voltar" href="./?acao=contratos">‹ Voltar para Contratos</a></p>
+      <h1>Produtos e preços</h1>
+      <p class="dica">O que a Donkey vende junto com o chope. Marcados em "Perguntar no pedido" viram uma pergunta no pedido do cliente ("Deseja …?", com quantidade). Os preços valem para a página do Chope Delivery, as sugestões do orçamento e os próximos contratos; contratos já gerados não mudam.</p>
+      <form method="post" action="./?acao=produtos-salvar" class="form-cerveja">
+        <?= $csrf ?>
+        <?php foreach ($lista as $n => $p): ?>
+          <fieldset class="produto<?= $p['fixo'] ? ' fixo' : '' ?>">
+            <legend><?= $p['id'] === '' ? '+ Novo produto' : e($p['nome']) ?></legend>
+            <input type="hidden" name="produtos[<?= $n ?>][id]" value="<?= e($p['id']) ?>">
+            <div class="duas">
+              <label>Nome <input name="produtos[<?= $n ?>][nome]" maxlength="80" value="<?= e($p['nome']) ?>" <?= $p['fixo'] ? 'readonly' : '' ?> placeholder="Ex.: Taças de vidro"></label>
+              <label>Preço (R$) <input name="produtos[<?= $n ?>][preco]" inputmode="decimal" value="<?= e($p['preco'] !== '' ? dh_num(number_format((float) $p['preco'], 2, '.', '')) : '') ?>" placeholder="Ex.: 150,00"></label>
+            </div>
+            <div class="duas">
+              <label>Detalhe <small>(opcional)</small><input name="produtos[<?= $n ?>][detalhe]" maxlength="120" value="<?= e($p['detalhe']) ?>" placeholder="Ex.: pacote com 50 copos"></label>
+              <label>Cobrado por <small>(opcional)</small><input name="produtos[<?= $n ?>][unidade]" maxlength="30" value="<?= e($p['unidade']) ?>" placeholder="Ex.: pacote, tirador, hora"></label>
+            </div>
+            <?php if ($p['fixo']): ?>
+              <p class="dica">Usado sozinho no pedido quando a entrega é em Fortaleza.</p>
+            <?php else: ?>
+              <label class="check"><input type="checkbox" name="produtos[<?= $n ?>][no_pedido]" value="1" <?= $p['no_pedido'] ? 'checked' : '' ?>> Perguntar no pedido do cliente</label>
+              <label class="check"><input type="checkbox" name="produtos[<?= $n ?>][ativo]" value="1" <?= $p['ativo'] ? 'checked' : '' ?>> Ativo <small>(desmarque para tirar de tudo; apague o nome para excluir)</small></label>
+            <?php endif; ?>
+          </fieldset>
+        <?php endforeach; ?>
+        <div class="barra-salvar"><button class="btn primario">Salvar produtos e preços</button></div>
+      </form>
+    <?php
 }
 
 function contratos_tela_cupons(): void
@@ -730,7 +809,7 @@ function contratos_tela_contrato(): void
         ?>
           <p class="dica">O cliente abre o link, escolhe os rótulos e a litragem, preenche os dados dele e já assina. Você recebe um e-mail quando ele terminar; depois é só assinar pela Donkey aqui.</p>
           <?php if (!empty($k['referencia'])): ?><p>Referência: <strong><?= e($k['referencia']) ?></strong></p><?php endif; ?>
-          <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?> em Fortaleza</strong>; em outras cidades, o cliente digita o valor combinado com o vendedor. O cliente anexa o comprovante de pagamento no pedido.</p>
+          <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= e(dh_moeda(dh_frete_fortaleza())) ?> em Fortaleza</strong>; em outras cidades, o cliente digita o valor combinado com o vendedor. O cliente anexa o comprovante de pagamento no pedido.</p>
           <h2>Enviar ao cliente</h2>
           <input class="link-banda" value="<?= e($link) ?>" readonly onclick="this.select()">
           <p class="botoes-link">
@@ -901,7 +980,9 @@ function contratos_form(array $k): void
             </div>
           <?php endforeach; ?>
           <label>Frete de ida e volta (R$) <small>(em branco = incluso)</small><input name="frete" value="<?= $v($f['frete']) ?>" inputmode="decimal" class="calc"></label>
-          <label>Pacotes de copos personalizados <small>(<?= DH_COPOS['qtd'] ?> copos por <?= e(dh_moeda(DH_COPOS['valor'])) ?> o pacote; 0 = sem copos)</small><input name="copos_pacotes" value="<?= (int) ($f['copos_pacotes'] ?? 0) ?>" inputmode="numeric" class="calc"></label>
+          <?php $qtdAtual = array_column(dh_comodato_extras($f), 'qtd', 'id'); foreach (dh_produtos_adicionais() as $ad): ?>
+            <label><?= e($ad['nome']) ?> <small>(<?= e(dh_moeda($ad['preco'])) ?><?= $ad['unidade'] !== '' ? ' por ' . e($ad['unidade']) : '' ?><?= $ad['detalhe'] !== '' ? ' · ' . e($ad['detalhe']) : '' ?>; 0 = não)</small><input name="extras[<?= e($ad['id']) ?>]" value="<?= (int) ($qtdAtual[$ad['id']] ?? 0) ?>" inputmode="numeric" class="calc qtd-extra" data-preco="<?= e($ad['preco']) ?>"></label>
+          <?php endforeach; ?>
           <label>Desconto no chope (R$) <small>(opcional<?= !empty($f['cupom']) ? '; cupom ' . e($f['cupom']) : '' ?>)</small><input name="desconto" value="<?= $v($f['desconto'] ?? '') ?>" inputmode="decimal" class="calc"></label>
           <p class="aviso" id="total-comodato"></p>
           <h2>Equipamentos em comodato</h2>
@@ -966,7 +1047,9 @@ function contratos_form(array $k): void
               form.querySelectorAll('.linha-item').forEach(function (l) {
                 var i = l.querySelectorAll('input'); if (!i[3].checked) s += num(i[1].value) * num(i[2].value);
               });
-              s = s - Math.min(s, num(form.desconto.value)) + (parseInt(form.copos_pacotes.value, 10) || 0) * <?= json_encode(DH_COPOS['valor']) ?> + num(form.frete.value);
+              var extras = 0;
+              form.querySelectorAll('.qtd-extra').forEach(function (q) { extras += (parseInt(q.value, 10) || 0) * parseFloat(q.dataset.preco); });
+              s = s - Math.min(s, num(form.desconto.value)) + extras + num(form.frete.value);
               tc.textContent = 'Valor total: ' + brl(s);
             }
           }
@@ -998,7 +1081,7 @@ function contratos_form_pedido(): void
         <label>Referência <small>(só para você achar na lista, ex.: nome do cliente ou do evento)</small><input name="referencia" maxlength="80"></label>
         <p class="rotulo">Forma de pagamento</p>
         <span class="escolhas"><?php foreach (DH_PAGAMENTOS as $p => $rot): ?><label class="escolha"><input type="radio" name="pagamento" value="<?= $p ?>" <?= $p === 'pix' ? 'checked' : '' ?>><span><?= e($rot) ?></span></label><?php endforeach; ?></span>
-        <p class="dica">Frete: em Fortaleza entra sozinho (<?= e(dh_moeda(DH_FRETE_FORTALEZA)) ?>, instalação e retirada). Se for em outra cidade, o cliente digita o valor do frete combinado com o vendedor. Para dar desconto, crie um cupom em Contratos → 🏷 Cupons e passe o código para o cliente.</p>
+        <p class="dica">Frete: em Fortaleza entra sozinho (<?= e(dh_moeda(dh_frete_fortaleza())) ?>, instalação e retirada). Se for em outra cidade, o cliente digita o valor do frete combinado com o vendedor. Para dar desconto, crie um cupom em Contratos → 🏷 Cupons e passe o código para o cliente.</p>
         <label>Observações para o contrato <small>(opcional)</small><textarea name="observacoes" rows="3"></textarea></label>
         <div class="barra-salvar"><button class="btn primario">Criar pedido e gerar o link</button></div>
       </form>

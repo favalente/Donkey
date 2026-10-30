@@ -9,10 +9,8 @@ const DH_CONTRATO_TIPOS = [
     'evento' => 'Evento corporativo no pub',
     'comodato' => 'Venda de chope com comodato de equipamentos',
 ];
-// Frete de instalação e retirada em Fortaleza; outras cidades, sob consulta (a Donkey define no painel)
+// Frete de instalação e retirada em Fortaleza (valor de reserva: o preço vale o do cadastro de produtos)
 const DH_FRETE_FORTALEZA = 40;
-// Copos personalizados vendidos junto com o chope
-const DH_COPOS = ['qtd' => 50, 'valor' => 40];
 // Comprovante de pagamento que o cliente anexa ao pedido (fica em dados/, sem acesso direto pela web)
 const DH_DIR_COMPROVANTES = DH_RAIZ . '/dados/comprovantes';
 const DH_COMPROVANTE_TIPOS = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/heic' => 'heic', 'image/heif' => 'heif', 'application/pdf' => 'pdf'];
@@ -366,17 +364,11 @@ function dh_comodato_chope(array $f): float
     return $t;
 }
 
-// Copos personalizados: pacotes × valor do pacote
-function dh_comodato_copos(array $f): float
-{
-    return max(0, (int) ($f['copos_pacotes'] ?? 0)) * DH_COPOS['valor'];
-}
-
-// Total a pagar: chope comprado − desconto do cupom (só no chope) + copos + frete
+// Total a pagar: chope comprado − desconto do cupom (só no chope) + adicionais (copos, tirador…) + frete
 function dh_comodato_total(array $f): float
 {
     $chope = dh_comodato_chope($f);
-    return $chope - min($chope, (float) (($f['desconto'] ?? '') ?: 0)) + dh_comodato_copos($f) + (float) ($f['frete'] ?: 0);
+    return $chope - min($chope, (float) (($f['desconto'] ?? '') ?: 0)) + dh_comodato_extras_total($f) + (float) ($f['frete'] ?: 0);
 }
 
 // ---- Cupons de desconto (valem sobre o chope, não sobre o frete) ----
@@ -605,8 +597,8 @@ function dh_contrato_comodato(array $f, callable $linha): string
     }
     $comprado = array_filter($f['itens'], fn($it) => empty($it['comodato']));
     $emComodato = array_filter($f['itens'], fn($it) => !empty($it['comodato']));
-    $temCopos = (int) ($f['copos_pacotes'] ?? 0) > 0;
-    $h .= '</table><h3>' . ($temCopos ? 'Chope e copos comprados' : 'Chope comprado') . '</h3><table class="itens"><tr><th>Item</th><th>' . ($temCopos ? 'Valor (litro ou pacote)' : 'Valor do litro') . '</th><th>Quantidade</th><th>Valor total</th></tr>';
+    $extras = dh_comodato_extras($f);
+    $h .= '</table><h3>' . ($extras ? 'Chope e adicionais comprados' : 'Chope comprado') . '</h3><table class="itens"><tr><th>Item</th><th>' . ($extras ? 'Valor unitário' : 'Valor do litro') . '</th><th>Quantidade</th><th>Valor total</th></tr>';
     foreach ($comprado as $it) {
         $h .= '<tr><td>' . e($it['descricao']) . '</td><td>' . e(dh_moeda($it['valor_litro'])) . '</td><td>' . e(dh_litros($it['litros'])) . ' L</td><td>'
             . e(dh_moeda((float) $it['litros'] * (float) $it['valor_litro'])) . '</td></tr>';
@@ -614,9 +606,9 @@ function dh_contrato_comodato(array $f, callable $linha): string
     if ((float) (($f['desconto'] ?? '') ?: 0) > 0) {
         $h .= '<tr><td colspan="3">Desconto' . (($f['cupom'] ?? '') !== '' ? ' (cupom ' . e($f['cupom']) . ')' : '') . '</td><td>− ' . e(dh_moeda(min(dh_comodato_chope($f), (float) $f['desconto']))) . '</td></tr>';
     }
-    if (($pc = (int) ($f['copos_pacotes'] ?? 0)) > 0) {
-        $h .= '<tr><td>Copos personalizados (pacote com ' . DH_COPOS['qtd'] . ')</td><td>' . e(dh_moeda(DH_COPOS['valor'])) . ' o pacote</td><td>' . $pc . ' pacote' . ($pc > 1 ? 's' : '')
-            . ' (' . $pc * DH_COPOS['qtd'] . ' copos)</td><td>' . e(dh_moeda(dh_comodato_copos($f))) . '</td></tr>';
+    foreach ($extras as $x) {
+        $h .= '<tr><td>' . e($x['descricao']) . ($x['detalhe'] !== '' ? ' (' . e($x['detalhe']) . ')' : '') . '</td><td>' . e(dh_moeda($x['valor'])) . ($x['unidade'] !== '' ? ' por ' . e($x['unidade']) : '') . '</td>'
+            . '<td>' . (int) $x['qtd'] . '</td><td>' . e(dh_moeda((float) $x['valor'] * (int) $x['qtd'])) . '</td></tr>';
     }
     $frete = $f['frete'] !== '' && (float) $f['frete'] > 0;
     $h .= '<tr><td colspan="3">Frete (instalação e retirada)</td><td>' . ($frete ? e(dh_moeda($f['frete'])) : 'Incluso') . '</td></tr>';

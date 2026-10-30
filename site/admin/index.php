@@ -506,7 +506,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=37">
+  <link rel="stylesheet" href="admin.css?v=38">
   <script>
     // Tema escolhido neste aparelho (claro é o padrão)
     try { if (localStorage.getItem('dh-tema') === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}
@@ -544,7 +544,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (pode('bandas')): ?><a href="./?acao=bandas" class="<?= in_array($tela, ['bandas', 'banda'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🎸</span>Bandas</a><?php endif; ?>
       <?php if (pode('relatorio')): ?><a href="./?acao=relatorio" class="<?= $tela === 'relatorio' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">💰</span>Financeiro</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=orcamentos" class="<?= in_array($tela, ['orcamentos', 'orcamento', 'orcamentos-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📄</span>Orçamentos</a><?php endif; ?>
-      <?php if (pode('contratos')): ?><a href="./?acao=contratos" class="<?= in_array($tela, ['contratos', 'contrato', 'contratos-config', 'contratos-cupons'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📝</span>Contratos</a><?php endif; ?>
+      <?php if (pode('contratos')): ?><a href="./?acao=contratos" class="<?= in_array($tela, ['contratos', 'contrato', 'contratos-config', 'contratos-cupons', 'produtos'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📝</span>Contratos</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=relatorios" class="<?= $tela === 'relatorios' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📊</span>Relatórios</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=clientes" class="<?= $tela === 'clientes' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👤</span>Clientes</a><?php endif; ?>
       <?php if (pode('galeria')): ?><a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🖼️</span>Galeria</a><?php endif; ?>

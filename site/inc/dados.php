@@ -360,4 +360,5 @@ require_once __DIR__ . '/agenda.php';
 require_once __DIR__ . '/contratos.php';
 require_once __DIR__ . '/clientes.php';
 require_once __DIR__ . '/vendas.php';
+require_once __DIR__ . '/produtos.php';
 require_once __DIR__ . '/orcamentos.php';
