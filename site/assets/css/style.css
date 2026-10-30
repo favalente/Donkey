@@ -371,3 +371,8 @@ a.filtro { text-decoration: none; color: var(--text); }
 /* Calendário: cada show é um botão próprio (abre só aquele show) */
 .cal-dia > .cal-show { flex: none; width: 100%; margin-top: 3px; border: 0; text-align: left; cursor: pointer; }
 .cal-dia > .cal-show:hover { filter: brightness(1.12); }
+/* Nomes longos de banda quebram a linha em vez de alargar a página */
+.cal-sedes { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 860px) { .cal-sedes { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.cal-sede, .cal-lista, .cal-lista li, .cal-linha { min-width: 0; }
+.cal-linha-info strong, .cal-linha-info span { overflow-wrap: anywhere; }

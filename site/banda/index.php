@@ -106,7 +106,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="theme-color" content="#16110d">
   <link rel="icon" href="../favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=27">
+  <link rel="stylesheet" href="../assets/css/style.css?v=28">
   <style>
     .pg-banda { max-width: 640px; }
     .moldura-foto { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 14px; border: 2px solid var(--amber); cursor: grab; touch-action: none; user-select: none; background: #0e0b08; }
