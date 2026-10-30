@@ -91,67 +91,69 @@ function dh_orcamento_sugestoes(): array
     return $s;
 }
 
-// Proposta em HTML (a mesma para a página do cliente e para o PDF)
+// Proposta em HTML (a mesma para a página do cliente e para o PDF), no visual do contrato:
+// timbre, título com número, quadros de identificação, tabela de itens e assinatura.
 function dh_orcamento_html(array $k, string $raiz = ''): string
 {
     $c = $k['cliente'];
-    $linhas = '';
+    $linha = fn($rot, $val) => '<tr><th>' . e($rot) . '</th><td>' . ($val === '' ? '&nbsp;' : e($val)) . '</td></tr>';
+    $emitido = $k['emitido_em'] ?: $k['criado_em'];
+    $h = '<div class="orc">';
+    $h .= '<div class="timbre"><img src="' . e($raiz) . 'assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria"><span>' . e(DH_EMPRESA['razao']) . '<br>CNPJ ' . e(DH_EMPRESA['cnpj']) . '</span></div>';
+    $h .= '<h1>PROPOSTA COMERCIAL</h1><p class="numero">Orçamento nº ' . e($k['numero']) . ' · emitido em ' . e(dh_data_br(substr($emitido, 0, 10))) . '</p>';
+    $h .= '<h2>DADOS DA PROPOSTA</h2><table class="quadro">'
+        . $linha('PARA:', $c['nome']) . ($c['doc'] !== '' ? $linha('CPF/CNPJ:', dh_cpf_formatar($c['doc'])) : '')
+        . ($c['telefone'] !== '' ? $linha('TELEFONE:', $c['telefone']) : '') . ($c['email'] !== '' ? $linha('E-MAIL:', $c['email']) : '')
+        . $linha('DATA DO EVENTO:', $k['data_evento'] !== '' ? dh_data_br($k['data_evento']) : 'A definir') . ($k['local'] !== '' ? $linha('LOCAL:', $k['local']) : '')
+        . '</table>';
+    $h .= '<h2>ITENS</h2><table class="itens"><tr><th class="n">#</th><th>Descrição</th><th class="num vu">Valor un.</th><th class="num">Quant.</th><th class="num">Total</th></tr>';
     foreach (array_values($k['itens']) as $n => $it) {
-        $linhas .= '<tr><td class="n">' . ($n + 1) . '</td><td class="desc"><strong>' . e($it['descricao']) . '</strong>' . ($it['detalhe'] !== '' ? '<small>(' . e($it['detalhe']) . ')</small>' : '') . '</td>'
+        $h .= '<tr><td class="n">' . ($n + 1) . '</td><td><strong>' . e($it['descricao']) . '</strong>' . ($it['detalhe'] !== '' ? '<br><small>' . e($it['detalhe']) . '</small>' : '') . '</td>'
             . '<td class="num vu">' . ($it['valor'] !== '' ? e(dh_moeda($it['valor'])) : '') . '</td><td class="num">' . e($it['quant']) . '</td><td class="num">' . e(dh_moeda(dh_orcamento_item_total($it))) . '</td></tr>';
     }
-    $emitido = $k['emitido_em'] ?: $k['criado_em'];
-    // Layout em tabelas: funciona igual na página e no gerador de PDF
-    $h = '<div class="orc">';
-    $h .= '<table class="orc-topo"><tr><td class="orc-titulo"><h1>PROPOSTA</h1>'
-        . ($k['data_evento'] !== '' ? '<p class="orc-data">Data do Evento: <strong>' . e(dh_data_br($k['data_evento'])) . '</strong></p>' : '')
-        . '<p class="orc-empresa">' . e(DH_EMPRESA['razao']) . '<br>CNPJ: ' . e(DH_EMPRESA['cnpj']) . '<br>' . e(DH_EMPRESA['endereco']) . '<br>Contato: ' . e(DH_EMPRESA['telefone']) . '</p></td>'
-        . '<td class="orc-para"><img src="' . e($raiz) . 'assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria"><p class="rot">Para:</p><p class="nome">' . e($c['nome']) . '</p>'
-        . ($c['doc'] !== '' ? '<p>' . e(dh_cpf_formatar($c['doc'])) . '</p>' : '') . '</td></tr></table>';
-    $h .= '<p class="orc-numero">Proposta nº ' . e($k['numero']) . ($k['local'] !== '' ? ' · Local: ' . e($k['local']) : '') . '</p>';
-    $h .= '<table class="orc-itens"><thead><tr><th class="n"></th><th>Descrição</th><th class="num vu">Valor Un</th><th class="num">Quant.</th><th class="num">Total</th></tr></thead><tbody>' . $linhas
-        . '</tbody><tfoot><tr><td class="n"></td><td></td><td class="vu"></td><td class="num">Total</td><td class="num">' . e(dh_moeda(dh_orcamento_total($k))) . '</td></tr></tfoot></table>';
+    $h .= '<tr class="total"><td class="n"></td><td>VALOR TOTAL</td><td class="vu"></td><td></td><td class="num">' . e(dh_moeda(dh_orcamento_total($k))) . '</td></tr></table>';
     if (trim($k['observacoes']) !== '') {
-        $h .= '<p class="orc-obs">' . nl2br(e($k['observacoes'])) . '</p>';
+        $h .= '<p><strong>Observações:</strong> ' . nl2br(e($k['observacoes'])) . '</p>';
     }
-    $h .= '<table class="orc-rodape"><tr><td class="orc-cond"><h3>Condições de pagamento:</h3><p>' . nl2br(e($k['condicoes'])) . '</p>'
-        . '<h3>Proposta válida por ' . (int) $k['validade'] . ' dias</h3><p class="mini">até ' . e(dh_data_br(dh_orcamento_validade($k))) . '</p>'
-        . (trim($k['banco']) !== '' ? '<h3>Dados bancários:</h3><p>' . nl2br(e($k['banco'])) . '</p>' : '') . '</td>'
-        . '<td class="orc-assina"><p class="traco">' . e($k['assinante'] ?? '') . '</p><p>Fortaleza, ' . e(dh_data_extenso(substr($emitido, 0, 10))) . '</p></td></tr></table>';
+    $h .= '<h2>CONDIÇÕES</h2><table class="quadro">' . $linha('PAGAMENTO:', $k['condicoes'])
+        . $linha('VALIDADE:', (int) $k['validade'] . ' dias (até ' . dh_data_br(dh_orcamento_validade($k)) . ')') . '</table>';
+    // Dados bancários e assinatura lado a lado (no celular, um embaixo do outro)
+    $h .= '<table class="fim"><tr><td class="fim-banco">' . (trim($k['banco']) !== '' ? '<h3>Dados bancários</h3><p class="banco">' . nl2br(e($k['banco'])) . '</p>' : '') . '</td>'
+        . '<td class="fim-assina"><p class="local-data">Fortaleza/CE, ' . e(dh_data_extenso(substr($emitido, 0, 10))) . '.</p>'
+        . '<div class="assina"><p class="traco">' . e($k['assinante'] ?? '') . '</p><p><strong>' . e(DH_EMPRESA['razao']) . '</strong></p></div></td></tr></table>';
+    $h .= '<p class="rodape-doc">' . e(DH_EMPRESA['razao']) . ' · CNPJ ' . e(DH_EMPRESA['cnpj']) . ' · ' . e(DH_EMPRESA['endereco']) . ' · ' . e(DH_EMPRESA['telefone']) . ' · ' . e(DH_EMPRESA['email']) . '</p>';
     return $h . '</div>';
 }
 
-// Estilo da proposta (página e PDF), no visual do modelo: faixas cinza-escuro, tabela cinza
+// Estilo da proposta (o mesmo do contrato). A página do cliente já carrega contrato.css; o PDF usa isto.
 const DH_ORCAMENTO_CSS = <<<'CSS'
-.orc { font-family: "DejaVu Sans", Arial, sans-serif; color: #2b2b2b; font-size: 10pt; }
-.orc, .orc * { overflow-wrap: normal; word-break: normal; }
-.orc table { width: 100%; border-collapse: collapse; }
-.orc-topo td { background: #3c3c3e; color: #fff; vertical-align: top; padding: 20px 24px; }
-.orc-titulo h1 { margin: 0 0 6px; font-size: 26pt; letter-spacing: 1px; color: #fff; text-align: left; }
-.orc-data { margin: 0 0 12px; font-size: 12pt; }
-.orc-empresa { margin: 0; font-size: 8.5pt; line-height: 1.5; }
-.orc-para { width: 34%; text-align: right; }
-.orc-para img { width: 64px; margin: 0 0 6px auto; display: block; }
-.orc-para p { margin: 0; }
-.orc-para .rot { font-size: 14pt; font-weight: bold; }
-.orc-para .nome { font-size: 11pt; font-weight: bold; text-transform: uppercase; }
-.orc-numero { color: #6b6b6b; font-size: 8.5pt; margin: 10px 2px 8px; text-align: left; }
-.orc-itens th { background: #4a4a4c; color: #fff; padding: 8px; text-align: left; font-size: 9pt; }
-.orc-itens td { background: #efefef; border-bottom: 2px solid #fff; padding: 10px 8px; vertical-align: top; }
-.orc-itens .n { width: 18px; text-align: center; font-weight: bold; }
-.orc-itens td.desc strong { display: block; text-transform: uppercase; }
-.orc-itens td.desc small { font-size: 7.5pt; color: #555; }
-.orc-itens .num { text-align: right; white-space: nowrap; }
-.orc-itens tfoot td { background: #e2e2e2; font-weight: bold; font-size: 11pt; }
-.orc-obs { margin: 12px 2px 0; font-size: 9pt; }
-.orc-rodape { margin-top: 18px; }
-.orc-rodape td { vertical-align: top; }
-.orc-cond { width: 58%; }
-.orc-rodape h3 { margin: 12px 0 2px; font-size: 11pt; }
-.orc-rodape p { margin: 0; font-size: 9pt; line-height: 1.5; }
-.orc-rodape .mini { color: #6b6b6b; font-size: 8pt; }
-.orc-assina { text-align: center; padding-top: 60px; }
-.orc-assina .traco { border-top: 1px solid #2b2b2b; padding-top: 4px; font-weight: bold; min-height: 14px; margin: 0 10px 4px; }
+.orc { font-family: "DejaVu Sans", Arial, sans-serif; color: #1f1a16; font-size: 9.5pt; line-height: 1.45; }
+.orc .timbre { border-bottom: 2px solid #1f1a16; padding-bottom: 6px; margin-bottom: 12px; font-size: 8pt; color: #5f564e; }
+.orc .timbre img { width: 34px; vertical-align: middle; margin-right: 8px; }
+.orc .timbre span { display: inline-block; vertical-align: middle; }
+.orc h1 { font-size: 14pt; text-align: center; margin: 4px 0; }
+.orc .numero { text-align: center; color: #5f564e; margin: 0 0 10px; }
+.orc h2 { font-size: 10pt; margin: 10px 0 5px; padding: 4px 8px; background: #f3ede6; border-left: 3px solid #e9a23b; }
+.orc h3 { font-size: 9.5pt; margin: 10px 0 4px; }
+.orc p { margin: 0 0 6px; }
+.orc table.quadro, .orc table.itens { width: 100%; border-collapse: collapse; margin: 0 0 8px; }
+.orc .quadro th, .orc .quadro td, .orc .itens th, .orc .itens td { border: 1px solid #d9cfc4; padding: 4px 7px; vertical-align: top; text-align: left; font-size: 8.8pt; }
+.orc .quadro th { width: 32%; background: #faf7f3; }
+.orc .itens th { background: #faf7f3; }
+.orc .itens .n { width: 20px; text-align: center; }
+.orc .itens .num { text-align: right; white-space: nowrap; }
+.orc .itens small { color: #5f564e; font-size: 7.8pt; }
+.orc .itens .total td { font-weight: bold; background: #fff7e8; }
+.orc .banco { font-size: 8.8pt; }
+.orc .local-data { margin-top: 10px; }
+.orc table.fim { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.orc .fim td { vertical-align: top; padding: 0; }
+.orc .fim-banco { width: 46%; padding-right: 12px; }
+.orc .fim-assina { text-align: center; }
+.orc .assina { width: 90%; margin: 30px auto 0; text-align: center; }
+.orc .assina p { text-align: center; }
+.orc .assina .traco { border-top: 1px solid #1f1a16; padding-top: 4px; min-height: 14px; margin: 0 0 2px; font-weight: bold; }
+.orc .rodape-doc { margin-top: 12px; padding-top: 6px; border-top: 1px solid #d9cfc4; font-size: 7pt; color: #5f564e; }
 CSS;
 
 function dh_orcamento_pdf_nome(array $k): string
@@ -173,7 +175,7 @@ function dh_orcamento_pdf(array $k): string
     $op->setFontCache($cache);
     $op->setTempDir($cache);
     $raiz = realpath(DH_RAIZ) . '/';
-    $html = '<!doctype html><html><head><meta charset="utf-8"><style>@page { margin: 14mm 14mm 16mm; } body { margin: 0; }' . DH_ORCAMENTO_CSS . '</style></head><body>'
+    $html = '<!doctype html><html><head><meta charset="utf-8"><style>@page { margin: 14mm 15mm 14mm; } body { margin: 0; }' . DH_ORCAMENTO_CSS . '</style></head><body>'
         . dh_orcamento_html($k, $raiz) . '</body></html>';
     $pdf = new \Dompdf\Dompdf($op);
     $pdf->loadHtml($html, 'UTF-8');

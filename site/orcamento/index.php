@@ -70,21 +70,9 @@ if ($k && $_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="stylesheet" href="../contrato/contrato.css?v=9">
   <style>
     <?= DH_ORCAMENTO_CSS ?>
-    .orc { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; }
-    .orc-topo { border-radius: 8px; }
-    .papel { padding: clamp(12px, 4vw, 40px); }
-    @media (max-width: 600px) {
-      .orc { font-size: 14px; }
-      .orc-topo tr, .orc-rodape tr { display: flex; flex-direction: column; }
-      .orc-topo td { padding: 16px; }
-      .orc-para { width: auto; text-align: left; padding-top: 0 !important; }
-      .orc-para img { margin: 0 0 6px; }
-      .orc-titulo h1 { font-size: 30px; }
-      .orc-itens .vu { display: none; }
-      .orc-itens td, .orc-itens th { padding: 8px 5px; }
-      .orc-cond { width: auto; }
-      .orc-assina { padding-top: 40px; }
-    }
+    .orc { font-family: inherit; font-size: 15px; }
+    .orc .quadro th, .orc .quadro td, .orc .itens th, .orc .itens td { font-size: .9rem; overflow-wrap: anywhere; }
+    @media (max-width: 600px) { .orc .itens .vu { display: none; } .orc .quadro th { width: 40%; } .orc table.fim tr { display: flex; flex-direction: column; } .orc .fim-banco { width: auto; padding: 0 0 8px; } }
     .aprovar { background: #fff; border: 2px solid var(--ambar); border-radius: 8px; padding: 20px; margin-bottom: 40px; }
     .aprovar input { display: block; width: 100%; margin: 4px 0 12px; padding: 14px; font: inherit; font-size: 1.05rem; border: 2px solid var(--linha); border-radius: 10px; }
   </style>
