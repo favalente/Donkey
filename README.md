@@ -66,8 +66,18 @@ O caderno de produção em versão digital (painel → 🧪 Brassagem). A fábri
 - **Tanques virtuais:** a tela mostra cada tanque com o lote que está nele (cerveja, lote, dia da produção, últimas medidas de Brix, pressão e temperatura e a última anotação) ou "Livre".
 - **Caderno do lote:** o cabeçalho do caderno de papel (cerveja escolhida do cadastro de Cervejas, ou "Outra" digitada se ainda não estiver lá, data, lote, levedura, tanque, PF e OG em °Brix com a litragem em cm, Obs.) e o acompanhamento da fermentação e maturação: data, Brix, pressão (bar), temperatura (°C) e anotação livre, com quem anotou. Dá para corrigir ou apagar uma anotação e imprimir o caderno.
 - **Fluxo:** Fermentando → Passar para maturação → Finalizar lote (libera o tanque). Um tanque recebe um lote por vez; o número do lote não se repete.
-- **Acesso:** administrador e o perfil **Cervejaria** (que só vê a Brassagem).
+- **Acesso:** administrador e o perfil **Cervejaria** (que só vê a Brassagem e as Receitas).
 - Dados em `dados/brassagem.json` (só no servidor), com cópia diária em `dados/backup`.
+
+## Receitas
+
+Uma receita para cada cerveja do cadastro (painel → 📖 Receitas), importada do BeerSmith.
+
+- **Importar:** no BeerSmith, selecione as receitas e use **Exportar Sel** (ou **Exportar Tudo**) em formato **BeerXML (.xml)**; um arquivo pode ter várias receitas. O arquivo nativo **.bsmx** também é aceito, mas o BeerXML traz OG, FG, IBU e ABV previstos.
+- Cada receita é ligada à cerveja de nome parecido do cadastro (dá para trocar). Importar de novo a receita de uma cerveja substitui a atual e guarda a anterior em "versões".
+- Mostra OG/FG (também em °Brix, para comparar com o refratômetro), ABV, IBU, cor, volume, fermentáveis com %, lúpulos, levedura, outros (água, clarificantes…), mostura e notas.
+- **Na Brassagem**, a cerveja escolhida traz a receita: a levedura entra sozinha, o caderno mostra a receita e a OG prevista em °Brix ao lado da medida. O lote guarda uma cópia da receita do dia.
+- Acesso: administrador e o perfil Cervejaria. Dados em `dados/receitas.json` (só no servidor), com cópia diária em `dados/backup`.
 
 ## Contratos com assinatura eletrônica
 

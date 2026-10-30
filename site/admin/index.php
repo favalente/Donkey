@@ -7,6 +7,7 @@ require __DIR__ . '/modulo-contratos.php';
 require __DIR__ . '/modulo-relatorios.php';
 require __DIR__ . '/modulo-orcamentos.php';
 require __DIR__ . '/modulo-brassagem.php';
+require __DIR__ . '/modulo-receitas.php';
 
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
 const DH_ARQ_USUARIOS = DH_RAIZ . '/dados/usuarios.json';
@@ -25,6 +26,7 @@ const DH_PERMISSOES = [
     'relatorio' => ['admin', 'financeiro'],
     'contratos' => ['admin', 'financeiro'],
     'brassagem' => ['admin', 'cervejaria'],
+    'receitas' => ['admin', 'cervejaria'],
     'usuarios' => ['admin'],
     'importar' => ['admin'],
 ];
@@ -485,7 +487,7 @@ if (!$usuarios) {
 
             default:
                 // Agenda, bandas, relatório, importação e usuários ficam em arquivos próprios
-                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao) && !brassagem_acao($acao)) {
+                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao) && !brassagem_acao($acao) && !receitas_acao($acao)) {
                     $tela = $inicio;
                 }
         }
@@ -508,7 +510,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=40">
+  <link rel="stylesheet" href="admin.css?v=42">
   <script>
     // Tema escolhido neste aparelho (claro é o padrão)
     try { if (localStorage.getItem('dh-tema') === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}
@@ -550,6 +552,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (pode('contratos')): ?><a href="./?acao=relatorios" class="<?= $tela === 'relatorios' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📊</span>Relatórios</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=clientes" class="<?= $tela === 'clientes' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👤</span>Clientes</a><?php endif; ?>
       <?php if (pode('brassagem')): ?><a href="./?acao=brassagem" class="<?= in_array($tela, ['brassagem', 'brassagem-lote', 'brassagem-tanques'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🧪</span>Brassagem</a><?php endif; ?>
+      <?php if (pode('receitas')): ?><a href="./?acao=receitas" class="<?= in_array($tela, ['receitas', 'receita'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📖</span>Receitas</a><?php endif; ?>
       <?php if (pode('galeria')): ?><a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🖼️</span>Galeria</a><?php endif; ?>
       <?php if (pode('usuarios')): ?><a href="./?acao=usuarios" class="<?= in_array($tela, ['usuarios', 'importar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👥</span>Usuários</a><?php endif; ?>
       <a href="../" target="_blank"><span class="ic" aria-hidden="true">🌐</span>Ver site</a>
@@ -751,7 +754,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <label>Repita a nova senha <input type="password" name="senha2" required autocomplete="new-password"></label>
         <button class="btn primario">Trocar senha</button>
       </form>
-    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela) || brassagem_tela($tela); endif; ?>
+    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela) || brassagem_tela($tela) || receitas_tela($tela); endif; ?>
 
     <footer class="rodape">
       <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a> · <button type="button" class="botao-tema" id="botao-tema"></button></span>

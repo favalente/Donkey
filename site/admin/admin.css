@@ -483,3 +483,30 @@ fieldset.produto.fixo { border-style: dashed; }
 .caderno-cerveja { display: flex; align-items: center; gap: 10px; }
 .caderno-cerveja span { display: flex; flex-direction: column; }
 .caderno-cerveja small { font-weight: 400; font-size: .85rem; color: var(--muted); }
+/* Receitas (BeerSmith) */
+.form-importar-receita { background: var(--caixa); border: 2px dashed var(--amber); border-radius: 14px; padding: 14px; margin: 12px 0 20px; }
+.form-importar-receita input[type=file] { display: block; width: 100%; margin-top: 8px; font: inherit; color: var(--text); }
+.lista-receitas > li > a { flex-wrap: nowrap; }
+.lista-receitas > li > a img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: none; }
+.lista-receitas > li > a strong { flex: 0 1 auto; min-width: 0; }
+.lista-receitas > li > a span { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 600px) { .lista-receitas > li > a { flex-wrap: wrap; } .lista-receitas > li > a span { flex-basis: 100%; } }
+.receita-metricas .cartao-metrica { display: flex; flex-direction: column; }
+.receita-metricas .cartao-metrica span { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.receita-metricas .cartao-metrica strong { font-size: 1.4rem; }
+.receita-metricas .cartao-metrica small { color: var(--muted); font-size: .78rem; }
+.tabela-receita { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+.tabela-receita td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.tabela-receita td:not(:first-child) { white-space: nowrap; text-align: right; color: var(--muted); }
+.receita-notas { white-space: normal; overflow-wrap: anywhere; }
+h3 small { font-weight: 400; color: var(--muted); }
+.caderno-receita, .caderno-editar { margin: 12px 0; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); }
+.caderno-receita > summary, .caderno-editar > summary { cursor: pointer; font-weight: 600; color: var(--ambar-txt); }
+.caderno-editar > summary.escondido { display: none; }
+@media print { .caderno-receita { border: 0; padding: 0; } .caderno-receita:not([open]) > *:not(summary) { display: block; } }
+@media (max-width: 600px) {
+  .tabela-receita tr { display: grid; grid-template-columns: auto 1fr; gap: 0 12px; border-bottom: 1px solid var(--line); padding: 6px 0; }
+  .tabela-receita td { border: 0; padding: 2px 6px; }
+  .tabela-receita td:first-child { grid-column: 1 / -1; color: var(--text); }
+  .tabela-receita td:nth-child(2) { text-align: left; }
+}

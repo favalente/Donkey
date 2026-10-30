@@ -363,3 +363,4 @@ require_once __DIR__ . '/vendas.php';
 require_once __DIR__ . '/produtos.php';
 require_once __DIR__ . '/orcamentos.php';
 require_once __DIR__ . '/brassagem.php';
+require_once __DIR__ . '/receitas.php';

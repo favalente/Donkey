@@ -96,6 +96,11 @@ function brassagem_acao(string $acao): bool
             if ($ocupado && !$mesmoLote && ($i === null || $b['lotes'][$i]['status'] !== 'finalizado')) {
                 throw new RuntimeException($tanque['nome'] . ' está com o lote ' . $ocupado['lote'] . ' (' . $ocupado['cerveja'] . '). Finalize esse lote antes ou escolha outro tanque.');
             }
+            // Receita da cerveja (cópia no lote): na criação, quando a cerveja muda ou se o lote ainda não tinha
+            if ($i === null || empty($b['lotes'][$i]['receita']) || ($b['lotes'][$i]['cerveja_id'] ?? '') !== $l['cerveja_id'] || $b['lotes'][$i]['cerveja'] !== $l['cerveja']) {
+                $rc = $l['cerveja_id'] !== '' ? dh_receita_da_cerveja(dh_receitas(), $l['cerveja_id']) : null;
+                $l['receita'] = $rc ? dh_receita_copia($rc) : null;
+            }
             if ($i === null) {
                 $l = ['id' => dh_id_novo('l')] + $l + ['status' => 'fermentando', 'registros' => [], 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'finalizado_em' => ''];
                 $b['lotes'][] = $l;
@@ -303,6 +308,7 @@ function brassagem_tela_lote(): void
     $t = dh_tanque($b, $l['tanque']);
     $regs = dh_lote_registros($l);
     $cervejas = dh_brassagem_cervejas();
+    $receitas = dh_receitas();
     $cv = $novo ? null : dh_lote_cerveja($l, $cervejas);
     // Cerveja escolhida no formulário: do cadastro, "outra" (nome digitado) ou nenhuma ainda
     $cidSel = $posted && isset($_POST['cerveja_id']) ? (string) $_POST['cerveja_id'] : ($cv['id'] ?? ($l['cerveja'] !== '' ? 'outra' : ''));
@@ -332,9 +338,18 @@ function brassagem_tela_lote(): void
           <h2 class="caderno-titulo">Anotações brassagem</h2>
           <div class="caderno-brassagem">
             <div><span>PF</span><strong><?= $l['pf_brix'] !== '' ? e(dh_num($l['pf_brix'])) . ' °Bx' : '—' ?></strong><small>Litragem: <?= $l['pf_cm'] !== '' ? e(dh_num($l['pf_cm'])) . ' cm' . $litros($l['pf_cm']) : '—' ?></small></div>
-            <div><span>OG</span><strong><?= $l['og_brix'] !== '' ? e(dh_num($l['og_brix'])) . ' °Bx' : '—' ?></strong><small><?= $l['og_brix'] !== '' ? 'SG ≈ ' . e(dh_brix_sg($l['og_brix'])) . ' · ' : '' ?>Litragem: <?= $l['og_cm'] !== '' ? e(dh_num($l['og_cm'])) . ' cm' . $litros($l['og_cm']) : '—' ?></small></div>
+            <div><span>OG</span><strong><?= $l['og_brix'] !== '' ? e(dh_num($l['og_brix'])) . ' °Bx' : '—' ?></strong><small><?= $l['og_brix'] !== '' ? 'SG ≈ ' . e(dh_brix_sg($l['og_brix'])) . ' · ' : '' ?><?= !empty($l['receita']['og']) ? 'previsto ≈ ' . e(dh_sg_brix($l['receita']['og'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['og_cm'] !== '' ? e(dh_num($l['og_cm'])) . ' cm' . $litros($l['og_cm']) : '—' ?></small></div>
           </div>
           <?php if ($l['obs'] !== ''): ?><p class="caderno-obs"><b>Obs.:</b> <?= nl2br(e($l['obs'])) ?></p><?php endif; ?>
+          <?php if (!empty($l['receita'])): $rc = $l['receita']; ?>
+            <details class="caderno-receita">
+              <summary>📖 Receita: <?= e($rc['nome']) ?><?= $rc['og'] !== '' ? ' · OG prevista ' . e(dh_sg_formatar($rc['og'])) . ' (≈ ' . e(dh_sg_brix($rc['og'])) . ' °Bx)' : '' ?></summary>
+              <?php receitas_resumo($rc, true); ?>
+              <?php if (trim($rc['notas']) !== ''): ?><h3>Notas</h3><p class="receita-notas"><?= nl2br(e($rc['notas'])) ?></p><?php endif; ?>
+            </details>
+          <?php elseif ($cv): ?>
+            <p class="dica sem-impressao">A <?= e($cv['nome']) ?> ainda não tem receita. <a href="./?acao=receita&amp;cerveja=<?= e(rawurlencode($cv['id'])) ?>">Adicionar em Receitas</a> (depois, é só salvar o cabeçalho para ela entrar no caderno).</p>
+          <?php endif; ?>
         <?php endif; ?>
 
         <details class="sem-impressao" <?= $novo || ($posted && ($_GET['acao'] ?? '') === 'brassagem-lote-salvar') ? 'open' : '' ?>>
@@ -345,7 +360,7 @@ function brassagem_tela_lote(): void
               <label>Cerveja <small>(do cadastro de Cervejas)</small>
                 <select name="cerveja_id" id="cerveja-id" required>
                   <option value="">Escolha a cerveja</option>
-                  <?php foreach ($cervejas as $c): ?><option value="<?= e($c['id']) ?>" <?= $c['id'] === $cidSel ? 'selected' : '' ?>><?= e($c['nome']) ?><?= ($c['estilo'] ?? '') !== '' ? ' · ' . e($c['estilo']) : '' ?></option><?php endforeach; ?>
+                  <?php foreach ($cervejas as $c): $rc = dh_receita_da_cerveja($receitas, $c['id']); ?><option value="<?= e($c['id']) ?>" data-levedura="<?= e($rc && $rc['leveduras'] ? $rc['leveduras'][0]['nome'] : '') ?>" <?= $c['id'] === $cidSel ? 'selected' : '' ?>><?= e($c['nome']) ?><?= ($c['estilo'] ?? '') !== '' ? ' · ' . e($c['estilo']) : '' ?><?= $rc ? ' · 📖 receita' : '' ?></option><?php endforeach; ?>
                   <option value="outra" <?= $cidSel === 'outra' ? 'selected' : '' ?>>Outra (ainda não cadastrada)…</option>
                 </select>
               </label>
@@ -356,7 +371,13 @@ function brassagem_tela_lote(): void
               (function () {
                 var s = document.getElementById('cerveja-id'), o = document.getElementById('cerveja-outra');
                 function ver() { o.hidden = s.value !== 'outra'; o.querySelector('input').required = s.value === 'outra'; }
-                s.addEventListener('change', ver); ver();
+                // A levedura da receita entra sozinha se o campo estiver vazio
+                s.addEventListener('change', function () {
+                  var lev = document.querySelector('[name=levedura]'), op = s.selectedOptions[0];
+                  if (lev && !lev.value && op && op.dataset.levedura) lev.value = op.dataset.levedura;
+                  ver();
+                });
+                ver();
               })();
             </script>
             <div class="duas">
