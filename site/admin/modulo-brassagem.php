@@ -152,7 +152,7 @@ function brassagem_acao(string $acao): bool
             }
             $b['lotes'][$i]['registros'] = $regs;
             dh_brassagem_salvar($b);
-            ir('./?acao=brassagem-lote&id=' . $b['lotes'][$i]['id'] . '#acompanhamento', 'Anotação salva.');
+            ir('./?acao=brassagem-lote&id=' . $b['lotes'][$i]['id'] . '#nova-anotacao', 'Anotação salva.');
 
         case 'brassagem-registro-excluir':
             exigir_post();
@@ -542,21 +542,9 @@ function brassagem_tela_lote(): void
 
         <?php if (!$novo): ?>
           <h2 class="caderno-titulo" id="acompanhamento">Acompanhamento fermentação e maturação</h2>
-          <?php if ($l['status'] !== 'finalizado'): $rp = $posted && ($_GET['acao'] ?? '') === 'brassagem-registro-salvar' && empty($_POST['rid']) ? $_POST : []; ?>
-            <form method="post" action="./?acao=brassagem-registro-salvar" class="form-registro sem-impressao">
-              <?= $csrf ?><input type="hidden" name="id" value="<?= e($l['id']) ?>">
-              <div class="quatro">
-                <label>Data <input type="date" name="data" required value="<?= e($rp['data'] ?? date('Y-m-d')) ?>"></label>
-                <label>Brix <small>(°Bx)</small><input name="brix" inputmode="decimal" value="<?= e($rp['brix'] ?? '') ?>"></label>
-                <label>Pressão <small>(bar)</small><input name="pressao" inputmode="decimal" value="<?= e($rp['pressao'] ?? '') ?>"></label>
-                <label>Temp. <small>(°C)</small><input name="temp" inputmode="decimal" value="<?= e($rp['temp'] ?? '') ?>"></label>
-              </div>
-              <label>Anotação <textarea name="texto" rows="2" placeholder="Ex.: Medição 4 Brix, fechar válvula, baixar para 4 graus"><?= e($rp['texto'] ?? '') ?></textarea></label>
-              <button class="btn primario largo">+ Anotar</button>
-            </form>
-          <?php endif; ?>
+          <!-- Do mais antigo para o mais novo, como no caderno; a próxima anotação vai embaixo -->
           <ol class="caderno-linhas">
-            <?php foreach (array_reverse($regs) as $r): $med = brassagem_medidas($r); ?>
+            <?php foreach ($regs as $r): $med = brassagem_medidas($r); ?>
               <li>
                 <span class="linha-data"><?= e(date('d/m', strtotime($r['data']))) ?><small>dia <?= dh_lote_dia($l, $r['data']) ?></small></span>
                 <span class="linha-texto">
@@ -584,6 +572,19 @@ function brassagem_tela_lote(): void
             <?php endforeach; ?>
             <?php if (!$regs): ?><li class="dica">Nenhuma anotação ainda.</li><?php endif; ?>
           </ol>
+          <?php if ($l['status'] !== 'finalizado'): $rp = $posted && ($_GET['acao'] ?? '') === 'brassagem-registro-salvar' && empty($_POST['rid']) ? $_POST : []; ?>
+            <form method="post" action="./?acao=brassagem-registro-salvar" class="form-registro sem-impressao" id="nova-anotacao">
+              <?= $csrf ?><input type="hidden" name="id" value="<?= e($l['id']) ?>">
+              <div class="quatro">
+                <label>Data <input type="date" name="data" required value="<?= e($rp['data'] ?? date('Y-m-d')) ?>"></label>
+                <label>Brix <small>(°Bx)</small><input name="brix" inputmode="decimal" value="<?= e($rp['brix'] ?? '') ?>"></label>
+                <label>Pressão <small>(bar)</small><input name="pressao" inputmode="decimal" value="<?= e($rp['pressao'] ?? '') ?>"></label>
+                <label>Temp. <small>(°C)</small><input name="temp" inputmode="decimal" value="<?= e($rp['temp'] ?? '') ?>"></label>
+              </div>
+              <label>Anotação <textarea name="texto" rows="2" placeholder="Ex.: Medição 4 Brix, fechar válvula, baixar para 4 graus"><?= e($rp['texto'] ?? '') ?></textarea></label>
+              <button class="btn primario largo">+ Anotar</button>
+            </form>
+          <?php endif; ?>
 
           <div class="card-botoes sem-impressao">
             <button type="button" class="btn secundario" onclick="var d = document.getElementById('editar-caderno'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' });">✏️ Editar</button>

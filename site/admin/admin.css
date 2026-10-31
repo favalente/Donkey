@@ -549,3 +549,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .tabela-comparar th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .tabela-comparar .linha-receita td { color: var(--muted); font-style: italic; }
 .caixa-antigo { background: var(--caixa); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+#nova-anotacao { margin-top: 14px; scroll-margin-top: 12px; }
