@@ -226,17 +226,22 @@ function receitas_tela_lista(): void
     ?>
       <div class="titulo-acao"><h1>Receitas</h1></div>
       <p class="dica">Uma receita para cada cerveja: tamanho do lote, insumos, pré-fervura, OG e FG (°Brix), lavagem, cor, ABV, IBU e, se quiser, o print da receita. Toque na cerveja para preencher.</p>
+      <div class="filtro-receitas">
+        <input type="search" id="filtro-receitas" placeholder="🔎 Filtrar pelo nome da cerveja ou da receita" aria-label="Filtrar receitas pelo nome" autocomplete="off">
+        <label class="check"><input type="checkbox" id="so-com-receita"> Só com receita</label>
+      </div>
+      <p class="dica" id="filtro-vazio" hidden>Nenhuma receita com esse nome.</p>
       <?php if ($soltas): ?>
         <h2>Sem cerveja ligada</h2>
         <ul class="lista-lotes">
           <?php foreach ($soltas as $x): ?>
-            <li><a href="./?acao=receita&amp;id=<?= e($x['id']) ?>"><strong><?= e($x['nome']) ?></strong><span>escolha a cerveja do cadastro</span><em class="tag alerta">Ligar à cerveja</em></a></li>
+            <li data-busca="<?= e(dh_sem_acento($x['nome'])) ?>" data-receita="1"><a href="./?acao=receita&amp;id=<?= e($x['id']) ?>"><strong><?= e($x['nome']) ?></strong><span>escolha a cerveja do cadastro</span><em class="tag alerta">Ligar à cerveja</em></a></li>
           <?php endforeach; ?>
         </ul>
       <?php endif; ?>
       <ul class="lista-lotes lista-receitas">
         <?php foreach ($cervejas as $c): $x = dh_receita_da_cerveja($r, $c['id']); ?>
-          <li><a href="<?= $x ? './?acao=receita&amp;id=' . e($x['id']) : './?acao=receita&amp;cerveja=' . e(rawurlencode($c['id'])) ?>">
+          <li data-busca="<?= e(dh_sem_acento($c['nome'] . ' ' . ($x['nome'] ?? ''))) ?>" data-receita="<?= $x ? '1' : '' ?>"><a href="<?= $x ? './?acao=receita&amp;id=' . e($x['id']) : './?acao=receita&amp;cerveja=' . e(rawurlencode($c['id'])) ?>">
             <?php if (!empty($c['imagem'])): ?><img src="../<?= e($c['imagem']) ?>" alt="" width="40" height="40" loading="lazy"><?php endif; ?>
             <strong><?= e($c['nome']) ?></strong>
             <?php if ($x): ?>
@@ -248,6 +253,25 @@ function receitas_tela_lista(): void
           </a></li>
         <?php endforeach; ?>
       </ul>
+      <script>
+        // Filtro na hora, sem acento e sem diferenciar maiúsculas
+        (function () {
+          var campo = document.getElementById('filtro-receitas'), so = document.getElementById('so-com-receita'), vazio = document.getElementById('filtro-vazio');
+          function norm(t) { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+          function filtrar() {
+            var q = norm(campo.value.trim()), achou = 0;
+            document.querySelectorAll('li[data-busca]').forEach(function (li) {
+              var ok = (!q || li.dataset.busca.indexOf(q) >= 0) && (!so.checked || li.dataset.receita);
+              li.hidden = !ok; if (ok) achou++;
+            });
+            document.querySelectorAll('.lista-lotes').forEach(function (ul) {
+              var h = ul.previousElementSibling; if (h && h.tagName === 'H2') h.hidden = !ul.querySelector('li[data-busca]:not([hidden])');
+            });
+            vazio.hidden = achou > 0;
+          }
+          campo.addEventListener('input', filtrar); so.addEventListener('change', filtrar);
+        })();
+      </script>
       <?php receitas_form_importar(); ?>
     <?php
 }

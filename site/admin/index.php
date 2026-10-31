@@ -510,7 +510,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=49">
+  <link rel="stylesheet" href="admin.css?v=50">
   <script>
     // Tema escolhido neste aparelho (claro é o padrão)
     try { if (localStorage.getItem('dh-tema') === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}

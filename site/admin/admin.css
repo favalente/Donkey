@@ -553,3 +553,7 @@ h3 small { font-weight: 400; color: var(--muted); }
 /* Insumos da maturação (dry hop…): fundo verde claro, sempre no fim da lista */
 .tabela-receita.insumos tr.insumo-maturacao td { background: var(--verde-bg); }
 .legenda-maturacao i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--verde-bg); border: 1px solid var(--verde-txt); vertical-align: -1px; margin: 0 4px 0 6px; }
+.filtro-receitas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 10px 0 4px; }
+.filtro-receitas input[type=search] { flex: 1 1 240px; margin-top: 0; }
+.filtro-receitas .check { margin: 0; }
+.lista-lotes li[hidden] { display: none; }
