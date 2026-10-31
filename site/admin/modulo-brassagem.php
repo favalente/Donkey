@@ -24,6 +24,7 @@ function brassagem_acao(string $acao): bool
         case 'brassagem':
         case 'brassagem-lote':
         case 'brassagem-tanques':
+        case 'brassagem-comparar':
             exigir('brassagem');
             return true;
 
@@ -95,7 +96,13 @@ function brassagem_acao(string $acao): bool
                     throw new RuntimeException('Já existe o lote ' . $x['lote'] . ' (' . $x['cerveja'] . '). Confira o número.');
                 }
             }
-            $ocupado = dh_tanque_lote($b, $tanque['id']);
+            // Caderno antigo (lote já finalizado): entra no histórico sem ocupar o tanque
+            $antigo = $i === null && !empty($_POST['antigo']);
+            $fim = brassagem_data($_POST['finalizado_em'] ?? '');
+            if ($antigo && $fim !== '' && $fim < $l['data']) {
+                throw new RuntimeException('A data de finalização não pode ser antes da brassagem.');
+            }
+            $ocupado = $antigo ? null : dh_tanque_lote($b, $tanque['id']);
             $mesmoLote = $ocupado && $i !== null && $ocupado['id'] === $b['lotes'][$i]['id'];
             if ($ocupado && !$mesmoLote && ($i === null || $b['lotes'][$i]['status'] !== 'finalizado')) {
                 throw new RuntimeException($tanque['nome'] . ' está com o lote ' . $ocupado['lote'] . ' (' . $ocupado['cerveja'] . '). Finalize esse lote antes ou escolha outro tanque.');
@@ -106,9 +113,10 @@ function brassagem_acao(string $acao): bool
                 $l['receita'] = $rc ? dh_receita_copia($rc) : null;
             }
             if ($i === null) {
-                $l = ['id' => dh_id_novo('l')] + $l + ['status' => 'fermentando', 'registros' => [], 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'), 'finalizado_em' => ''];
+                $l = ['id' => dh_id_novo('l')] + $l + ['status' => $antigo ? 'finalizado' : 'fermentando', 'registros' => [], 'criado_por' => $usuario['nome'], 'criado_em' => date('Y-m-d H:i:s'),
+                    'finalizado_em' => $antigo ? ($fim ?: $l['data']) . ' 00:00:00' : ''];
                 $b['lotes'][] = $l;
-                $msg = 'Lote ' . $l['lote'] . ' criado no ' . $tanque['nome'] . '. Agora é só anotar o acompanhamento.';
+                $msg = $antigo ? 'Caderno antigo do lote ' . $l['lote'] . ' criado (finalizado). Agora é só passar as anotações.' : 'Lote ' . $l['lote'] . ' criado no ' . $tanque['nome'] . '. Agora é só anotar o acompanhamento.';
             } else {
                 $b['lotes'][$i] = array_merge($b['lotes'][$i], $l);
                 $l = $b['lotes'][$i];
@@ -250,7 +258,7 @@ function brassagem_acao(string $acao): bool
                     'unidade' => isset(DH_UNIDADES[$in['unidade'] ?? '']) ? $in['unidade'] : '', 'pf_brix' => brassagem_num($in['pf_brix'] ?? ''), 'pf_cm' => brassagem_num($in['pf_cm'] ?? ''),
                     'og_brix' => brassagem_num($in['og_brix'] ?? ''), 'og_cm' => brassagem_num($in['og_cm'] ?? ''), 'obs' => mb_substr(trim((string) ($in['obs'] ?? '')), 0, 1000),
                     'receita' => $rc ? dh_receita_copia($rc) : null, 'status' => $status, 'registros' => $regs, 'criado_por' => $usuario['nome'] . ' (importado)',
-                    'criado_em' => date('Y-m-d H:i:s'), 'finalizado_em' => $status === 'finalizado' ? date('Y-m-d H:i:s') : '', 'maturacao_em' => $status === 'maturando' ? date('Y-m-d') : ''];
+                    'criado_em' => date('Y-m-d H:i:s'), 'finalizado_em' => $status === 'finalizado' ? (brassagem_data($in['finalizado_em'] ?? '') ?: ($regs ? max(array_column($regs, 'data')) : $data)) . ' 00:00:00' : '', 'maturacao_em' => $status === 'maturando' ? date('Y-m-d') : ''];
                 $ok[] = $num . ' (' . ($cv['nome'] ?? $in['cerveja']) . ', ' . $tq['nome'] . ')';
             }
             if (!$ok) {
@@ -289,6 +297,10 @@ function brassagem_tela(string $tela): bool
     }
     if ($tela === 'brassagem-tanques') {
         brassagem_tela_config();
+        return true;
+    }
+    if ($tela === 'brassagem-comparar') {
+        brassagem_tela_comparar();
         return true;
     }
     return false;
@@ -335,7 +347,7 @@ function brassagem_tela_tanques(): void
       <?php if (!$b['tanques']): ?>
         <p class="aviso">Primeiro passo: <a href="./?acao=brassagem-tanques">cadastre os tanques</a> da fábrica. Depois, cada brassagem vira um caderno digital dentro do tanque.</p>
       <?php else: ?>
-        <div class="novo-contrato"><a class="btn primario largo" href="./?acao=brassagem-lote">+ Nova brassagem</a></div>
+        <div class="novo-contrato"><a class="btn primario largo" href="./?acao=brassagem-lote">+ Nova brassagem</a><a class="btn secundario largo" href="./?acao=brassagem-lote&amp;antigo=1">+ Caderno antigo (histórico)</a></div>
       <?php endif; ?>
       <?php if ($tanques): ?>
         <div class="grade-tanques">
@@ -372,6 +384,16 @@ function brassagem_tela_tanques(): void
         $hist = array_slice($hist, 0, $busca !== '' ? 200 : 40);
       ?>
       <?php if ($b['lotes']): ?>
+        <?php
+          $grupos = [];
+          foreach ($b['lotes'] as $x) {
+              $g = brassagem_chave_cerveja($x);
+              $grupos[$g] = ['nome' => $x['cerveja'], 'n' => ($grupos[$g]['n'] ?? 0) + 1];
+          }
+          uasort($grupos, fn($p, $q) => strnatcasecmp($p['nome'], $q['nome']));
+        ?>
+        <h2>Comparar lotes por cerveja</h2>
+        <p class="chips-comparar"><?php foreach ($grupos as $g => $x): ?><a href="./?acao=brassagem-comparar&amp;cerveja=<?= e(rawurlencode($g)) ?>">📈 <?= e($x['nome']) ?> <small><?= $x['n'] ?></small></a><?php endforeach; ?></p>
         <h2>Cadernos (lotes)</h2>
         <form method="get" class="busca-lotes"><input type="hidden" name="acao" value="brassagem"><input type="search" name="q" value="<?= e($_GET['q'] ?? '') ?>" placeholder="Buscar por cerveja, lote ou levedura"><button class="btn secundario">Buscar</button></form>
         <ul class="lista-lotes">
@@ -406,6 +428,9 @@ function brassagem_tela_lote(): void
     $cidSel = $posted && isset($_POST['cerveja_id']) ? (string) $_POST['cerveja_id'] : ($cv['id'] ?? ($l['cerveja'] !== '' ? 'outra' : ''));
     $leveduras = array_unique(array_filter(array_column($b['lotes'], 'levedura')));
     $livres = array_filter($b['tanques'], fn($x) => $x['id'] === $l['tanque'] || ($x['ativo'] && !dh_tanque_lote($b, $x['id'])));
+    // Caderno antigo: qualquer tanque (o lote já saiu dele)
+    $antigoSel = $novo && ($posted ? !empty($_POST['antigo']) : !empty($_GET['antigo']));
+    $todosTanques = $novo ? $b['tanques'] : $livres;
     $v = fn($k) => e(is_numeric($cab[$k] ?? '') && ($cab[$k] ?? '') !== '' ? dh_num($cab[$k]) : ($cab[$k] ?? ''));
     // "Litragem: 66 cm" e, embaixo, os litros efetivos (66 × 7,5 = 495 L)
     $litragem = fn($cm) => 'Litragem: ' . ($cm !== '' ? e(dh_num($cm)) . ' cm<br><b class="litros-efetivos">' . e(dh_num(dh_litros_cm((string) $cm))) . ' L efetivos</b>' : '—');
@@ -447,8 +472,24 @@ function brassagem_tela_lote(): void
 
         <details class="sem-impressao" id="editar-caderno" <?= $novo || ($posted && ($_GET['acao'] ?? '') === 'brassagem-lote-salvar') ? 'open' : '' ?>>
           <summary class="<?= $novo ? 'escondido' : '' ?>">✏️ Editar caderno</summary>
-          <form method="post" action="./?acao=brassagem-lote-salvar" class="form-cerveja">
+          <form method="post" action="./?acao=brassagem-lote-salvar" class="form-cerveja" id="form-caderno">
             <?= $csrf ?><input type="hidden" name="id" value="<?= e($l['id']) ?>">
+            <?php if ($novo): ?>
+              <label class="check caixa-antigo"><input type="checkbox" name="antigo" value="1" id="caderno-antigo" <?= $antigoSel ? 'checked' : '' ?>> <span><b>Caderno antigo</b> (lote que já saiu do tanque; entra no histórico para comparar)</span></label>
+              <label id="campo-fim" <?= $antigoSel ? '' : 'hidden' ?>>Data de finalização <small>(opcional)</small><input type="date" name="finalizado_em" value="<?= e($_POST['finalizado_em'] ?? '') ?>"></label>
+              <script>
+                // Roda depois do formulário inteiro carregar (a lista de tanques vem mais abaixo)
+                document.addEventListener('DOMContentLoaded', function () {
+                  var ck = document.getElementById('caderno-antigo'), fim = document.getElementById('campo-fim'), sel = document.querySelector('#form-caderno [name=tanque]');
+                  function ver() {
+                    fim.hidden = !ck.checked;
+                    // Lote em andamento só vai para tanque livre; caderno antigo pode ser qualquer tanque
+                    sel.querySelectorAll('option[data-ocupado]').forEach(function (o) { o.disabled = !ck.checked; o.hidden = !ck.checked; if (!ck.checked && o.selected) sel.value = ''; });
+                  }
+                  ck.addEventListener('change', ver); ver();
+                });
+              </script>
+            <?php endif; ?>
             <div class="duas">
               <label>Cerveja <small>(do cadastro de Cervejas)</small>
                 <select name="cerveja_id" id="cerveja-id" required>
@@ -477,7 +518,7 @@ function brassagem_tela_lote(): void
               <label>Lote <input name="lote" required inputmode="numeric" value="<?= $v('lote') ?>"></label>
               <label>Tanque
                 <select name="tanque" required><option value="">—</option>
-                  <?php foreach ($livres as $x): ?><option value="<?= e($x['id']) ?>" <?= $x['id'] === $cab['tanque'] ? 'selected' : '' ?>><?= e($x['nome']) ?></option><?php endforeach; ?>
+                  <?php foreach ($todosTanques as $x): $livre = isset($livres[array_search($x, $b['tanques'], true)]); ?><option value="<?= e($x['id']) ?>" <?= $livre ? '' : 'data-ocupado="1"' ?> <?= $x['id'] === $cab['tanque'] ? 'selected' : '' ?>><?= e($x['nome']) ?></option><?php endforeach; ?>
                 </select>
               </label>
             </div>
@@ -550,6 +591,7 @@ function brassagem_tela_lote(): void
             <?php if ($l['status'] === 'fermentando'): ?><?= $st('maturando', '❄️ Passar para maturação', 'secundario', 'Passar o lote ' . $l['lote'] . ' para maturação?') ?><?php endif; ?>
             <?php if ($l['status'] !== 'finalizado'): ?><?= $st('finalizado', '✅ Finalizar lote (libera o tanque)', 'primario', 'Finalizar o lote ' . $l['lote'] . '? O ' . ($t['nome'] ?? 'tanque') . ' fica livre para outra brassagem.') ?><?php endif; ?>
             <?php if ($l['status'] === 'finalizado' && !dh_tanque_lote($b, $l['tanque'])): ?><?= $st('maturando', '↩ Reabrir lote', 'secundario', 'Reabrir o lote ' . $l['lote'] . ' no ' . ($t['nome'] ?? 'tanque') . '?') ?><?php endif; ?>
+            <a class="btn secundario" href="./?acao=brassagem-comparar&amp;cerveja=<?= e(rawurlencode(brassagem_chave_cerveja($l))) ?>">📈 Comparar lotes</a>
             <button type="button" class="btn secundario" onclick="window.print()">🖨 Imprimir caderno</button>
             <form method="post" action="./?acao=brassagem-lote-excluir" onsubmit="return confirm('Excluir o lote <?= e($l['lote']) ?> e todas as anotações? Não dá para desfazer.');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($l['id']) ?>"><button class="btn perigo">🗑 Excluir lote</button></form>
           </div>
@@ -598,5 +640,133 @@ function brassagem_tela_config(): void
         <label>Importar cadernos <small>(arquivo .json com os lotes; lotes com número que já existe ficam de fora)</small><input type="file" name="arquivo" accept=".json,application/json" required></label>
         <button class="btn secundario">Importar</button>
       </form>
+    <?php
+}
+
+// Chave de agrupamento dos lotes de uma cerveja: o id do cadastro ou, sem ele, o nome
+function brassagem_chave_cerveja(array $l): string
+{
+    return ($l['cerveja_id'] ?? '') !== '' ? $l['cerveja_id'] : 'nome:' . mb_strtolower(trim($l['cerveja']));
+}
+
+// Números de um lote para a comparação: OG, Brix lidos por dia, FG lida, FG real, álcool, dias
+function brassagem_resumo_lote(array $l): array
+{
+    $og = ($l['og_brix'] ?? '') !== '' ? (float) $l['og_brix'] : null;
+    $pontos = $og !== null ? [[0, $og]] : [];
+    foreach (dh_lote_registros($l) as $r) {
+        if (($r['brix'] ?? '') !== '' && $r['data'] > $l['data']) {
+            $pontos[] = [dh_lote_dia($l, $r['data']), (float) $r['brix']];
+        }
+    }
+    $leituras = array_slice($pontos, $og !== null ? 1 : 0);
+    $fgLida = $leituras ? end($leituras)[1] : null;
+    $min = $leituras ? min(array_column($leituras, 1)) : null;
+    $diaFg = null;
+    foreach ($leituras as [$d, $bx]) {
+        if ($bx <= $min) {
+            $diaFg = $d;
+            break;
+        }
+    }
+    $fgReal = $og !== null && $fgLida !== null && $fgLida < $og ? dh_refratometro_sg($og, $fgLida) : null;
+    $fim = $l['status'] === 'finalizado' && $l['finalizado_em'] ? substr($l['finalizado_em'], 0, 10) : null;
+    return ['pontos' => $pontos, 'og' => $og, 'fg_lida' => $fgLida, 'fg_real' => $fgReal, 'dia_fg' => $diaFg,
+        'abv' => $fgReal !== null ? max(0, (dh_refratometro_og_sg($og) - $fgReal) * 131.25) : null,
+        'dias' => dh_lote_dia($l, $fim), 'andamento' => $fim === null];
+}
+
+function brassagem_tela_comparar(): void
+{
+    $b = dh_brassagem();
+    $chave = (string) ($_GET['cerveja'] ?? '');
+    $lotes = array_values(array_filter($b['lotes'], fn($l) => brassagem_chave_cerveja($l) === $chave));
+    usort($lotes, fn($x, $y) => $y['data'] <=> $x['data']);
+    $nome = $lotes ? $lotes[0]['cerveja'] : 'Cerveja';
+    $receita = $lotes && str_starts_with($chave, 'nome:') === false ? dh_receita_da_cerveja(dh_receitas(), $chave) : null;
+    $res = array_map('brassagem_resumo_lote', $lotes);
+    ?>
+      <p><a class="voltar" href="./?acao=brassagem">‹ Voltar para Brassagem</a></p>
+      <h1>Comparar lotes · <?= e($nome) ?></h1>
+      <?php if (!$lotes): ?><p class="dica">Nenhum lote desta cerveja.</p><?php return; endif; ?>
+      <p class="dica"><?= count($lotes) ?> lote<?= count($lotes) > 1 ? 's' : '' ?>. O Brix é o lido no refratômetro; FG real e álcool já com a correção de álcool.<?= $receita ? ' Receita: OG ' . e(dh_num($receita['og'])) . ' °Bx, FG no refratômetro ' . e(dh_num($receita['fg'])) . ' °Bx.' : '' ?></p>
+      <?php brassagem_grafico_brix($lotes, $res, $receita); ?>
+      <div class="tabela-rolagem">
+        <table class="tabela-comparar">
+          <thead><tr><th>Lote</th><th>Brassagem</th><th>Sede · tanque</th><th>Levedura</th><th>PF</th><th>OG</th><th>FG lida</th><th>FG real</th><th>Álcool</th><th>Chegou na FG</th><th>No tanque</th></tr></thead>
+          <tbody>
+            <?php if ($receita): ?>
+              <tr class="linha-receita"><td>Receita</td><td>—</td><td>—</td><td><?= e($receita['levedura'] ?: '—') ?></td><td><?= $receita['pre_fervura'] !== '' ? e(dh_num($receita['pre_fervura'])) : '—' ?></td><td><?= $receita['og'] !== '' ? e(dh_num($receita['og'])) : '—' ?></td><td><?= $receita['fg'] !== '' ? e(dh_num($receita['fg'])) : '—' ?></td>
+                <td><?= $receita['og'] !== '' && $receita['fg'] !== '' ? e(number_format(dh_refratometro_sg((float) $receita['og'], (float) $receita['fg']), 3, ',', '')) : '—' ?></td><td><?= $receita['abv'] !== '' ? e(dh_num($receita['abv'])) . '%' : '—' ?></td><td>—</td><td>—</td></tr>
+            <?php endif; ?>
+            <?php foreach ($lotes as $k => $l): $r = $res[$k]; $t = dh_tanque($b, $l['tanque']); ?>
+              <tr>
+                <td><a href="./?acao=brassagem-lote&amp;id=<?= e($l['id']) ?>"><?php if ($k < 3): ?><i class="cor-serie serie-<?= $k + 1 ?>" aria-hidden="true"></i><?php endif; ?><?= e($l['lote']) ?></a></td>
+                <td><?= e(dh_data_br($l['data'])) ?></td>
+                <td><?= !empty($l['unidade']) ? e(DH_UNIDADES[$l['unidade']]) . ' · ' : '' ?><?= e($t['nome'] ?? '?') ?></td>
+                <td><?= e($l['levedura'] ?: '—') ?></td>
+                <td><?= $l['pf_brix'] !== '' ? e(dh_num($l['pf_brix'])) : '—' ?></td>
+                <td><?= $r['og'] !== null ? e(dh_num($r['og'])) : '—' ?></td>
+                <td><?= $r['fg_lida'] !== null ? e(dh_num($r['fg_lida'])) : '—' ?></td>
+                <td><?= $r['fg_real'] !== null ? e(number_format($r['fg_real'], 3, ',', '')) : '—' ?></td>
+                <td><?= $r['abv'] !== null ? e(dh_num(round($r['abv'], 1))) . '%' : '—' ?></td>
+                <td><?= $r['dia_fg'] !== null ? 'dia ' . $r['dia_fg'] : '—' ?></td>
+                <td><?= $r['dias'] ?> dias<?= $r['andamento'] ? ' <small>(em andamento)</small>' : '' ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php
+}
+
+// Curva do Brix lido por dia de produção. Os 3 lotes mais recentes em cor (com rótulo na ponta da linha),
+// os anteriores em cinza; a FG esperada da receita como linha tracejada. Passar o dedo/mouse num ponto mostra o valor.
+function brassagem_grafico_brix(array $lotes, array $res, ?array $receita): void
+{
+    $todos = array_merge(...array_map(fn($r) => $r['pontos'], $res));
+    if (count($todos) < 2) {
+        echo '<p class="dica">Ainda não há medições de Brix suficientes para o gráfico.</p>';
+        return;
+    }
+    [$W, $H, $ml, $mr, $mt, $mb] = [420, 260, 30, 46, 14, 34];
+    $maxDia = max(7, max(array_column($todos, 0)));
+    $maxBx = max(array_column($todos, 1));
+    if ($receita && $receita['og'] !== '') {
+        $maxBx = max($maxBx, (float) $receita['og']);
+    }
+    $maxBx = (int) ceil($maxBx + 0.5);
+    $x = fn($d) => $ml + $d / $maxDia * ($W - $ml - $mr);
+    $y = fn($v) => $mt + (1 - $v / $maxBx) * ($H - $mt - $mb);
+    $passoY = $maxBx > 16 ? 4 : 2;
+    $passoX = $maxDia > 28 ? 7 : ($maxDia > 14 ? 2 : 1);
+    ?>
+      <figure class="grafico-brix">
+        <div class="legenda-brix">
+          <?php foreach (array_slice($lotes, 0, 3) as $k => $l): ?><span><i class="cor-serie serie-<?= $k + 1 ?>"></i>Lote <?= e($l['lote']) ?> <small>(<?= e(date('d/m/y', strtotime($l['data']))) ?>)</small></span><?php endforeach; ?>
+          <?php if (count($lotes) > 3): ?><span><i class="cor-serie serie-cinza"></i>Lotes anteriores (<?= count($lotes) - 3 ?>)</span><?php endif; ?>
+          <?php if ($receita && $receita['fg'] !== ''): ?><span><i class="cor-serie serie-receita"></i>FG da receita</span><?php endif; ?>
+        </div>
+        <svg viewBox="0 0 <?= $W ?> <?= $H ?>" role="img" aria-label="Brix lido por dia de produção, lotes de <?= e($lotes[0]['cerveja']) ?>">
+          <?php for ($v = 0; $v <= $maxBx; $v += $passoY): ?>
+            <line class="grade" x1="<?= $ml ?>" x2="<?= $W - $mr ?>" y1="<?= round($y($v), 1) ?>" y2="<?= round($y($v), 1) ?>"/>
+            <text class="eixo" x="<?= $ml - 6 ?>" y="<?= round($y($v), 1) + 4 ?>" text-anchor="end"><?= $v ?></text>
+          <?php endfor; ?>
+          <?php for ($d = 0; $d <= $maxDia; $d += $passoX): ?><text class="eixo" x="<?= round($x($d), 1) ?>" y="<?= $H - $mb + 16 ?>" text-anchor="middle"><?= $d ?></text><?php endfor; ?>
+          <text class="eixo" x="<?= $ml ?>" y="<?= $H - 4 ?>">dia da produção</text>
+          <text class="eixo" x="4" y="<?= $mt + 2 ?>">°Bx</text>
+          <?php if ($receita && $receita['fg'] !== ''): $yf = round($y((float) $receita['fg']), 1); ?>
+            <line class="linha-receita-fg" x1="<?= $ml ?>" x2="<?= $W - $mr ?>" y1="<?= $yf ?>" y2="<?= $yf ?>"/>
+            <text class="eixo" x="<?= $W - $mr + 4 ?>" y="<?= $yf + 4 ?>">FG <?= e(dh_num($receita['fg'])) ?></text>
+          <?php endif; ?>
+          <?php foreach (array_reverse(array_keys($lotes)) as $k): $p = $res[$k]['pontos']; if (count($p) < 1) { continue; } $cls = $k < 3 ? 'serie-' . ($k + 1) : 'serie-cinza'; ?>
+            <g class="<?= $cls ?>">
+              <?php if (count($p) > 1): ?><polyline points="<?= implode(' ', array_map(fn($pt) => round($x($pt[0]), 1) . ',' . round($y($pt[1]), 1), $p)) ?>"/><?php endif; ?>
+              <?php foreach ($p as [$d, $bx]): ?><circle cx="<?= round($x($d), 1) ?>" cy="<?= round($y($bx), 1) ?>" r="<?= $k < 3 ? 4 : 3 ?>"><title>Lote <?= e($lotes[$k]['lote']) ?> · dia <?= $d ?> · <?= e(dh_num($bx)) ?> °Bx</title></circle><?php endforeach; ?>
+              <?php if ($k < 3): $u = end($p); ?><text class="rotulo-serie" x="<?= round($x($u[0]), 1) + 7 ?>" y="<?= round($y($u[1]), 1) - 6 ?>"><?= e($lotes[$k]['lote']) ?></text><?php endif; ?>
+            </g>
+          <?php endforeach; ?>
+        </svg>
+      </figure>
     <?php
 }

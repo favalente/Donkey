@@ -520,3 +520,32 @@ h3 small { font-weight: 400; color: var(--muted); }
 .linha-corrigida { display: block; color: var(--teal-txt); font-size: .85rem; }
 .tanque-medidas b small { font-weight: 400; color: var(--muted); font-size: .8rem; }
 .litros-efetivos { color: var(--text); font-size: .95rem; }
+/* Comparação de lotes (curva do Brix) */
+:root { --serie-1: #2a78d6; --serie-2: #eb6834; --serie-3: #1baf7a; --serie-cinza: #b9ada0; }
+:root[data-tema="escuro"] { --serie-1: #3987e5; --serie-2: #d95926; --serie-3: #199e70; --serie-cinza: #6b5d50; }
+.chips-comparar { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips-comparar a { padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-weight: 600; font-size: .92rem; }
+.chips-comparar small { color: var(--muted); font-weight: 400; margin-left: 2px; }
+.grafico-brix { margin: 12px 0 18px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.grafico-brix svg { width: 100%; max-width: 620px; height: auto; display: block; }
+.legenda-brix { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .88rem; margin-bottom: 6px; color: var(--text); }
+.legenda-brix small { color: var(--muted); }
+.cor-serie { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--serie-cinza); }
+.cor-serie.serie-1 { background: var(--serie-1); } .cor-serie.serie-2 { background: var(--serie-2); } .cor-serie.serie-3 { background: var(--serie-3); }
+.cor-serie.serie-receita { height: 0; border-top: 2px dashed var(--muted); background: none; border-radius: 0; }
+.grafico-brix .grade { stroke: var(--line); stroke-width: 1; opacity: .6; }
+.grafico-brix .eixo { fill: var(--muted); font-size: 12px; }
+.grafico-brix .linha-receita-fg { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.grafico-brix g polyline { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.grafico-brix g circle { stroke: var(--surface); stroke-width: 2; }
+.grafico-brix g.serie-1 polyline { stroke: var(--serie-1); } .grafico-brix g.serie-1 circle { fill: var(--serie-1); }
+.grafico-brix g.serie-2 polyline { stroke: var(--serie-2); } .grafico-brix g.serie-2 circle { fill: var(--serie-2); }
+.grafico-brix g.serie-3 polyline { stroke: var(--serie-3); } .grafico-brix g.serie-3 circle { fill: var(--serie-3); }
+.grafico-brix g.serie-cinza polyline { stroke: var(--serie-cinza); stroke-width: 1.5; } .grafico-brix g.serie-cinza circle { fill: var(--serie-cinza); }
+.grafico-brix .rotulo-serie { fill: var(--text); font-size: 12px; font-weight: 700; }
+.tabela-rolagem { overflow-x: auto; margin-bottom: 24px; }
+.tabela-comparar { border-collapse: collapse; min-width: 720px; width: 100%; font-size: .9rem; }
+.tabela-comparar th, .tabela-comparar td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.tabela-comparar th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.tabela-comparar .linha-receita td { color: var(--muted); font-style: italic; }
+.caixa-antigo { background: var(--caixa); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
