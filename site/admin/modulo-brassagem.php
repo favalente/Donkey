@@ -320,7 +320,7 @@ function brassagem_brix_corrigido(array $l, array $r): string
     return '≈ ' . number_format($sg, 3, ',', '') . ' · ' . dh_num(round($abv, 1)) . '% álcool';
 }
 
-// Resumo de medidas de uma linha: "7 °Bx · 0,5 bar · 4 °C"
+// Resumo de medidas de uma linha: "7 °Bx · 0,5 kg · 4 °C"
 function brassagem_medidas(array $r): string
 {
     $m = [];
@@ -328,7 +328,7 @@ function brassagem_medidas(array $r): string
         $m[] = dh_num($r['brix']) . ' °Bx';
     }
     if (($r['pressao'] ?? '') !== '') {
-        $m[] = dh_num($r['pressao']) . ' bar';
+        $m[] = dh_num($r['pressao']) . ' kg';
     }
     if (($r['temp'] ?? '') !== '') {
         $m[] = dh_num($r['temp']) . ' °C';
@@ -359,7 +359,7 @@ function brassagem_tela_tanques(): void
                 <span>Lote <?= e($l['lote']) ?><?= !empty($l['unidade']) ? ' · ' . e(DH_UNIDADES[$l['unidade']]) : '' ?> · dia <?= dh_lote_dia($l) ?> <small>(<?= e(dh_data_br($l['data'])) ?>)</small></span>
                 <span class="tanque-medidas">
                   <?php if ($ub): $corr = brassagem_brix_corrigido($l, $ub); ?><b><?= e(dh_num($ub['brix'])) ?> °Bx<?= $corr !== '' ? ' <small>' . e($corr) . '</small>' : '' ?></b><?php endif; ?>
-                  <?php if ($up): ?><b><?= e(dh_num($up['pressao'])) ?> bar</b><?php endif; ?>
+                  <?php if ($up): ?><b><?= e(dh_num($up['pressao'])) ?> kg</b><?php endif; ?>
                   <?php if ($ut): ?><b><?= e(dh_num($ut['temp'])) ?> °C</b><?php endif; ?>
                 </span>
                 <?php if ($ult): ?><span class="tanque-ultima"><?= e(date('d/m', strtotime($ult['data']))) ?>: <?= e($ult['texto'] !== '' ? $ult['texto'] : brassagem_medidas($ult)) ?></span><?php else: ?><span class="tanque-ultima">Sem anotações ainda</span><?php endif; ?>
@@ -578,7 +578,7 @@ function brassagem_tela_lote(): void
               <div class="quatro">
                 <label>Data <input type="date" name="data" required value="<?= e($rp['data'] ?? date('Y-m-d')) ?>"></label>
                 <label>Brix <small>(°Bx)</small><input name="brix" inputmode="decimal" value="<?= e($rp['brix'] ?? '') ?>"></label>
-                <label>Pressão <small>(bar)</small><input name="pressao" inputmode="decimal" value="<?= e($rp['pressao'] ?? '') ?>"></label>
+                <label>Pressão <small>(kg)</small><input name="pressao" inputmode="decimal" value="<?= e($rp['pressao'] ?? '') ?>"></label>
                 <label>Temp. <small>(°C)</small><input name="temp" inputmode="decimal" value="<?= e($rp['temp'] ?? '') ?>"></label>
               </div>
               <label>Anotação <textarea name="texto" rows="2" placeholder="Ex.: Medição 4 Brix, fechar válvula, baixar para 4 graus"><?= e($rp['texto'] ?? '') ?></textarea></label>
