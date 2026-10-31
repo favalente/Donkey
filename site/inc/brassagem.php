@@ -99,14 +99,14 @@ function dh_lote_ultima(array $l, string $campo): ?array
     return null;
 }
 
-// Litragem em cm vira litros quando o tanque tem a medida "litros por cm"
-function dh_tanque_litros(?array $t, string $cm): ?float
+// Litragem medida em cm na régua da panela: cada cm são 7,5 litros efetivos
+const DH_LITROS_POR_CM = 7.5;
+
+function dh_litros_cm(string $cm): ?float
 {
-    $f = (float) ($t['litros_cm'] ?? 0);
-    return $f > 0 && $cm !== '' ? round((float) $cm * $f, 1) : null;
+    return $cm !== '' ? round((float) $cm * DH_LITROS_POR_CM, 1) : null;
 }
 
-// Brix → densidade aproximada (SG), para quem prefere ver em OG/FG
 function dh_brix_sg(string $brix): ?string
 {
     if ($brix === '') {

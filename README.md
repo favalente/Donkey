@@ -62,7 +62,7 @@ Painel → **📄 Orçamentos** (administrador e financeiro): a proposta que vai
 
 O caderno de produção em versão digital (painel → 🧪 Brassagem). A fábrica é única e atende as duas sedes.
 
-- **Tanques:** cadastre em ⚙ Tanques (nome, capacidade e, se quiser, "litros por cm" para converter a litragem em cm para litros). Tanque com histórico não se exclui: marque "Fora de uso".
+- **Tanques:** cadastre em ⚙ Tanques (nome e capacidade). A litragem do caderno, medida em cm, aparece também em litros efetivos (cm × 7,5). Tanque com histórico não se exclui: marque "Fora de uso".
 - **Tanques virtuais:** a tela mostra cada tanque com o lote que está nele (cerveja, lote, dia da produção, últimas medidas de Brix, pressão e temperatura e a última anotação) ou "Livre".
 - **Caderno do lote:** o cabeçalho do caderno de papel (sede para a qual é o lote, cerveja escolhida do cadastro de Cervejas, ou "Outra" digitada se ainda não estiver lá, data, lote, levedura, tanque, PF e OG em °Brix com a litragem em cm, Obs.) e o acompanhamento da fermentação e maturação: data, Brix, pressão (bar), temperatura (°C) e anotação livre, com quem anotou. Dá para corrigir ou apagar uma anotação e imprimir o caderno.
 - **Fluxo:** Fermentando → Passar para maturação → Finalizar lote (libera o tanque). Um tanque recebe um lote por vez; o número do lote não se repete.

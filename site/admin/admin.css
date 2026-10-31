@@ -519,3 +519,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .receita-print img { max-width: 100%; border-radius: 10px; border: 1px solid var(--line); }
 .linha-corrigida { display: block; color: var(--teal-txt); font-size: .85rem; }
 .tanque-medidas b small { font-weight: 400; color: var(--muted); font-size: .8rem; }
+.litros-efetivos { color: var(--text); font-size: .95rem; }

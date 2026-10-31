@@ -36,7 +36,7 @@ function brassagem_acao(string $acao): bool
             if ($nome === '') {
                 throw new RuntimeException('Dê um nome ao tanque (ex.: Tanque 1).');
             }
-            $t = ['nome' => $nome, 'capacidade' => brassagem_num($_POST['capacidade'] ?? ''), 'litros_cm' => brassagem_num($_POST['litros_cm'] ?? ''), 'ativo' => empty($_POST['inativo'])];
+            $t = ['nome' => $nome, 'capacidade' => brassagem_num($_POST['capacidade'] ?? ''), 'ativo' => empty($_POST['inativo'])];
             $i = dh_brassagem_indice($b['tanques'], (string) ($_POST['id'] ?? ''));
             if ($i === null) {
                 $b['tanques'][] = ['id' => dh_id_novo('t')] + $t;
@@ -334,7 +334,8 @@ function brassagem_tela_lote(): void
     $leveduras = array_unique(array_filter(array_column($b['lotes'], 'levedura')));
     $livres = array_filter($b['tanques'], fn($x) => $x['id'] === $l['tanque'] || ($x['ativo'] && !dh_tanque_lote($b, $x['id'])));
     $v = fn($k) => e(is_numeric($cab[$k] ?? '') && ($cab[$k] ?? '') !== '' ? dh_num($cab[$k]) : ($cab[$k] ?? ''));
-    $litros = fn($cm) => ($x = dh_tanque_litros($t, (string) $cm)) !== null ? ' <small>(≈ ' . e(dh_num($x)) . ' L)</small>' : '';
+    // "Litragem: 66 cm" e, embaixo, os litros efetivos (66 × 7,5 = 495 L)
+    $litragem = fn($cm) => 'Litragem: ' . ($cm !== '' ? e(dh_num($cm)) . ' cm<br><b class="litros-efetivos">' . e(dh_num(dh_litros_cm((string) $cm))) . ' L efetivos</b>' : '—');
     ?>
       <p class="sem-impressao"><a class="voltar" href="./?acao=brassagem">‹ Voltar para Brassagem</a></p>
       <?php if ($novo): ?>
@@ -357,8 +358,8 @@ function brassagem_tela_lote(): void
           </dl>
           <h2 class="caderno-titulo">Anotações brassagem</h2>
           <div class="caderno-brassagem">
-            <div><span>PF</span><strong><?= $l['pf_brix'] !== '' ? e(dh_num($l['pf_brix'])) . ' °Bx' : '—' ?></strong><small><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['pre_fervura'] !== '' ? 'receita: ' . e(dh_num($rcl['pre_fervura'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['pf_cm'] !== '' ? e(dh_num($l['pf_cm'])) . ' cm' . $litros($l['pf_cm']) : '—' ?></small></div>
-            <div><span>OG</span><strong><?= $l['og_brix'] !== '' ? e(dh_num($l['og_brix'])) . ' °Bx' : '—' ?></strong><small><?= $l['og_brix'] !== '' ? 'SG ≈ ' . e(number_format(dh_refratometro_og_sg((float) $l['og_brix']), 3, ',', '')) . ' · ' : '' ?><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['og'] !== '' ? 'receita: ' . e(dh_num($rcl['og'])) . ' °Bx · ' : '' ?>Litragem: <?= $l['og_cm'] !== '' ? e(dh_num($l['og_cm'])) . ' cm' . $litros($l['og_cm']) : '—' ?></small></div>
+            <div><span>PF</span><strong><?= $l['pf_brix'] !== '' ? e(dh_num($l['pf_brix'])) . ' °Bx' : '—' ?></strong><small><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['pre_fervura'] !== '' ? 'receita: ' . e(dh_num($rcl['pre_fervura'])) . ' °Bx<br>' : '' ?><?= $litragem($l['pf_cm']) ?></small></div>
+            <div><span>OG</span><strong><?= $l['og_brix'] !== '' ? e(dh_num($l['og_brix'])) . ' °Bx' : '—' ?></strong><small><?= $l['og_brix'] !== '' ? 'SG ≈ ' . e(number_format(dh_refratometro_og_sg((float) $l['og_brix']), 3, ',', '')) . '<br>' : '' ?><?= ($rcl = dh_receita_simplificar($l['receita'] ?? [])) && $rcl['og'] !== '' ? 'receita: ' . e(dh_num($rcl['og'])) . ' °Bx<br>' : '' ?><?= $litragem($l['og_cm']) ?></small></div>
           </div>
           <?php if ($l['obs'] !== ''): ?><p class="caderno-obs"><b>Obs.:</b> <?= nl2br(e($l['obs'])) ?></p><?php endif; ?>
           <?php if (!empty($l['receita'])): $rc = dh_receita_simplificar($l['receita']); ?>
@@ -416,9 +417,9 @@ function brassagem_tela_lote(): void
             <datalist id="lista-leveduras"><?php foreach ($leveduras as $x): ?><option value="<?= e($x) ?>"><?php endforeach; ?></datalist>
             <div class="quatro">
               <label>PF (°Brix) <input name="pf_brix" inputmode="decimal" value="<?= $v('pf_brix') ?>"></label>
-              <label>Litragem PF (cm) <input name="pf_cm" inputmode="decimal" value="<?= $v('pf_cm') ?>"></label>
+              <label>Litragem PF (cm) <small>(× 7,5 = litros)</small><input name="pf_cm" inputmode="decimal" value="<?= $v('pf_cm') ?>"></label>
               <label>OG (°Brix) <input name="og_brix" inputmode="decimal" value="<?= $v('og_brix') ?>"></label>
-              <label>Litragem OG (cm) <input name="og_cm" inputmode="decimal" value="<?= $v('og_cm') ?>"></label>
+              <label>Litragem OG (cm) <small>(× 7,5 = litros)</small><input name="og_cm" inputmode="decimal" value="<?= $v('og_cm') ?>"></label>
             </div>
             <label>Obs. <textarea name="obs" rows="2"><?= $v('obs') ?></textarea></label>
             <button class="btn primario largo"><?= $novo ? 'Criar lote e abrir o caderno' : 'Salvar alterações' ?></button>
@@ -493,10 +494,7 @@ function brassagem_tela_config(): void
           <form method="post" action="./?acao=brassagem-tanque-salvar" class="form-cerveja">
             <?= $csrf ?><input type="hidden" name="id" value="<?= e($t['id']) ?>">
             <label>Nome <input name="nome" required maxlength="40" value="<?= e($t['nome']) ?>" placeholder="Ex.: Tanque 1"></label>
-            <div class="duas">
-              <label>Capacidade (L) <small>(opcional)</small><input name="capacidade" inputmode="decimal" value="<?= e($t['capacidade'] !== '' ? dh_num($t['capacidade']) : '') ?>"></label>
-              <label>Litros por cm <small>(opcional; converte a litragem em cm para litros)</small><input name="litros_cm" inputmode="decimal" value="<?= e($t['litros_cm'] !== '' ? dh_num($t['litros_cm']) : '') ?>"></label>
-            </div>
+            <label>Capacidade (L) <small>(opcional)</small><input name="capacidade" inputmode="decimal" value="<?= e($t['capacidade'] !== '' ? dh_num($t['capacidade']) : '') ?>"></label>
             <?php if ($t['id']): ?><label class="check"><input type="checkbox" name="inativo" value="1" <?= $t['ativo'] ? '' : 'checked' ?>> Fora de uso (não aparece para novas brassagens)</label><?php endif; ?>
             <button class="btn primario"><?= $t['id'] ? 'Salvar tanque' : 'Adicionar tanque' ?></button>
           </form>
