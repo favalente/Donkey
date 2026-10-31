@@ -84,6 +84,14 @@ function dh_receita_simplificar(array $x): array
         $x['fg'] = (string) round(dh_refratometro_leitura((float) $x['og'], dh_plato_sg((float) $x['fg'])), 1);
     }
     $x['fg_refr'] = true;
+    // A US-05 é comprada em pacote grande: no lugar dos sachês do BeerSmith ("10 pct Safale American
+    // (DCL/Fermentis US-05)"), a receita traz 250 g de Fermentis US-05
+    foreach ($x['insumos'] as $k => $it) {
+        if (preg_match('/\bUS-?05\b/i', $it['nome']) && in_array(mb_strtolower($it['unidade']), ['pct', 'pkg', ''], true)) {
+            $x['insumos'][$k] = ['qtd' => '250', 'unidade' => 'g', 'nome' => 'Fermentis US-05'];
+            $x['levedura'] = 'Fermentis US-05';
+        }
+    }
     $x['versoes'] = array_map(fn($v) => array_diff_key(dh_receita_simplificar($v), ['versoes' => 1]), $x['versoes']);
     return $x;
 }
