@@ -60,10 +60,14 @@ function dh_vendas_historico_salvar(array $h): void
     }
 }
 
-// Texto sem acento e em minúsculas, para comparar
+// Texto sem acento e em minúsculas, para comparar. Os acentos do português saem por tabela: o iconv
+// sozinho depende do idioma do servidor (na Locaweb, "Água" virava "?gua")
 function dh_sem_acento(string $s): string
 {
-    $t = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
+    $s = strtr(mb_strtolower($s, 'UTF-8'), ['á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'é' => 'e', 'ê' => 'e', 'è' => 'e', 'ë' => 'e',
+        'í' => 'i', 'î' => 'i', 'ì' => 'i', 'ï' => 'i', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ò' => 'o', 'ö' => 'o', 'ú' => 'u', 'û' => 'u', 'ù' => 'u', 'ü' => 'u',
+        'ç' => 'c', 'ñ' => 'n']);
+    $t = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
     return strtolower($t === false ? $s : $t);
 }
 
