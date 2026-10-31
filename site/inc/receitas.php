@@ -92,6 +92,17 @@ function dh_receita_simplificar(array $x): array
             $x['levedura'] = 'Fermentis US-05';
         }
     }
+    // Água e sais sempre no começo da lista (água primeiro), o resto na ordem em que estava
+    $ordem = function (array $it): int {
+        $n = dh_sem_acento($it['nome']);
+        if (preg_match('/\b(agua|water)\b/', $n)) {
+            return 0;
+        }
+        return preg_match('/\b(sais|sal|salt|gesso|gypsum|cloreto|chloride|sulfato|sulfate|calcio|calcium|cacl2?|caso4|epsom|bicarbonato|magnesio|magnesium)\b/', $n) ? 1 : 2;
+    };
+    $pos = array_flip(array_keys($x['insumos']));
+    uksort($x['insumos'], fn($p, $q) => [$ordem($x['insumos'][$p]), $pos[$p]] <=> [$ordem($x['insumos'][$q]), $pos[$q]]);
+    $x['insumos'] = array_values($x['insumos']);
     $x['versoes'] = array_map(fn($v) => array_diff_key(dh_receita_simplificar($v), ['versoes' => 1]), $x['versoes']);
     return $x;
 }
@@ -380,7 +391,9 @@ function dh_receita_bsmx(DOMXPath $xp, DOMNode $r): array
         $x['outros'][] = ['nome' => $t($w, 'F_W_NAME'), 'qtd' => (string) round($num($w, 'F_W_AMOUNT') * $L, 1), 'unidade' => 'L', 'uso' => 'Água'];
     }
     foreach ($ing('Misc') as $m) {
-        $x['outros'][] = ['nome' => $t($m, 'F_M_NAME'), 'qtd' => dh_receita_num($t($m, 'F_M_AMOUNT')), 'unidade' => '', 'uso' => ''];
+        // Unidade do BeerSmith (F_M_UNITS): a quantidade já vem nela
+        $un = [0 => 'mg', 1 => 'g', 2 => 'oz', 3 => 'lb', 4 => 'kg', 5 => 'ml', 6 => 'colher chá', 7 => 'colher sopa', 8 => 'xícara', 11 => 'L', 13 => 'un'][(int) $num($m, 'F_M_UNITS')] ?? '';
+        $x['outros'][] = ['nome' => $t($m, 'F_M_NAME'), 'qtd' => dh_receita_num($t($m, 'F_M_AMOUNT')), 'unidade' => $un, 'uso' => ''];
     }
     // Volumes do BeerSmith: o mosto rende o lote + a perda de trub; antes da fervura está no volume de pré-fervura
     $volFinal = ($lote + $trub) / 3.78541;
