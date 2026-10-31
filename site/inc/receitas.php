@@ -92,9 +92,13 @@ function dh_receita_simplificar(array $x): array
             $x['levedura'] = 'Fermentis US-05';
         }
     }
-    // Água e sais sempre no começo da lista (água primeiro), o resto na ordem em que estava
+    // Água e sais sempre no começo da lista (água primeiro), os da maturação (dry hop…) sempre no fim,
+    // o resto na ordem em que estava
     $ordem = function (array $it): int {
         $n = dh_sem_acento($it['nome']);
+        if (dh_insumo_maturacao($it)) {
+            return 3;
+        }
         if (preg_match('/\b(agua|water)\b/', $n)) {
             return 0;
         }
@@ -105,6 +109,12 @@ function dh_receita_simplificar(array $x): array
     $x['insumos'] = array_values($x['insumos']);
     $x['versoes'] = array_map(fn($v) => array_diff_key(dh_receita_simplificar($v), ['versoes' => 1]), $x['versoes']);
     return $x;
+}
+
+// Insumo que entra na maturação: dry hop e o que o BeerSmith marca para a maturação (secondary)
+function dh_insumo_maturacao(array $it): bool
+{
+    return (bool) preg_match('/\b(dry ?hop|maturacao|secondary)\b/', dh_sem_acento($it['nome']));
 }
 
 function dh_receita_uso_lupulo(array $h): string

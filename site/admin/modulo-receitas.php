@@ -378,8 +378,8 @@ function receitas_resumo(array $x): void
         </div>
       <?php endif; ?>
       <?php if ($x['insumos']): ?>
-        <h3>Insumos</h3>
-        <table class="tabela-receita insumos"><?php foreach ($x['insumos'] as $it): ?><tr><td><?= $it['qtd'] !== '' ? e(is_numeric($it['qtd']) ? dh_num($it['qtd']) : $it['qtd']) . ' ' . e($it['unidade']) : '' ?></td><td><?= e($it['nome']) ?></td></tr><?php endforeach; ?></table>
+        <h3>Insumos<?php if (array_filter($x['insumos'], 'dh_insumo_maturacao')): ?> <small class="legenda-maturacao"><i></i>maturação (no fim da lista)</small><?php endif; ?></h3>
+        <table class="tabela-receita insumos"><?php foreach ($x['insumos'] as $it): $mat = dh_insumo_maturacao($it); ?><tr<?= $mat ? ' class="insumo-maturacao" title="Maturação"' : '' ?>><td><?= $it['qtd'] !== '' ? e(is_numeric($it['qtd']) ? dh_num($it['qtd']) : $it['qtd']) . ' ' . e($it['unidade']) : '' ?></td><td><?= e($it['nome']) ?></td></tr><?php endforeach; ?></table>
       <?php endif; ?>
       <?php if (($x['imagem'] ?? '') !== '' && $x['id'] !== ''): $src = './?acao=receita-imagem&amp;id=' . e(rawurlencode($x['id'])); ?>
         <h3>Print da receita</h3>
