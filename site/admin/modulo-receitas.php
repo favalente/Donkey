@@ -56,14 +56,24 @@ function receitas_acao(string $acao): bool
                     throw new RuntimeException('Não foi possível receber o arquivo ' . $nomeArq . '.');
                 }
                 foreach (dh_receitas_importar((string) file_get_contents($arqs['tmp_name'][$n]), (string) $nomeArq) as $x) {
-                    // Nova versão de uma receita escolhida, ou da receita da cerveja de mesmo nome
-                    $cid = $alvo !== null ? $r['receitas'][$alvo]['cerveja_id'] : dh_receita_casar_cerveja($x['nome'], $cervejas);
+                    // Receita com o mesmo nome já importada: vira nova versão dela e fica na cerveja que estava
+                    $mesmoNome = null;
+                    if ($alvo === null) {
+                        foreach ($r['receitas'] as $j => $rc) {
+                            if (mb_strtolower(trim($rc['nome'])) === mb_strtolower(trim($x['nome']))) {
+                                $mesmoNome = $j;
+                            }
+                        }
+                    }
+                    // Senão, nova versão de uma receita escolhida, ou da receita da cerveja de nome parecido
+                    $base = $alvo ?? $mesmoNome;
+                    $cid = $base !== null ? $r['receitas'][$base]['cerveja_id'] : dh_receita_casar_cerveja($x['nome'], $cervejas);
                     // Duas receitas do mesmo arquivo para a mesma cerveja: a segunda fica para você ligar
-                    if ($alvo === null && isset($usadas[$cid])) {
+                    if ($base === null && isset($usadas[$cid])) {
                         $cid = '';
                     }
                     $usadas[$cid] = true;
-                    $i = $alvo;
+                    $i = $base;
                     if ($i === null && $cid !== '') {
                         $atual = dh_receita_da_cerveja($r, $cid);
                         $i = $atual ? dh_brassagem_indice($r['receitas'], $atual['id']) : null;
