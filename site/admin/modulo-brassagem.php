@@ -186,6 +186,79 @@ function brassagem_acao(string $acao): bool
             ir('./?acao=' . ($st === 'finalizado' ? 'brassagem' : 'brassagem-lote&id=' . $l['id']),
                 $st === 'finalizado' ? 'Lote ' . $l['lote'] . ' finalizado. ' . ($tanque['nome'] ?? 'O tanque') . ' está livre.' : 'Lote ' . $l['lote'] . ': ' . mb_strtolower(DH_LOTE_STATUS[$st]) . '.');
 
+        case 'brassagem-exportar':
+            // Cópia dos cadernos e tanques (backup), no mesmo formato da importação
+            exigir('brassagem');
+            header('Content-Type: application/json; charset=utf-8');
+            header('Content-Disposition: attachment; filename="cadernos-brassagem-' . date('Y-m-d') . '.json"');
+            echo json_encode(dh_brassagem(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+
+        case 'brassagem-importar':
+            // Cadernos de papel passados para um arquivo .json: {"lotes": [{cerveja, lote, data, tanque ("Tanque 7"), ...}]}
+            exigir_post();
+            exigir('brassagem');
+            $telaErro = 'brassagem-tanques';
+            $arq = $_FILES['arquivo'] ?? null;
+            if (!$arq || ($arq['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($arq['tmp_name']) || $arq['size'] > 5 * 1024 * 1024) {
+                throw new RuntimeException('Escolha o arquivo .json dos cadernos.');
+            }
+            $dados = json_decode((string) file_get_contents($arq['tmp_name']), true);
+            if (!is_array($dados['lotes'] ?? null)) {
+                throw new RuntimeException('Arquivo inválido: não encontrei a lista de lotes.');
+            }
+            $b = dh_brassagem();
+            $cad = dh_brassagem_cervejas();
+            $receitas = dh_receitas();
+            $ok = [];
+            $pulados = [];
+            foreach ($dados['lotes'] as $in) {
+                $num = mb_substr(trim((string) ($in['lote'] ?? '')), 0, 20);
+                $tq = null;
+                foreach ($b['tanques'] as $t) {
+                    if (mb_strtolower($t['nome']) === mb_strtolower(trim((string) ($in['tanque'] ?? ''))) || $t['id'] === ($in['tanque'] ?? '')) {
+                        $tq = $t;
+                    }
+                }
+                $data = brassagem_data($in['data'] ?? '');
+                if ($num === '' || !$tq || $data === '' || trim((string) ($in['cerveja'] ?? '')) === '') {
+                    $pulados[] = 'lote ' . ($num ?: '?') . ' (faltou lote, data, cerveja ou tanque válido)';
+                    continue;
+                }
+                if (array_filter($b['lotes'], fn($x) => mb_strtolower($x['lote']) === mb_strtolower($num))) {
+                    $pulados[] = 'lote ' . $num . ' (já existe)';
+                    continue;
+                }
+                $status = isset(DH_LOTE_STATUS[$in['status'] ?? '']) ? $in['status'] : 'fermentando';
+                if ($status !== 'finalizado' && ($ocupado = dh_tanque_lote($b, $tq['id']))) {
+                    $pulados[] = 'lote ' . $num . ' (' . $tq['nome'] . ' já está com o lote ' . $ocupado['lote'] . ')';
+                    continue;
+                }
+                $cid = dh_receita_casar_cerveja((string) $in['cerveja'], $cad);
+                $cv = $cid !== '' ? array_column($cad, null, 'id')[$cid] : null;
+                $rc = $cid !== '' ? dh_receita_da_cerveja($receitas, $cid) : null;
+                $regs = [];
+                foreach ((array) ($in['registros'] ?? []) as $r) {
+                    $rd = brassagem_data($r['data'] ?? '');
+                    if ($rd !== '') {
+                        $regs[] = ['id' => dh_id_novo('r'), 'data' => $rd, 'brix' => brassagem_num($r['brix'] ?? ''), 'pressao' => brassagem_num($r['pressao'] ?? ''),
+                            'temp' => brassagem_num($r['temp'] ?? ''), 'texto' => mb_substr(trim((string) ($r['texto'] ?? '')), 0, 500), 'por' => 'Caderno de papel', 'em' => date('Y-m-d H:i:s')];
+                    }
+                }
+                $b['lotes'][] = ['id' => dh_id_novo('l'), 'cerveja_id' => $cv['id'] ?? '', 'cerveja' => $cv['nome'] ?? mb_substr(trim((string) $in['cerveja']), 0, 80), 'lote' => $num,
+                    'levedura' => mb_substr(trim((string) ($in['levedura'] ?? '')), 0, 80), 'data' => $data, 'tanque' => $tq['id'],
+                    'unidade' => isset(DH_UNIDADES[$in['unidade'] ?? '']) ? $in['unidade'] : '', 'pf_brix' => brassagem_num($in['pf_brix'] ?? ''), 'pf_cm' => brassagem_num($in['pf_cm'] ?? ''),
+                    'og_brix' => brassagem_num($in['og_brix'] ?? ''), 'og_cm' => brassagem_num($in['og_cm'] ?? ''), 'obs' => mb_substr(trim((string) ($in['obs'] ?? '')), 0, 1000),
+                    'receita' => $rc ? dh_receita_copia($rc) : null, 'status' => $status, 'registros' => $regs, 'criado_por' => $usuario['nome'] . ' (importado)',
+                    'criado_em' => date('Y-m-d H:i:s'), 'finalizado_em' => $status === 'finalizado' ? date('Y-m-d H:i:s') : '', 'maturacao_em' => $status === 'maturando' ? date('Y-m-d') : ''];
+                $ok[] = $num . ' (' . ($cv['nome'] ?? $in['cerveja']) . ', ' . $tq['nome'] . ')';
+            }
+            if (!$ok) {
+                throw new RuntimeException('Nenhum lote importado: ' . implode('; ', $pulados) . '.');
+            }
+            dh_brassagem_salvar($b);
+            ir('./?acao=brassagem', count($ok) . ' caderno(s) importado(s): lotes ' . implode(', ', $ok) . '.' . ($pulados ? ' Não entraram: ' . implode('; ', $pulados) . '.' : ''));
+
         case 'brassagem-lote-excluir':
             exigir_post();
             exigir('brassagem');
@@ -518,5 +591,12 @@ function brassagem_tela_config(): void
       </ul>
       <h2>Novo tanque</h2>
       <?php $form(['id' => '', 'nome' => 'Tanque ' . (count($b['tanques']) + 1), 'capacidade' => '', 'litros_cm' => '', 'ativo' => true]); ?>
+      <h2>Cópia e importação dos cadernos</h2>
+      <p><a class="btn secundario" href="./?acao=brassagem-exportar">⬇ Baixar cópia dos cadernos (.json)</a></p>
+      <form method="post" action="./?acao=brassagem-importar" enctype="multipart/form-data" class="form-importar-receita">
+        <?= $csrf ?>
+        <label>Importar cadernos <small>(arquivo .json com os lotes; lotes com número que já existe ficam de fora)</small><input type="file" name="arquivo" accept=".json,application/json" required></label>
+        <button class="btn secundario">Importar</button>
+      </form>
     <?php
 }
