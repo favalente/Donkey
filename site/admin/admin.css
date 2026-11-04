@@ -557,3 +557,12 @@ h3 small { font-weight: 400; color: var(--muted); }
 .filtro-receitas input[type=search] { flex: 1 1 240px; margin-top: 0; }
 .filtro-receitas .check { margin: 0; }
 .lista-lotes li[hidden] { display: none; }
+/* Alertas de caderno atualizado */
+.topo nav a { position: relative; }
+.badge-alerta { position: absolute; top: -6px; right: -6px; font-style: normal; font-size: .72rem; font-weight: 800; background: var(--erro); color: #fff; border-radius: 999px; padding: 1px 6px; line-height: 1.4; }
+.alertas-brassagem { background: var(--caixa); border: 1px solid var(--amber); border-radius: 14px; padding: 12px 14px; margin: 10px 0 18px; }
+.alertas-brassagem h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.alertas-brassagem ul { list-style: none; margin: 0; padding: 0; }
+.alertas-brassagem li { padding: 8px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.alertas-brassagem li a, .alertas-brassagem li span { color: var(--text); text-decoration: none; }
+.alertas-brassagem small { display: block; color: var(--muted); }

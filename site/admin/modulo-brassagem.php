@@ -16,6 +16,42 @@ function brassagem_data($v): string
     return preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) && strtotime($v) ? $v : '';
 }
 
+// Alerta de caderno atualizado: entra na lista do painel (🔔 no menu da Brassagem) e vai por e-mail
+// para os endereços cadastrados em ⚙ Tanques (sem nenhum, para o contato@ da Donkey Head Cervejaria)
+function brassagem_alertar(?array $l, string $oQue): void
+{
+    global $usuario;
+    $b = dh_brassagem();
+    $t = $l ? dh_tanque($b, $l['tanque']) : null;
+    $titulo = $l ? ($t['nome'] ?? 'Tanque ?') . ' · lote ' . $l['lote'] . ' (' . $l['cerveja'] . ')' : 'Cadernos';
+    $b['alertas'] = array_slice(array_merge($b['alertas'] ?? [], [['em' => date('Y-m-d H:i:s'), 'por' => $usuario['nome'], 'login' => $usuario['login'],
+        'titulo' => $titulo, 'texto' => $oQue, 'lote_id' => $l['id'] ?? '']]), -300);
+    dh_brassagem_salvar($b);
+    $link = dh_url_site() . 'admin/?acao=' . ($l && dh_brassagem_indice($b['lotes'], $l['id']) !== null ? 'brassagem-lote&id=' . rawurlencode($l['id']) : 'brassagem');
+    $html = '<p><b>' . e($titulo) . '</b></p><p>' . nl2br(e($oQue)) . '</p><p style="color:#666">Por ' . e($usuario['nome']) . ' em ' . date('d/m/Y H:i') . '.</p>'
+        . '<p><a href="' . e($link) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir o caderno</a></p>';
+    $assunto = 'Brassagem: ' . $titulo . ' · ' . mb_strimwidth(strtok($oQue, "\n"), 0, 60, '…');
+    $para = $b['config']['alerta_emails'] ?? [];
+    foreach ($para ?: [DH_EMPRESA['email']] as $email) {
+        dh_email($email, $assunto, $html);
+    }
+}
+
+// Atualizações que este usuário ainda não viu (as feitas por ele mesmo não contam)
+function brassagem_alertas_novos(?array $b = null): array
+{
+    global $usuario;
+    $b ??= dh_brassagem();
+    $visto = $b['alertas_lidos'][$usuario['login']] ?? '';
+    return array_values(array_filter($b['alertas'] ?? [], fn($a) => $a['em'] > $visto && $a['login'] !== $usuario['login']));
+}
+
+// Resumo de uma anotação para o alerta: "31/10: 4 °Bx · 1,1 kg · Medição 4 Brix"
+function brassagem_resumo_registro(array $r): string
+{
+    return date('d/m', strtotime($r['data'])) . ': ' . implode(' · ', array_filter([brassagem_medidas($r), $r['texto']]));
+}
+
 function brassagem_acao(string $acao): bool
 {
     global $usuario, $telaErro;
@@ -123,6 +159,7 @@ function brassagem_acao(string $acao): bool
                 $msg = 'Caderno do lote ' . $l['lote'] . ' salvo.';
             }
             dh_brassagem_salvar($b);
+            brassagem_alertar($l, $i === null ? ($antigo ? 'Caderno antigo cadastrado (lote finalizado).' : 'Nova brassagem no ' . $tanque['nome'] . ' (' . dh_data_br($l['data']) . ').') : 'Cabeçalho do caderno alterado.');
             ir('./?acao=brassagem-lote&id=' . $l['id'], $msg);
 
         case 'brassagem-registro-salvar':
@@ -152,6 +189,7 @@ function brassagem_acao(string $acao): bool
             }
             $b['lotes'][$i]['registros'] = $regs;
             dh_brassagem_salvar($b);
+            brassagem_alertar($b['lotes'][$i], ($j === null ? 'Nova anotação ' : 'Anotação corrigida ') . brassagem_resumo_registro($r));
             ir('./?acao=brassagem-lote&id=' . $b['lotes'][$i]['id'] . '#nova-anotacao', 'Anotação salva.');
 
         case 'brassagem-registro-excluir':
@@ -164,8 +202,12 @@ function brassagem_acao(string $acao): bool
                 throw new RuntimeException('Lote não encontrado.');
             }
             $rid = (string) ($_POST['rid'] ?? '');
+            $apagada = array_values(array_filter($b['lotes'][$i]['registros'] ?? [], fn($r) => $r['id'] === $rid))[0] ?? null;
             $b['lotes'][$i]['registros'] = array_values(array_filter($b['lotes'][$i]['registros'] ?? [], fn($r) => $r['id'] !== $rid));
             dh_brassagem_salvar($b);
+            if ($apagada) {
+                brassagem_alertar($b['lotes'][$i], 'Anotação apagada ' . brassagem_resumo_registro($apagada));
+            }
             ir('./?acao=brassagem-lote&id=' . $b['lotes'][$i]['id'] . '#acompanhamento', 'Anotação apagada.');
 
         case 'brassagem-status':
@@ -190,9 +232,21 @@ function brassagem_acao(string $acao): bool
                 $b['lotes'][$i]['maturacao_em'] = date('Y-m-d');
             }
             dh_brassagem_salvar($b);
+            $fase = ['fermentando' => 'a fermentação', 'maturando' => 'a maturação'][$st] ?? '';
+            brassagem_alertar($b['lotes'][$i], $st === 'finalizado' ? 'Lote finalizado: o tanque está livre.' : ($l['status'] === 'finalizado' ? 'Lote reaberto, voltou para ' . $fase . '.' : 'Passou para ' . $fase . '.'));
             $tanque = dh_tanque($b, $l['tanque']);
             ir('./?acao=' . ($st === 'finalizado' ? 'brassagem' : 'brassagem-lote&id=' . $l['id']),
                 $st === 'finalizado' ? 'Lote ' . $l['lote'] . ' finalizado. ' . ($tanque['nome'] ?? 'O tanque') . ' está livre.' : 'Lote ' . $l['lote'] . ': ' . mb_strtolower(DH_LOTE_STATUS[$st]) . '.');
+
+        case 'brassagem-alertas-config':
+            // Quem recebe os e-mails de caderno atualizado (só o administrador muda)
+            exigir_post();
+            exigir('usuarios');
+            $telaErro = 'brassagem-tanques';
+            $b = dh_brassagem();
+            $b['config']['alerta_emails'] = dh_emails_lista((string) ($_POST['alerta_emails'] ?? ''));
+            dh_brassagem_salvar($b);
+            ir('./?acao=brassagem-tanques', $b['config']['alerta_emails'] ? 'Os alertas vão para ' . implode(', ', $b['config']['alerta_emails']) . '.' : 'Os alertas vão para o e-mail da Donkey Head Cervejaria.');
 
         case 'brassagem-exportar':
             // Cópia dos cadernos e tanques (backup), no mesmo formato da importação
@@ -265,6 +319,7 @@ function brassagem_acao(string $acao): bool
                 throw new RuntimeException('Nenhum lote importado: ' . implode('; ', $pulados) . '.');
             }
             dh_brassagem_salvar($b);
+            brassagem_alertar(null, count($ok) . ' caderno(s) importado(s): lotes ' . implode(', ', $ok) . '.');
             ir('./?acao=brassagem', count($ok) . ' caderno(s) importado(s): lotes ' . implode(', ', $ok) . '.' . ($pulados ? ' Não entraram: ' . implode('; ', $pulados) . '.' : ''));
 
         case 'brassagem-lote-excluir':
@@ -278,8 +333,10 @@ function brassagem_acao(string $acao): bool
                 throw new RuntimeException('Lote não encontrado.');
             }
             $lote = $b['lotes'][$i]['lote'];
+            $excluido = $b['lotes'][$i];
             array_splice($b['lotes'], $i, 1);
             dh_brassagem_salvar($b);
+            brassagem_alertar($excluido, 'Lote excluído, com ' . count($excluido['registros'] ?? []) . ' anotações.');
             ir('./?acao=brassagem', 'Lote ' . $lote . ' excluído.');
     }
     return false;
@@ -338,12 +395,30 @@ function brassagem_medidas(array $r): string
 
 function brassagem_tela_tanques(): void
 {
+    global $usuario;
     $b = dh_brassagem();
+    $novos = array_reverse(brassagem_alertas_novos($b));
     $busca = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
     $tanques = array_values(array_filter($b['tanques'], fn($t) => $t['ativo'] || dh_tanque_lote($b, $t['id'])));
     $cadastro = dh_brassagem_cervejas();
     ?>
       <div class="titulo-acao"><h1>Brassagem</h1><a class="btn secundario" href="./?acao=brassagem-tanques">⚙ Tanques</a></div>
+      <?php if ($novos): ?>
+        <section class="alertas-brassagem" aria-label="Atualizações nos cadernos">
+          <h2>🔔 <?= count($novos) ?> atualizaç<?= count($novos) > 1 ? 'ões' : 'ão' ?> desde a sua última visita</h2>
+          <ul>
+            <?php foreach (array_slice($novos, 0, 30) as $a): $existe = $a['lote_id'] !== '' && dh_brassagem_indice($b['lotes'], $a['lote_id']) !== null; ?>
+              <li><?= $existe ? '<a href="./?acao=brassagem-lote&amp;id=' . e(rawurlencode($a['lote_id'])) . '">' : '<span>' ?><strong><?= e($a['titulo']) ?></strong> <?= e($a['texto']) ?><?= $existe ? '</a>' : '</span>' ?>
+                <small><?= e($a['por']) ?> · <?= e(date('d/m H:i', strtotime($a['em']))) ?></small></li>
+            <?php endforeach; ?>
+          </ul>
+        </section>
+        <?php
+          // Visto: some do contador do menu na próxima tela
+          $b['alertas_lidos'][$usuario['login']] = date('Y-m-d H:i:s');
+          dh_brassagem_salvar($b);
+        ?>
+      <?php endif; ?>
       <?php if (!$b['tanques']): ?>
         <p class="aviso">Primeiro passo: <a href="./?acao=brassagem-tanques">cadastre os tanques</a> da fábrica. Depois, cada brassagem vira um caderno digital dentro do tanque.</p>
       <?php else: ?>
@@ -634,6 +709,15 @@ function brassagem_tela_config(): void
       </ul>
       <h2>Novo tanque</h2>
       <?php $form(['id' => '', 'nome' => 'Tanque ' . (count($b['tanques']) + 1), 'capacidade' => '', 'litros_cm' => '', 'ativo' => true]); ?>
+      <?php if (pode('usuarios')): ?>
+        <h2>Alertas de caderno atualizado</h2>
+        <p class="dica">A cada lote novo, anotação, mudança de situação ou caderno alterado, vai um e-mail para estes endereços e aparece o 🔔 no menu da Brassagem. Sem nenhum endereço, o e-mail vai para <?= e(DH_EMPRESA['email']) ?>.</p>
+        <form method="post" action="./?acao=brassagem-alertas-config" class="form-cerveja">
+          <?= $csrf ?>
+          <label>E-mails que recebem os alertas <small>(um por linha)</small><textarea name="alerta_emails" rows="2"><?= e(implode("\n", $b['config']['alerta_emails'] ?? [])) ?></textarea></label>
+          <button class="btn primario">Salvar</button>
+        </form>
+      <?php endif; ?>
       <h2>Cópia e importação dos cadernos</h2>
       <p><a class="btn secundario" href="./?acao=brassagem-exportar">⬇ Baixar cópia dos cadernos (.json)</a></p>
       <form method="post" action="./?acao=brassagem-importar" enctype="multipart/form-data" class="form-importar-receita">
