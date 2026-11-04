@@ -67,7 +67,7 @@ if ($k && $_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="referrer" content="no-referrer">
   <title><?= $k ? 'Orçamento ' . e($k['numero']) . ' · ' : '' ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="../contrato/contrato.css?v=9">
+  <link rel="stylesheet" href="../contrato/contrato.css?v=10">
   <style>
     <?= DH_ORCAMENTO_CSS ?>
     .orc { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; }

@@ -51,6 +51,66 @@ if ($preencher && isset($_GET['cupom'])) {
     exit;
 }
 
+// Cliente que já tem cadastro: digita o CPF, recebe um código no e-mail do cadastro e, com o código,
+// os dados dele vêm preenchidos. Sem o código, ninguém vê os dados de outra pessoa só por saber o CPF.
+if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['op'] ?? '', ['cadastro_buscar', 'cadastro_codigo'], true)) {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        if (!hash_equals($_SESSION['csrf'], (string) ($_POST['csrf'] ?? ''))) {
+            throw new RuntimeException('A página ficou aberta muito tempo. Recarregue e tente de novo.');
+        }
+        if ($_POST['op'] === 'cadastro_buscar') {
+            $doc = dh_so_digitos((string) ($_POST['cpf'] ?? ''));
+            if (!dh_cpf_valido($doc) && !dh_cnpj_valido($doc)) {
+                throw new RuntimeException('CPF inválido. Confira os números.');
+            }
+            $cl = dh_clientes()[$doc] ?? null;
+            if (!$cl || !filter_var($cl['email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+                echo json_encode(['ok' => true, 'novo' => true, 'msg' => 'Não achamos cadastro com esse CPF. Preencha os seus dados abaixo.']);
+                exit;
+            }
+            $env = $_SESSION['cadastro_envios'] ?? ['n' => 0, 'ultimo' => 0];
+            if ($env['n'] >= 5) {
+                throw new RuntimeException('Muitas tentativas. Preencha os dados abaixo ou fale com a Donkey Head Cervejaria.');
+            }
+            if (time() - $env['ultimo'] < 60) {
+                throw new RuntimeException('Aguarde um minuto para pedir outro código.');
+            }
+            $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            if (!dh_email($cl['email'], 'Seu código para usar o seu cadastro · Donkey Head Cervejaria',
+                '<p>Olá, ' . e(strtok($cl['nome'], ' ')) . '! Use este código para preencher o pedido de chope com os seus dados cadastrados:</p>'
+                . '<p style="font-size:32px;font-weight:bold;letter-spacing:8px;margin:12px 0">' . $codigo . '</p>'
+                . '<p>Ele vale por 15 minutos. Se não foi você que pediu, ignore este e-mail.</p>')) {
+                throw new RuntimeException('Não foi possível enviar o código agora. Preencha os dados abaixo.');
+            }
+            $_SESSION['cadastro_envios'] = ['n' => $env['n'] + 1, 'ultimo' => time()];
+            $_SESSION['cadastro_codigo'] = ['hash' => hash('sha256', $codigo . $doc), 'doc' => $doc, 'ate' => time() + 900, 'tentativas' => 0];
+            [$usuario, $dominio] = explode('@', $cl['email'], 2);
+            echo json_encode(['ok' => true, 'enviado' => true, 'msg' => 'Você já tem cadastro! Enviamos um código de 6 números para ' . mb_substr($usuario, 0, 2) . '***@' . $dominio . '. Digite abaixo (confira também o spam).']);
+            exit;
+        }
+        $pend = $_SESSION['cadastro_codigo'] ?? null;
+        if (!$pend || time() > $pend['ate']) {
+            throw new RuntimeException('Código vencido. Peça outro.');
+        }
+        if (++$_SESSION['cadastro_codigo']['tentativas'] > 5) {
+            unset($_SESSION['cadastro_codigo']);
+            throw new RuntimeException('Muitas tentativas. Peça outro código.');
+        }
+        if (!hash_equals($pend['hash'], hash('sha256', dh_so_digitos((string) ($_POST['codigo'] ?? '')) . $pend['doc']))) {
+            throw new RuntimeException('Código incorreto. Confira no e-mail.');
+        }
+        unset($_SESSION['cadastro_codigo']);
+        $cl = dh_clientes()[$pend['doc']] ?? [];
+        echo json_encode(['ok' => true, 'dados' => ['nome' => $cl['nome'] ?? '', 'cpf' => dh_cpf_formatar($pend['doc']), 'celular' => $cl['telefone'] ?? '',
+            'email' => $cl['email'] ?? '', 'endereco' => $cl['endereco'] ?? '', 'cidade' => $cl['cidade'] ?? ''],
+            'msg' => 'Pronto! Seus dados foram preenchidos. Confira e corrija o que tiver mudado.']);
+    } catch (RuntimeException $e) {
+        echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
+    }
+    exit;
+}
+
 // PDF do contrato (o mesmo que vai anexado no e-mail)
 if ($k && isset($_GET['pdf']) && in_array($k['status'], ['enviado', 'assinado', 'cancelado'], true)) {
     $arquivo = dh_contrato_pdf($k);
@@ -316,7 +376,7 @@ $f = $k['campos'] ?? [];
   <meta name="referrer" content="no-referrer">
   <title><?= $preencher ? 'Pedido de chope · ' : ($k && $k['numero'] !== '' ? 'Contrato nº ' . e($k['numero']) . ' · ' : '') ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=9">
+  <link rel="stylesheet" href="contrato.css?v=10">
 </head>
 <body>
   <div class="barra no-print">

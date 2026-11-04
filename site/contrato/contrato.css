@@ -104,3 +104,8 @@ p, li { font-size: .95rem; text-align: justify; }
 .contador button { width: 48px; height: 48px; border: 2px solid var(--ambar); border-radius: 50%; background: #fff; color: var(--tinta); font-size: 1.5rem; font-weight: 700; line-height: 1; cursor: pointer; padding: 0; }
 .pedido .contador input { width: 72px !important; margin: 0; text-align: center; font-weight: 700; }
 #copos-info { font-weight: 600; color: var(--suave); }
+/* Buscar cadastro pelo CPF: o botão desce quando não cabe ao lado */
+.busca-cadastro .cupom-linha { flex-wrap: wrap; }
+.busca-cadastro .cupom-linha input { flex: 1 1 200px; min-width: 0; }
+.busca-cadastro .cupom-linha .btn { flex: 1 1 auto; }
+.busca-cadastro label { margin-bottom: 4px; }

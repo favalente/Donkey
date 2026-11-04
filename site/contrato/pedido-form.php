@@ -108,10 +108,16 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
   </table>
 
   <h2>3. Seus dados</h2>
+  <div class="busca-cadastro">
+    <label><?= $travado ? 'CPF ou CNPJ' : 'CPF' ?> <small>(se já comprou com a gente, puxamos o seu cadastro)</small>
+      <span class="cupom-linha"><input name="cpf" id="cpf" required inputmode="numeric" placeholder="<?= $travado ? 'CPF ou CNPJ' : '000.000.000-00' ?>" value="<?= $v('cpf', $doc !== '' ? dh_cpf_formatar($doc) : '') ?>"><button type="button" class="btn" id="bt-cadastro">Buscar meu cadastro</button></span></label>
+    <p class="cupom-msg" id="cadastro-msg" aria-live="polite"></p>
+    <div class="cupom-linha" id="cadastro-codigo" hidden><input id="codigo-cadastro" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="Código de 6 números" aria-label="Código recebido por e-mail"><button type="button" class="btn" id="bt-codigo">Usar meus dados</button></div>
+  </div>
   <label>Nome completo <input name="nome" required autocomplete="name" value="<?= $v('nome', $f['contratante_nome']) ?>"></label>
   <div class="duas">
-    <label><?= $travado ? 'CPF ou CNPJ' : 'CPF' ?> <input name="cpf" required inputmode="numeric" placeholder="<?= $travado ? 'CPF ou CNPJ' : '000.000.000-00' ?>" value="<?= $v('cpf', $doc !== '' ? dh_cpf_formatar($doc) : '') ?>"></label>
     <label>Celular <input name="celular" required inputmode="tel" autocomplete="tel" placeholder="(85) 99999-9999" value="<?= $v('celular', $f['contratante_telefone']) ?>"></label>
+    <label>E-mail <small>(para a cópia do contrato e o código de assinatura)</small><input type="email" name="email" required autocapitalize="none" autocomplete="email" value="<?= $v('email', $f['contratante_email']) ?>"></label>
   </div>
   <label>Endereço de entrega <input name="endereco" required autocomplete="street-address" value="<?= $v('endereco', $f['entrega_endereco']) ?>"></label>
   <div class="duas">
@@ -130,7 +136,6 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
     <label>Cidade da entrega <input name="cidade" value="<?= $v('cidade', $local === 'outra' ? $cidadeBase : '') ?>" placeholder="Ex.: Guaramiranga/CE"></label>
     <label <?= $freteTravado ? 'hidden' : '' ?>>Valor do frete (R$) <input name="frete_outra" id="frete-outra" inputmode="decimal" value="<?= $v('frete_outra') ?>" placeholder="Combinado com o vendedor"></label>
   </div>
-  <label>E-mail <small>(para a cópia do contrato e o código de assinatura)</small><input type="email" name="email" required autocapitalize="none" autocomplete="email" value="<?= $v('email', $f['contratante_email']) ?>"></label>
 
   <h2>4. Pagamento</h2>
   <p>Forma de pagamento: <strong><?= e(DH_PAGAMENTOS[$f['pagamento']] ?? '') ?></strong> · Valor a pagar: <strong id="t-pagar">R$ 0,00</strong></p>
@@ -271,3 +276,35 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
   })();
 </script>
 <?php endif; ?>
+<script>
+  // Cadastro: CPF → código no e-mail do cadastro → dados preenchidos
+  (function () {
+    var form = document.getElementById('pedido'), msg = document.getElementById('cadastro-msg'), caixa = document.getElementById('cadastro-codigo');
+    function enviar(dados, depois) {
+      var fd = new FormData(); fd.append('csrf', form.querySelector('[name=csrf]').value);
+      Object.keys(dados).forEach(function (k) { fd.append(k, dados[k]); });
+      msg.textContent = 'Aguarde…'; msg.className = 'cupom-msg';
+      fetch(location.href, { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); })
+        .then(function (j) { msg.textContent = j.msg; msg.className = 'cupom-msg ' + (j.ok ? 'ok' : 'erro'); if (j.ok) depois(j); })
+        .catch(function () { msg.textContent = 'Não foi possível buscar agora. Preencha os dados abaixo.'; msg.className = 'cupom-msg erro'; });
+    }
+    document.getElementById('bt-cadastro').addEventListener('click', function () {
+      enviar({ op: 'cadastro_buscar', cpf: document.getElementById('cpf').value }, function (j) {
+        caixa.hidden = !j.enviado; if (j.enviado) document.getElementById('codigo-cadastro').focus();
+      });
+    });
+    document.getElementById('bt-codigo').addEventListener('click', function () {
+      enviar({ op: 'cadastro_codigo', codigo: document.getElementById('codigo-cadastro').value }, function (j) {
+        var d = j.dados; caixa.hidden = true;
+        ['nome', 'cpf', 'celular', 'email', 'endereco'].forEach(function (k) { if (d[k]) form.querySelector('[name=' + k + ']').value = d[k]; });
+        if (d.cidade) {
+          var fortaleza = /fortaleza/i.test(d.cidade), r = form.querySelector('[name=local][value=' + (fortaleza ? 'fortaleza' : 'outra') + ']');
+          if (r) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }
+          if (!fortaleza && form.querySelector('[name=cidade]')) form.querySelector('[name=cidade]').value = d.cidade;
+        }
+      });
+    });
+    document.getElementById('codigo-cadastro').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); document.getElementById('bt-codigo').click(); } });
+    document.getElementById('cpf').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); document.getElementById('bt-cadastro').click(); } });
+  })();
+</script>
