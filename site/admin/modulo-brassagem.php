@@ -25,7 +25,7 @@ function brassagem_alertar(?array $l, string $oQue): void
     $b = dh_brassagem();
     $t = $l ? dh_tanque($b, $l['tanque']) : null;
     $titulo = $l ? ($t['nome'] ?? 'Tanque ?') . ' · lote ' . $l['lote'] . ' (' . $l['cerveja'] . ')' : 'Cadernos';
-    $b['alertas'] = array_slice(array_merge($b['alertas'] ?? [], [['em' => date('Y-m-d H:i:s'), 'por' => $usuario['nome'], 'login' => $usuario['login'],
+    $b['alertas'] = array_slice(array_merge($b['alertas'] ?? [], [['id' => dh_id_novo('a'), 'em' => date('Y-m-d H:i:s'), 'por' => $usuario['nome'], 'login' => $usuario['login'],
         'titulo' => $titulo, 'texto' => $oQue, 'lote_id' => $l['id'] ?? '']]), -300);
     dh_brassagem_salvar($b);
     // O que o administrador muda não vira e-mail (ele já sabe); continua no 🔔 de quem não fez
@@ -82,13 +82,35 @@ function brassagem_email_caderno(array $l, ?array $t): string
     return $h . '</table>';
 }
 
-// Atualizações que este usuário ainda não viu (as feitas por ele mesmo não contam)
+// Identificador do alerta (os primeiros não tinham; usa o conteúdo)
+function brassagem_alerta_id(array $a): string
+{
+    return $a['id'] ?? 'a' . substr(md5($a['em'] . $a['titulo'] . $a['texto']), 0, 12);
+}
+
+// Atualizações que este usuário ainda não leu (as feitas por ele mesmo não contam). Cada uma sai da
+// lista quando ele abre o caderno por ela, toca em "✓ Lida" ou em "Marcar todas como lidas".
 function brassagem_alertas_novos(?array $b = null): array
 {
     global $usuario;
     $b ??= dh_brassagem();
-    $visto = $b['alertas_lidos'][$usuario['login']] ?? '';
-    return array_values(array_filter($b['alertas'] ?? [], fn($a) => $a['em'] > $visto && $a['login'] !== $usuario['login']));
+    $antes = $b['alertas_lidos'][$usuario['login']] ?? '';
+    $lidos = array_flip($b['alertas_vistos'][$usuario['login']] ?? []);
+    return array_values(array_filter($b['alertas'] ?? [], fn($a) => $a['em'] > $antes && $a['login'] !== $usuario['login'] && !isset($lidos[brassagem_alerta_id($a)])));
+}
+
+// Marca como lidos (ids) ou todos ('*') para o usuário
+function brassagem_alertas_marcar(array $ids): void
+{
+    global $usuario;
+    $b = dh_brassagem();
+    if ($ids === ['*']) {
+        $b['alertas_lidos'][$usuario['login']] = date('Y-m-d H:i:s');
+        $b['alertas_vistos'][$usuario['login']] = [];
+    } else {
+        $b['alertas_vistos'][$usuario['login']] = array_slice(array_values(array_unique(array_merge($b['alertas_vistos'][$usuario['login']] ?? [], $ids))), -500);
+    }
+    dh_brassagem_salvar($b);
 }
 
 // Resumo de uma anotação para o alerta: "31/10: 4 °Bx · 1,1 kg · Medição 4 Brix"
@@ -107,7 +129,18 @@ function brassagem_acao(string $acao): bool
         case 'brassagem-tanques':
         case 'brassagem-comparar':
             exigir('brassagem');
+            // Abriu o caderno por uma notificação: só ela vira lida
+            if ($acao === 'brassagem-lote' && preg_match('/^a[0-9a-f]{8,}$/', (string) ($_GET['alerta'] ?? ''))) {
+                brassagem_alertas_marcar([$_GET['alerta']]);
+            }
             return true;
+
+        case 'brassagem-alerta-lido':
+            exigir_post();
+            exigir('brassagem');
+            $id = (string) ($_POST['alerta'] ?? '');
+            brassagem_alertas_marcar($id === '*' ? ['*'] : [$id]);
+            ir('./?acao=brassagem', $id === '*' ? 'Todas as notificações marcadas como lidas.' : null);
 
         case 'brassagem-tanque-salvar':
             exigir_post();
@@ -440,7 +473,7 @@ function brassagem_medidas(array $r): string
 
 function brassagem_tela_tanques(): void
 {
-    global $usuario;
+    global $csrf;
     $b = dh_brassagem();
     $novos = array_reverse(brassagem_alertas_novos($b));
     $busca = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
@@ -450,19 +483,20 @@ function brassagem_tela_tanques(): void
       <div class="titulo-acao"><h1>Brassagem</h1><a class="btn secundario" href="./?acao=brassagem-tanques">⚙ Tanques</a></div>
       <?php if ($novos): ?>
         <section class="alertas-brassagem" aria-label="Atualizações nos cadernos">
-          <h2>🔔 <?= count($novos) ?> atualizaç<?= count($novos) > 1 ? 'ões' : 'ão' ?> desde a sua última visita</h2>
+          <div class="alertas-topo">
+            <h2>🔔 <?= count($novos) ?> notificaç<?= count($novos) > 1 ? 'ões' : 'ão' ?> não lida<?= count($novos) > 1 ? 's' : '' ?></h2>
+            <?php if (count($novos) > 1): ?><form method="post" action="./?acao=brassagem-alerta-lido"><?= $csrf ?><input type="hidden" name="alerta" value="*"><button class="link">Marcar todas como lidas</button></form><?php endif; ?>
+          </div>
           <ul>
-            <?php foreach (array_slice($novos, 0, 30) as $a): $existe = $a['lote_id'] !== '' && dh_brassagem_indice($b['lotes'], $a['lote_id']) !== null; ?>
-              <li><?= $existe ? '<a href="./?acao=brassagem-lote&amp;id=' . e(rawurlencode($a['lote_id'])) . '">' : '<span>' ?><strong><?= e($a['titulo']) ?></strong> <?= e($a['texto']) ?><?= $existe ? '</a>' : '</span>' ?>
-                <small><?= e($a['por']) ?> · <?= e(date('d/m H:i', strtotime($a['em']))) ?></small></li>
+            <?php foreach (array_slice($novos, 0, 30) as $a): $aid = brassagem_alerta_id($a); $existe = $a['lote_id'] !== '' && dh_brassagem_indice($b['lotes'], $a['lote_id']) !== null; ?>
+              <li>
+                <?= $existe ? '<a href="./?acao=brassagem-lote&amp;id=' . e(rawurlencode($a['lote_id'])) . '&amp;alerta=' . e($aid) . '">' : '<span>' ?><strong><?= e($a['titulo']) ?></strong> <?= e($a['texto']) ?><?= $existe ? '</a>' : '</span>' ?>
+                <small><?= e($a['por']) ?> · <?= e(date('d/m H:i', strtotime($a['em']))) ?></small>
+                <form method="post" action="./?acao=brassagem-alerta-lido"><?= $csrf ?><input type="hidden" name="alerta" value="<?= e($aid) ?>"><button class="btn secundario btn-lida" title="Marcar como lida">✓ Lida</button></form>
+              </li>
             <?php endforeach; ?>
           </ul>
         </section>
-        <?php
-          // Visto: some do contador do menu na próxima tela
-          $b['alertas_lidos'][$usuario['login']] = date('Y-m-d H:i:s');
-          dh_brassagem_salvar($b);
-        ?>
       <?php endif; ?>
       <?php if (!$b['tanques']): ?>
         <p class="aviso">Primeiro passo: <a href="./?acao=brassagem-tanques">cadastre os tanques</a> da fábrica. Depois, cada brassagem vira um caderno digital dentro do tanque.</p>
