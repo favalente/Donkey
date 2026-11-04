@@ -364,3 +364,7 @@ require_once __DIR__ . '/produtos.php';
 require_once __DIR__ . '/orcamentos.php';
 require_once __DIR__ . '/brassagem.php';
 require_once __DIR__ . '/receitas.php';
+require_once __DIR__ . '/lembretes.php';
+
+// Lembretes de evento por e-mail: verifica no fim deste acesso, se estiver na hora
+dh_lembretes_agendar();

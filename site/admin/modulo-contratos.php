@@ -111,6 +111,13 @@ function contratos_acao(string $acao): bool
             dh_contratos_salvar($c);
             ir('./?acao=contratos-cupons', 'Cupom ' . $codigo . ($antigo ? ' atualizado.' : ' criado.'));
 
+        case 'contratos-lembretes':
+            // Roda a verificação dos lembretes de evento na hora (normalmente roda sozinha)
+            exigir_post();
+            exigir('contratos');
+            $feitos = dh_lembretes_rodar();
+            ir('./?acao=contratos-config', $feitos ? count($feitos) . ' lembrete(s) enviado(s): ' . implode('; ', $feitos) . '.' : 'Nenhum lembrete para enviar agora.');
+
         case 'contratos-email-teste':
             exigir_post();
             exigir('contratos');
@@ -660,6 +667,19 @@ function contratos_tela_config(): void
         <label>Dados para pagamento <small>(aparecem no pedido do cliente, ex.: chave Pix e nome de quem recebe)</small>
           <textarea name="pagamento_instrucoes" rows="3" maxlength="500" placeholder="Pix (CNPJ): 00.000.000/0000-00 · Nome de quem recebe"><?= e($_POST ? (string) ($_POST['pagamento_instrucoes'] ?? '') : ($c['config']['pagamento_instrucoes'] ?? '')) ?></textarea></label>
         <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato depois que as duas partes assinam. Os avisos do andamento (pedido preenchido, cliente assinou) vão só para <?= e(DH_EMPRESA['email']) ?>.</p>
+        <h2>Lembretes de evento</h2>
+        <p class="dica">Esses mesmos e-mails (e <?= e(DH_EMPRESA['email']) ?>) recebem um lembrete na véspera e outro no dia de cada evento, a partir das 7h, com os dados completos. Evento no domingo: o lembrete da véspera sai na sexta. Valem os contratos assinados e os que aguardam assinatura.</p>
+        <?php $prox = dh_lembretes_proximos(); ?>
+        <?php if ($prox): ?>
+          <ul class="lista-lembretes">
+            <?php foreach (array_slice($prox, 0, 20) as $p): ?>
+              <li><b><?= e(DH_DIAS_SEMANA_CURTOS[(int) date('N', strtotime($p['envio']))] . ' ' . date('d/m', strtotime($p['envio']))) ?></b> · <?= $p['tipo'] === 'dia' ? 'no dia' : 'véspera' ?> · <?= e($p['k']['campos']['contratante_nome']) ?> <small>(evento <?= e(dh_data_br($p['data'])) ?>)</small><?= $p['enviado'] ? ' <em class="tag ct-ok">enviado</em>' : '' ?></li>
+            <?php endforeach; ?>
+          </ul>
+        <?php else: ?>
+          <p class="dica">Nenhum evento nos próximos 14 dias.</p>
+        <?php endif; ?>
+        <p><button class="btn secundario" form="form-lembretes">Verificar e enviar agora</button></p>
         <h2>E-mail de envio</h2>
         <?php $ce = dh_email_config(); ?>
         <p class="dica">Os códigos de assinatura e as cópias saem pelo servidor de e-mail da Locaweb, entrando na conta <?= e(DH_EMPRESA['email']) ?>. Para isso o sistema precisa da senha dessa caixa de e-mail (fica guardada só no servidor).</p>
@@ -668,6 +688,7 @@ function contratos_tela_config(): void
         <?php if (!empty($ce['senha'])): ?><label class="check"><input type="checkbox" name="apagar_senha_email" value="1"> Apagar a senha cadastrada</label><?php endif; ?>
         <div class="barra-salvar"><button class="btn primario">Salvar</button></div>
       </form>
+      <form method="post" action="./?acao=contratos-lembretes" id="form-lembretes"><?= $csrf ?></form>
     <?php
     contratos_email_teste();
 }

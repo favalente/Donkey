@@ -86,6 +86,8 @@ Uma receita para cada cerveja do cadastro (painel → 📖 Receitas), só com o 
 
 ## Contratos com assinatura eletrônica
 
+**Lembretes de evento:** quem recebe a cópia dos contratos (o contato@ e os e-mails de Contratos → Configurações) recebe um lembrete na véspera e outro no dia de cada evento, a partir das 7h, com os dados completos (cliente, entrega, endereço, chope, opcionais, equipamentos, valor, observações) e o link do contrato. A expedição só trabalha de segunda a sexta: **evento no domingo tem o lembrete da véspera na sexta**. Valem contratos assinados e os que aguardam assinatura. Como a hospedagem não tem agendador, a verificação roda na consulta da TV da tap list (a cada minuto) e em `/lembretes.php` (para um agendador externo, se quiser), no máximo a cada 20 minutos; nada é enviado duas vezes (`dados/lembretes.json`). Em Configurações aparecem os próximos lembretes e o botão "Verificar e enviar agora".
+
 Painel → **Contratos** (administrador e financeiro). Dois modelos: **Evento corporativo no pub** (texto do contrato jurídico da casa, com o Anexo I – Menu) e **Venda de chope com comodato de equipamentos** (equipamentos com valor de reposição já preenchidos).
 
 1. Preencha o formulário (dá para salvar rascunho) e toque em **Gerar para assinatura**: o texto é congelado e ganha número (DH-2026-001) e **código de integridade** (SHA-256).
