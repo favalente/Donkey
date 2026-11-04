@@ -34,12 +34,52 @@ function brassagem_alertar(?array $l, string $oQue): void
     }
     $link = dh_url_site() . 'admin/?acao=' . ($l && dh_brassagem_indice($b['lotes'], $l['id']) !== null ? 'brassagem-lote&id=' . rawurlencode($l['id']) : 'brassagem');
     $html = '<p><b>' . e($titulo) . '</b></p><p>' . nl2br(e($oQue)) . '</p><p style="color:#666">Por ' . e($usuario['nome']) . ' em ' . date('d/m/Y H:i') . '.</p>'
-        . '<p><a href="' . e($link) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir o caderno</a></p>';
+        . '<p><a href="' . e($link) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir o caderno</a></p>'
+        . ($l ? brassagem_email_caderno($l, $t) : '');
     $assunto = 'Brassagem: ' . $titulo . ' · ' . mb_strimwidth(strtok($oQue, "\n"), 0, 60, '…');
     $para = $b['config']['alerta_emails'] ?? [];
     foreach ($para ?: [DH_EMPRESA['email']] as $email) {
         dh_email($email, $assunto, $html);
     }
+}
+
+// O caderno inteiro no corpo do e-mail: cabeçalho, anotações da brassagem, receita e todo o acompanhamento
+function brassagem_email_caderno(array $l, ?array $t): string
+{
+    $l += ['unidade' => '', 'registros' => []];
+    $rc = !empty($l['receita']) ? dh_receita_simplificar($l['receita']) : null;
+    $td = 'style="padding:6px 8px;border-bottom:1px solid #e3d9cc;vertical-align:top"';
+    $th = 'style="padding:6px 8px;border-bottom:2px solid #c9b9a5;text-align:left;font-size:12px;color:#5a5047;text-transform:uppercase"';
+    $linha = fn($rot, $val) => '<tr><td ' . $td . '><b>' . e($rot) . '</b></td><td ' . $td . '>' . $val . '</td></tr>';
+    $bx = fn($v) => $v !== '' ? e(dh_num($v)) . ' °Bx' : '—';
+    $cm = fn($v) => $v !== '' ? e(dh_num($v)) . ' cm (' . e(dh_num(dh_litros_cm((string) $v))) . ' L efetivos)' : '—';
+    $fim = $l['status'] === 'finalizado' && !empty($l['finalizado_em']) ? substr($l['finalizado_em'], 0, 10) : null;
+    $h = '<h3 style="margin:20px 0 6px">Caderno</h3><table style="border-collapse:collapse;width:100%;max-width:640px;font-size:14px">'
+        . $linha('Cerveja', e($l['cerveja']))
+        . $linha('Lote', e($l['lote']))
+        . $linha('Data da brassagem', e(dh_data_br($l['data'])) . ($fim ? ' · finalizado em ' . e(dh_data_br($fim)) . ' (dia ' . dh_lote_dia($l, $fim) . ')' : ' · hoje é o dia ' . dh_lote_dia($l)))
+        . $linha('Situação', e(DH_LOTE_STATUS[$l['status']] ?? $l['status']))
+        . $linha('Tanque', e($t['nome'] ?? '?'))
+        . $linha('Sede', $l['unidade'] !== '' ? e(DH_UNIDADES[$l['unidade']]) : '—')
+        . $linha('Levedura', e($l['levedura'] ?: '—'))
+        . $linha('PF', $bx($l['pf_brix']) . ($rc && $rc['pre_fervura'] !== '' ? ' <span style="color:#777">(receita ' . $bx($rc['pre_fervura']) . ')</span>' : '') . ' · litragem ' . $cm($l['pf_cm']))
+        . $linha('OG', $bx($l['og_brix']) . ($l['og_brix'] !== '' ? ' · SG ≈ ' . e(number_format(dh_refratometro_og_sg((float) $l['og_brix']), 3, ',', '')) : '') . ($rc && $rc['og'] !== '' ? ' <span style="color:#777">(receita ' . $bx($rc['og']) . ')</span>' : '') . ' · litragem ' . $cm($l['og_cm']))
+        . ($l['obs'] !== '' ? $linha('Obs.', nl2br(e($l['obs']))) : '')
+        . ($rc ? $linha('Receita', e($rc['nome']) . ' · ' . e(receitas_linha($rc))) : '')
+        . '</table>';
+    $h .= '<h3 style="margin:20px 0 6px">Acompanhamento fermentação e maturação</h3>';
+    $regs = dh_lote_registros($l);
+    if (!$regs) {
+        return $h . '<p style="color:#777">Nenhuma anotação ainda.</p>';
+    }
+    $h .= '<table style="border-collapse:collapse;width:100%;max-width:640px;font-size:14px"><tr><th ' . $th . '>Data</th><th ' . $th . '>Medidas</th><th ' . $th . '>Anotação</th></tr>';
+    foreach ($regs as $r) {
+        $corr = brassagem_brix_corrigido($l, $r);
+        $h .= '<tr><td ' . $td . ' nowrap>' . e(date('d/m', strtotime($r['data']))) . '<br><span style="color:#777;font-size:12px">dia ' . dh_lote_dia($l, $r['data']) . '</span></td>'
+            . '<td ' . $td . '>' . (brassagem_medidas($r) !== '' ? '<b>' . e(brassagem_medidas($r)) . '</b>' : '') . ($corr !== '' ? '<br><span style="color:#1d6e5e;font-size:12px">' . e($corr) . '</span>' : '') . '</td>'
+            . '<td ' . $td . '>' . nl2br(e($r['texto'])) . '<br><span style="color:#777;font-size:12px">' . e($r['por']) . '</span></td></tr>';
+    }
+    return $h . '</table>';
 }
 
 // Atualizações que este usuário ainda não viu (as feitas por ele mesmo não contam)
