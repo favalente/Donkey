@@ -17,7 +17,8 @@ function brassagem_data($v): string
 }
 
 // Alerta de caderno atualizado: entra na lista do painel (🔔 no menu da Brassagem) e vai por e-mail
-// para os endereços cadastrados em ⚙ Tanques (sem nenhum, para o contato@ da Donkey Head Cervejaria)
+// para os endereços cadastrados em ⚙ Tanques (sem nenhum, para o contato@ da Donkey Head Cervejaria),
+// menos quando quem mudou foi um administrador
 function brassagem_alertar(?array $l, string $oQue): void
 {
     global $usuario;
@@ -27,6 +28,10 @@ function brassagem_alertar(?array $l, string $oQue): void
     $b['alertas'] = array_slice(array_merge($b['alertas'] ?? [], [['em' => date('Y-m-d H:i:s'), 'por' => $usuario['nome'], 'login' => $usuario['login'],
         'titulo' => $titulo, 'texto' => $oQue, 'lote_id' => $l['id'] ?? '']]), -300);
     dh_brassagem_salvar($b);
+    // O que o administrador muda não vira e-mail (ele já sabe); continua no 🔔 de quem não fez
+    if ($usuario['papel'] === 'admin') {
+        return;
+    }
     $link = dh_url_site() . 'admin/?acao=' . ($l && dh_brassagem_indice($b['lotes'], $l['id']) !== null ? 'brassagem-lote&id=' . rawurlencode($l['id']) : 'brassagem');
     $html = '<p><b>' . e($titulo) . '</b></p><p>' . nl2br(e($oQue)) . '</p><p style="color:#666">Por ' . e($usuario['nome']) . ' em ' . date('d/m/Y H:i') . '.</p>'
         . '<p><a href="' . e($link) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir o caderno</a></p>';
@@ -711,7 +716,7 @@ function brassagem_tela_config(): void
       <?php $form(['id' => '', 'nome' => 'Tanque ' . (count($b['tanques']) + 1), 'capacidade' => '', 'litros_cm' => '', 'ativo' => true]); ?>
       <?php if (pode('usuarios')): ?>
         <h2>Alertas de caderno atualizado</h2>
-        <p class="dica">A cada lote novo, anotação, mudança de situação ou caderno alterado, vai um e-mail para estes endereços e aparece o 🔔 no menu da Brassagem. Sem nenhum endereço, o e-mail vai para <?= e(DH_EMPRESA['email']) ?>.</p>
+        <p class="dica">A cada lote novo, anotação, mudança de situação ou caderno alterado, vai um e-mail para estes endereços e aparece o 🔔 no menu da Brassagem. Alterações feitas por administradores não geram e-mail. Sem nenhum endereço, o e-mail vai para <?= e(DH_EMPRESA['email']) ?>.</p>
         <form method="post" action="./?acao=brassagem-alertas-config" class="form-cerveja">
           <?= $csrf ?>
           <label>E-mails que recebem os alertas <small>(um por linha)</small><textarea name="alerta_emails" rows="2"><?= e(implode("\n", $b['config']['alerta_emails'] ?? [])) ?></textarea></label>
