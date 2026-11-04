@@ -108,7 +108,7 @@ function detalhe_delivery(array $c): string
           </ul>
         </section>
         <section>
-          <h2>Adicionais</h2>
+          <h2>Opcionais</h2>
           <ul>
             <?php foreach (dh_produtos_adicionais() as $ad): ?>
               <li><?= e($ad['nome']) ?><?= $ad['detalhe'] !== '' ? ' (' . e($ad['detalhe']) . ')' : '' ?>: <strong><?= e(dh_moeda($ad['preco'])) ?></strong><?= $ad['unidade'] !== '' ? ' por ' . e($ad['unidade']) : '' ?></li>

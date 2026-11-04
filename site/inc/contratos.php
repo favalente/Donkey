@@ -598,7 +598,7 @@ function dh_contrato_comodato(array $f, callable $linha): string
     $comprado = array_filter($f['itens'], fn($it) => empty($it['comodato']));
     $emComodato = array_filter($f['itens'], fn($it) => !empty($it['comodato']));
     $extras = dh_comodato_extras($f);
-    $h .= '</table><h3>' . ($extras ? 'Chope e adicionais comprados' : 'Chope comprado') . '</h3><table class="itens"><tr><th>Item</th><th>' . ($extras ? 'Valor unitário' : 'Valor do litro') . '</th><th>Quantidade</th><th>Valor total</th></tr>';
+    $h .= '</table><h3>' . ($extras ? 'Chope e opcionais comprados' : 'Chope comprado') . '</h3><table class="itens"><tr><th>Item</th><th>' . ($extras ? 'Valor unitário' : 'Valor do litro') . '</th><th>Quantidade</th><th>Valor total</th></tr>';
     foreach ($comprado as $it) {
         $h .= '<tr><td>' . e($it['descricao']) . '</td><td>' . e(dh_moeda($it['valor_litro'])) . '</td><td>' . e(dh_litros($it['litros'])) . ' L</td><td>'
             . e(dh_moeda((float) $it['litros'] * (float) $it['valor_litro'])) . '</td></tr>';

@@ -45,7 +45,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
     </table>
     <table class="itens resumo"><tr><td>Chope</td><td><?= e(dh_moeda(dh_comodato_chope($f))) ?></td></tr>
       <?php if ((float) ($f['desconto'] ?? 0) > 0): ?><tr><td>Desconto</td><td>− <?= e(dh_moeda(min(dh_comodato_chope($f), (float) $f['desconto']))) ?></td></tr><?php endif; ?>
-      <?php if (dh_comodato_extras($f)): ?><tr><td>Adicionais</td><td><?= e(dh_moeda(dh_comodato_extras_total($f))) ?></td></tr><?php endif; ?>
+      <?php if (dh_comodato_extras($f)): ?><tr><td>Opcionais</td><td><?= e(dh_moeda(dh_comodato_extras_total($f))) ?></td></tr><?php endif; ?>
       <tr><td>Frete (instalação e retirada)</td><td id="t-frete"><?= $freteTravado ? e(dh_moeda($f['frete'])) : '—' ?></td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
   <?php else: ?>
   <?php if (!$cervejas): ?><p class="msg erro">Os rótulos para evento ainda não foram cadastrados. Fale com a Donkey Head Cervejaria.</p><?php endif; ?>
@@ -98,7 +98,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
     <p class="cupom-msg" id="cupom-msg" aria-live="polite"></p>
   </div>
 
-  <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr id="l-desconto" hidden><td id="t-desconto-rot">Desconto</td><td id="t-desconto">R$ 0,00</td></tr><tr id="l-extras" hidden><td>Adicionais</td><td id="t-extras">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
+  <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr id="l-desconto" hidden><td id="t-desconto-rot">Desconto</td><td id="t-desconto">R$ 0,00</td></tr><tr id="l-extras" hidden><td>Opcionais</td><td id="t-extras">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
   <?php endif; ?>
 
   <h2>2. Equipamentos em comodato</h2>
