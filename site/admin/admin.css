@@ -647,3 +647,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .lista-freelas summary span { color: var(--muted); font-size: .9rem; flex: 1 1 auto; }
 .valor-freela { font-size: 1.15rem; }
 .linha-funcao { align-items: end; }
+.sangria-dia { margin: 8px 12px 0; padding: 8px 10px; border-radius: 10px; background: var(--verde-bg); font-size: .92rem; } .valor-freela small { font-weight: 400; font-size: .78rem; color: var(--muted); }

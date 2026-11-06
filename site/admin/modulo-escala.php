@@ -42,7 +42,7 @@ function escala_ler_posicoes(array &$e, array $linhas, string $dia): array
         $pos[] = ['funcao' => dh_escala_funcao_por_nome($e, $funcao), 'pessoa' => $nome !== '' ? dh_escala_pessoa_por_nome($e, $nome) : '',
             'entrada' => dh_escala_hora((string) ($l['entrada'] ?? '')) ?: DH_ESCALA_ENTRADA_FREELA, 'saida' => dh_escala_hora((string) ($l['saida'] ?? '')) ?: $saidaPadrao,
             'falta' => !empty($l['falta']), 'ajuste' => brassagem_num(str_replace(['−', '+'], ['-', ''], (string) ($l['ajuste'] ?? ''))),
-            'motivo' => mb_substr(trim((string) ($l['motivo'] ?? '')), 0, 80)];
+            'motivo' => mb_substr(trim((string) ($l['motivo'] ?? '')), 0, 80), 'pago_caixa' => brassagem_num($l['pago_caixa'] ?? '')];
     }
     return $pos;
 }
@@ -116,7 +116,7 @@ function escala_acao(string $acao): bool
             }
             $saida = DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? null;
             $mudaSaida = (DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($de))] ?? null) !== $saida;
-            $e['dias'][$dia] = ['posicoes' => array_map(fn($p) => array_merge($p, ['falta' => false, 'ajuste' => '', 'motivo' => ''], $mudaSaida && $saida ? ['saida' => $saida] : []), $e['dias'][$de]['posicoes']),
+            $e['dias'][$dia] = ['posicoes' => array_map(fn($p) => array_merge($p, ['falta' => false, 'ajuste' => '', 'motivo' => '', 'pago_caixa' => ''], $mudaSaida && $saida ? ['saida' => $saida] : []), $e['dias'][$de]['posicoes']),
                 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s')];
             dh_escala_salvar($e);
             ir('./?acao=escala&semana=' . dh_semana_inicio($dia) . '#dia-' . $dia, escala_dia_nome($dia) . ': copiada de ' . escala_dia_nome($de) . '. Ajuste quem mudou e salve.');
@@ -133,7 +133,7 @@ function escala_acao(string $acao): bool
             foreach (dh_semana_dias($de) as $k => $dia) {
                 $alvo = dh_semana_dias($para)[$k];
                 if (!empty($e['dias'][$dia]['posicoes']) && empty($e['dias'][$alvo]['posicoes'])) {
-                    $e['dias'][$alvo] = ['posicoes' => array_map(fn($p) => array_merge($p, ['falta' => false, 'ajuste' => '', 'motivo' => '']), $e['dias'][$dia]['posicoes']),
+                    $e['dias'][$alvo] = ['posicoes' => array_map(fn($p) => array_merge($p, ['falta' => false, 'ajuste' => '', 'motivo' => '', 'pago_caixa' => '']), $e['dias'][$dia]['posicoes']),
                         'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s')];
                     $n++;
                 }
@@ -297,16 +297,20 @@ function escala_tela_semana(): void
                       <td><input name="linhas[<?= $k ?>][saida]" value="<?= e($p['saida']) ?>" inputmode="numeric" placeholder="<?= e(DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:30') ?>" aria-label="Saída"></td>
                       <td class="sem-impressao acoes-linha">
                         <button type="button" class="tirar-linha" aria-label="Tirar esta linha" title="Tirar esta linha">×</button>
-                        <details class="ajuste-linha"><summary title="Falta ou ajuste de valor"><?= !empty($p['falta']) ? 'falta' : (($p['ajuste'] ?? '') !== '' ? ((float) $p['ajuste'] > 0 ? '+' : '−') . dh_num(abs((float) $p['ajuste'])) : '⋯') ?></summary>
+                        <details class="ajuste-linha"><summary title="Falta, ajuste de valor ou pago no caixa"><?= !empty($p['falta']) ? 'falta' : (($p['ajuste'] ?? '') !== '' ? ((float) $p['ajuste'] > 0 ? '+' : '−') . dh_num(abs((float) $p['ajuste'])) : (($p['pago_caixa'] ?? '') === '' ? '⋯' : '')) ?><?= ($p['pago_caixa'] ?? '') !== '' ? ' 💵' : '' ?></summary>
                           <label class="check"><input type="checkbox" name="linhas[<?= $k ?>][falta]" value="1" <?= !empty($p['falta']) ? 'checked' : '' ?>> Faltou</label>
                           <label>Ajuste (R$) <small>(+ hora extra / − desconto)</small><input name="linhas[<?= $k ?>][ajuste]" value="<?= e(($p['ajuste'] ?? '') !== '' ? dh_num($p['ajuste']) : '') ?>" inputmode="decimal" placeholder="ex.: 20 ou -15"></label>
                           <label>Motivo <input name="linhas[<?= $k ?>][motivo]" value="<?= e($p['motivo'] ?? '') ?>" maxlength="80"></label>
+                          <label>Pago no dia pelo caixa (R$) <small>(sangria; desconta do pagamento da semana)</small><input name="linhas[<?= $k ?>][pago_caixa]" value="<?= e(($p['pago_caixa'] ?? '') !== '' ? dh_num($p['pago_caixa']) : '') ?>" inputmode="decimal" placeholder="0,00"></label>
                         </details>
                       </td>
                     </tr>
                   <?php endforeach; ?>
                 </tbody>
               </table>
+              <?php $sangria = array_filter($pos, fn($x) => ($x['pago_caixa'] ?? '') !== ''); if ($sangria): ?>
+                <p class="sangria-dia">💵 Pago no caixa hoje (sangria): <b><?= e(dh_moeda(array_sum(array_map(fn($x) => (float) $x['pago_caixa'], $sangria)))) ?></b> · <?= e(implode(', ', array_map(fn($x) => (dh_escala_pessoa($e, $x['pessoa'])['nome'] ?? '?') . ' ' . dh_moeda((float) $x['pago_caixa']), $sangria))) ?></p>
+              <?php endif; ?>
               <div class="botoes-dia sem-impressao">
                 <button type="button" class="btn secundario mais-linha">+ Linha</button>
                 <button class="btn primario">Salvar <?= e(mb_strtolower(DH_DIAS_SEMANA_ESCALA[(int) date('N', strtotime($dia))])) ?></button>
@@ -325,7 +329,7 @@ function escala_tela_semana(): void
           </section>
         <?php endforeach; ?>
       </div>
-      <p class="dica sem-impressao">Digite o nome como na planilha: quem ainda não está na <a href="./?acao=escala-equipe">Equipe</a> entra como freelancer. Linha sem nome é vaga em aberto (fica amarela). Fixos ficam em azul e não entram no pagamento. Em "⋯" marca-se falta ou ajuste de valor.</p>
+      <p class="dica sem-impressao">Digite o nome como na planilha: quem ainda não está na <a href="./?acao=escala-equipe">Equipe</a> entra como freelancer. Linha sem nome é vaga em aberto (fica amarela). Fixos ficam em azul e não entram no pagamento. Em "⋯" marca-se falta, ajuste de valor ou o que foi pago no dia pelo caixa (sangria).</p>
       <script>
         // + Linha copia a última linha do dia (vazia) e × tira a linha
         document.querySelectorAll('.form-dia').forEach(function (form) {
@@ -443,7 +447,7 @@ function escala_tela_freelancers(): void
       <?php escala_nav_semana('freelancers', $segunda); ?>
       <?php if ($semDiaria): ?><p class="aviso">Sem diária cadastrada: <?= e(implode(', ', array_column($semDiaria, 'nome'))) ?>. <a href="./?acao=escala-funcoes">Cadastrar as diárias</a>.</p><?php endif; ?>
       <div class="grade-metricas tres receita-metricas">
-        <div class="cartao-metrica"><span>Total da semana</span><strong><?= e(dh_moeda($total)) ?></strong><small>pagar na segunda <?= $paga ?></small></div>
+        <div class="cartao-metrica"><span>A pagar na segunda</span><strong><?= e(dh_moeda($total)) ?></strong><small><?= $paga ?><?= ($cx = array_sum(array_column($linhas, 'caixa'))) > 0 ? ' · ' . e(dh_moeda($cx)) . ' já saiu do caixa' : '' ?></small></div>
         <div class="cartao-metrica"><span>Já pago</span><strong><?= e(dh_moeda(array_sum(array_column($pagos, 'valor')))) ?></strong><small><?= count($pagos) ?> de <?= count($linhas) ?> freelancers</small></div>
         <div class="cartao-metrica"><span>Diárias</span><strong><?= array_sum(array_map(fn($l) => count(array_filter($l['itens'], fn($i) => !$i['falta'])), $linhas)) ?></strong><small><?php $nf = array_sum(array_map(fn($l) => count(array_filter($l['itens'], fn($i) => $i['falta'])), $linhas)); ?><?= $nf ?> falta<?= $nf === 1 ? '' : 's' ?></small></div>
       </div>
@@ -453,11 +457,11 @@ function escala_tela_freelancers(): void
           <li class="<?= $pg ? 'pago' : '' ?>">
             <details>
               <summary><strong><?= e($p['nome']) ?></strong><span><?= count(array_filter($l['itens'], fn($i) => !$i['falta'])) ?> dia(s)<?= $p['pix'] !== '' ? ' · Pix ' . e($p['pix']) : ' · <b>sem Pix</b>' ?></span>
-                <b class="valor-freela"><?= e(dh_moeda($l['total'])) ?></b><?= $pg ? '<em class="tag ct-ok">Pago ' . e(date('d/m', strtotime($pg['pago_em']))) . '</em>' : '<em class="tag ct-preenchimento">A pagar</em>' ?></summary>
+                <b class="valor-freela"><?= e(dh_moeda($l['total'])) ?><?= $l['caixa'] > 0 ? '<small> (' . e(dh_moeda($l['caixa'])) . ' já pago no caixa)</small>' : '' ?></b><?= $pg ? '<em class="tag ct-ok">Pago ' . e(date('d/m', strtotime($pg['pago_em']))) . '</em>' : '<em class="tag ct-preenchimento">A pagar</em>' ?></summary>
               <table class="tabela-receita">
                 <?php foreach ($l['itens'] as $it): ?>
                   <tr><td><?= e(escala_dia_nome($it['dia'], true)) ?> · <?= e($it['funcao']) ?> <small><?= e($it['entrada']) ?>–<?= e($it['saida']) ?></small><?= $it['motivo'] !== '' ? '<br><small>' . e($it['motivo']) . '</small>' : '' ?></td>
-                    <td><?= $it['falta'] ? '<b style="color:var(--erro)">falta</b>' : e(dh_moeda($it['diaria'])) ?></td><td><?= $it['ajuste'] != 0 ? ($it['ajuste'] > 0 ? '+' : '−') . e(dh_moeda(abs($it['ajuste']))) : '' ?></td></tr>
+                    <td><?= $it['falta'] ? '<b style="color:var(--erro)">falta</b>' : e(dh_moeda($it['diaria'])) ?></td><td><?= $it['ajuste'] != 0 ? ($it['ajuste'] > 0 ? '+' : '−') . e(dh_moeda(abs($it['ajuste']))) : '' ?><?= $it['pago_caixa'] > 0 ? '<br><small>pago no caixa −' . e(dh_moeda($it['pago_caixa'])) . '</small>' : '' ?></td></tr>
                 <?php endforeach; ?>
               </table>
               <?php if ($pg && abs($pg['valor'] - $l['total']) > 0.005): ?><p class="aviso">A escala mudou depois do pagamento: foi pago <?= e(dh_moeda($pg['valor'])) ?>, agora soma <?= e(dh_moeda($l['total'])) ?>.</p><?php endif; ?>
@@ -473,7 +477,7 @@ function escala_tela_freelancers(): void
           </li>
         <?php endforeach; ?>
       </ul>
-      <p class="dica">Os valores saem da <a href="./?acao=escala&amp;semana=<?= $segunda ?>">escala da semana</a>: diária da função (ou a própria da pessoa) por dia, sem as faltas, mais os ajustes. Para corrigir, ajuste a escala.</p>
+      <p class="dica">Os valores saem da <a href="./?acao=escala&amp;semana=<?= $segunda ?>">escala da semana</a>: diária da função (ou a própria da pessoa) por dia, sem as faltas, mais os ajustes, menos o que já foi pago no dia pelo caixa (sangria). Para corrigir, ajuste a escala.</p>
     <?php
 }
 

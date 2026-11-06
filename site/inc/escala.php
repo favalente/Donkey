@@ -134,10 +134,13 @@ function dh_escala_a_receber(array $e, string $segunda): array
             $falta = !empty($pos['falta']);
             $diaria = $falta ? 0.0 : dh_escala_diaria($e, $pos);
             $ajuste = (float) ($pos['ajuste'] ?? 0);
-            $r[$p['id']] ??= ['pessoa' => $p, 'itens' => [], 'total' => 0.0];
+            $caixa = (float) ($pos['pago_caixa'] ?? 0);
+            $r[$p['id']] ??= ['pessoa' => $p, 'itens' => [], 'total' => 0.0, 'caixa' => 0.0];
             $r[$p['id']]['itens'][] = ['dia' => $dia, 'funcao' => dh_escala_funcao($e, $pos['funcao'])['nome'] ?? '?', 'entrada' => $pos['entrada'], 'saida' => $pos['saida'],
-                'diaria' => $diaria, 'falta' => $falta, 'ajuste' => $ajuste, 'motivo' => $pos['motivo'] ?? ''];
-            $r[$p['id']]['total'] += $diaria + $ajuste;
+                'diaria' => $diaria, 'falta' => $falta, 'ajuste' => $ajuste, 'motivo' => $pos['motivo'] ?? '', 'pago_caixa' => $caixa];
+            // "total" é o que falta pagar na segunda: o que já saiu do caixa no dia (sangria) não entra
+            $r[$p['id']]['total'] += $diaria + $ajuste - $caixa;
+            $r[$p['id']]['caixa'] += $caixa;
         }
     }
     uasort($r, fn($a, $b) => strcoll(dh_sem_acento($a['pessoa']['nome']), dh_sem_acento($b['pessoa']['nome'])));
@@ -151,7 +154,8 @@ function dh_escala_extrato(array $linha, string $segunda): string
     foreach ($linha['itens'] as $it) {
         $t .= mb_substr(DH_DIAS_SEMANA_ESCALA[(int) date('N', strtotime($it['dia']))], 0, 3) . ' ' . date('d/m', strtotime($it['dia'])) . ' · ' . $it['funcao']
             . ($it['falta'] ? ' · FALTA' : ' · ' . dh_moeda($it['diaria']))
-            . ($it['ajuste'] != 0 ? ' · ajuste ' . ($it['ajuste'] > 0 ? '+' : '−') . dh_moeda(abs($it['ajuste'])) . ($it['motivo'] !== '' ? ' (' . $it['motivo'] . ')' : '') : '') . "\n";
+            . ($it['ajuste'] != 0 ? ' · ajuste ' . ($it['ajuste'] > 0 ? '+' : '−') . dh_moeda(abs($it['ajuste'])) . ($it['motivo'] !== '' ? ' (' . $it['motivo'] . ')' : '') : '')
+            . (($it['pago_caixa'] ?? 0) > 0 ? ' · já recebido no caixa ' . dh_moeda($it['pago_caixa']) : '') . "\n";
     }
-    return $t . "\nTotal: " . dh_moeda($linha['total']);
+    return $t . (($linha['caixa'] ?? 0) > 0 ? "\nJá recebido no caixa: " . dh_moeda($linha['caixa']) : '') . "\nA receber: " . dh_moeda($linha['total']);
 }
