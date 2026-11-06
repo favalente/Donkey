@@ -110,7 +110,6 @@ function usuarios_tela(string $tela): bool
         'financeiro' => 'Agenda e bandas com cachê e consumação, relatório financeiro',
         'designer' => 'Só visualiza: agenda do mês e bandas (nome, tributo, Instagram e fotos para baixar)',
         'barman' => 'Tap list e cervejas',
-        'gerente' => 'Escala da equipe (montar e ajustar a semana)',
         'cervejaria' => 'Só a Brassagem e as Receitas: tanques, cadernos dos lotes e receitas do BeerSmith',
     ];
     ?>

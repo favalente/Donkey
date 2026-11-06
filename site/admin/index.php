@@ -12,7 +12,7 @@ require __DIR__ . '/modulo-escala.php';
 
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
 const DH_ARQ_USUARIOS = DH_RAIZ . '/dados/usuarios.json';
-const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejaria' => 'Cervejaria', 'gerente' => 'Gerente'];
+const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejaria' => 'Cervejaria'];
 // O que cada função pode fazer no painel
 const DH_PERMISSOES = [
     'taplist' => ['admin', 'barman'],
@@ -31,7 +31,7 @@ const DH_PERMISSOES = [
     'vendas' => ['admin', 'financeiro'],
     'brassagem' => ['admin', 'cervejaria'],
     'receitas' => ['admin', 'cervejaria'],
-    'escala' => ['admin', 'financeiro', 'gerente'],
+    'escala' => ['admin', 'financeiro'],
     'freelancers' => ['admin', 'financeiro'],
     'usuarios' => ['admin'],
     'importar' => ['admin'],
@@ -88,6 +88,18 @@ function dh_usuarios(): array
 {
     $u = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
     if (is_array($u)) {
+        // A função Gerente (só Escala) foi trocada pelas Permissões: quem era Gerente vira Designer só com a Escala
+        $mudou = false;
+        foreach ($u as $login => $x) {
+            if (!isset(DH_PAPEIS[$x['papel'] ?? ''])) {
+                $u[$login]['papel'] = 'designer';
+                $u[$login]['permissoes'] = ($x['papel'] ?? '') === 'gerente' ? ['escala'] : [];
+                $mudou = true;
+            }
+        }
+        if ($mudou) {
+            gravar_json(DH_ARQ_USUARIOS, $u);
+        }
         return $u;
     }
     $antigo = json_decode((string) @file_get_contents(DH_ARQ_ADMIN), true);
