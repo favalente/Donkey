@@ -98,10 +98,12 @@ function dh_xmenu_separar_tamanho(string $nome): array
 function dh_xmenu_casar(string $nome, array $cervejas): ?array
 {
     $alvo = dh_slug($nome);
+    // "SoftHop" e "Soft HOP" são a mesma cerveja: compara também sem espaços e hífens
+    $junto = fn(string $s) => str_replace('-', '', $s);
     $melhor = null;
     foreach ($cervejas as $c) {
         $nomes = array_filter([dh_slug($c['nome']), $c['id'], dh_slug($c['nome_xmenu'] ?? '')]);
-        if (in_array($alvo, $nomes, true)) {
+        if (in_array($alvo, $nomes, true) || in_array($junto($alvo), array_map($junto, $nomes), true)) {
             return $c;
         }
         foreach ($nomes as $n) {

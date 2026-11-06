@@ -47,6 +47,9 @@ function dh_carregar(): array
             // tenta de novo na próxima leitura
         }
     }
+    if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['xmenu_duplicadas_2026'])) {
+        $dados = dh_xmenu_juntar_duplicadas($dados);
+    }
     if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['preco_1l_aldeota_2026'])) {
         // "Preço 1 litro" vazio recebe o preço da Aldeota da planilha de produtos (base do chope delivery)
         foreach ($dados['cervejas'] as $i => $c) {
@@ -65,6 +68,79 @@ function dh_carregar(): array
         }
     }
     return $dados;
+}
+
+// Cervejas que o xMenu cadastrou sozinho com outra grafia de uma que já existia ("SoftHop" × "Soft HOP"),
+// uma vez só: a cópia some e a original fica com o nome do xMenu, o preço da Aldeota (se não tinha)
+// e as ligações das receitas e dos cadernos da brassagem.
+function dh_xmenu_juntar_duplicadas(array $dados): array
+{
+    $junto = fn(string $s) => str_replace('-', '', dh_slug($s));
+    $trocas = [];
+    foreach ($dados['cervejas'] as $i => $c) {
+        if (($c['origem'] ?? '') !== 'xmenu') {
+            continue;
+        }
+        foreach ($dados['cervejas'] as $j => $o) {
+            if ($j === $i || ($o['origem'] ?? '') === 'xmenu' || $junto($o['nome']) !== $junto($c['nome'])) {
+                continue;
+            }
+            if (trim((string) ($o['nome_xmenu'] ?? '')) === '') {
+                $dados['cervejas'][$j]['nome_xmenu'] = $c['nome_xmenu'] ?? $c['nome'];
+            }
+            if ((!is_numeric($o['preco_1l'] ?? '') || (float) $o['preco_1l'] <= 0) && is_numeric($c['preco_1l'] ?? '')) {
+                $dados['cervejas'][$j]['preco_1l'] = $c['preco_1l'];
+            }
+            $trocas[$c['id']] = $o['id'];
+            if (str_starts_with((string) $c['imagem'], 'uploads/cervejas/') && $c['imagem'] !== ($o['imagem'] ?? '')) {
+                @unlink(DH_RAIZ . '/' . $c['imagem']);
+            }
+            unset($dados['cervejas'][$i]);
+            break;
+        }
+    }
+    $dados['cervejas'] = array_values($dados['cervejas']);
+    foreach ($dados['torneiras'] as $u => $lista) {
+        foreach ($lista as $k => $id) {
+            if (is_string($id) && isset($trocas[$id])) {
+                $dados['torneiras'][$u][$k] = $trocas[$id];
+            }
+        }
+    }
+    if ($trocas) {
+        // Receitas e cadernos ligados à cópia passam para a original
+        $r = dh_receitas_cru();
+        if ($r !== null) {
+            foreach ($r['receitas'] as $k => $x) {
+                if (isset($trocas[$x['cerveja_id'] ?? ''])) {
+                    $r['receitas'][$k]['cerveja_id'] = $trocas[$x['cerveja_id']];
+                }
+            }
+            @file_put_contents(DH_RAIZ . '/dados/receitas.json', json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
+        }
+        $b = json_decode((string) @file_get_contents(DH_RAIZ . '/dados/brassagem.json'), true);
+        if (is_array($b) && !empty($b['lotes'])) {
+            foreach ($b['lotes'] as $k => $l) {
+                if (isset($trocas[$l['cerveja_id'] ?? ''])) {
+                    $b['lotes'][$k]['cerveja_id'] = $trocas[$l['cerveja_id']];
+                }
+            }
+            @file_put_contents(DH_RAIZ . '/dados/brassagem.json', json_encode($b, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
+        }
+    }
+    $dados['migracoes']['xmenu_duplicadas_2026'] = date('c') . ($trocas ? ' ' . json_encode($trocas) : '');
+    try {
+        dh_salvar($dados);
+    } catch (RuntimeException $e) {
+        // tenta de novo na próxima leitura
+    }
+    return $dados;
+}
+
+function dh_receitas_cru(): ?array
+{
+    $r = json_decode((string) @file_get_contents(DH_RAIZ . '/dados/receitas.json'), true);
+    return is_array($r) && isset($r['receitas']) ? $r : null;
 }
 
 // Variações enviadas em out/2026 (uma vez só): Peste Negra Toffee e Carvalho (mesmo rótulo da Peste
