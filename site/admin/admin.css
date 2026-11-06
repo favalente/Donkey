@@ -655,3 +655,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .aba-check span { display: flex; flex-direction: column; }
 .aba-check small { font-weight: 400; }
 .aba-check:has(input:checked) { border-color: var(--amber); background: var(--caixa); }
+.abas-usuario { margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--caixa); border: 1px solid var(--line); } .abas-usuario p { margin: 0 0 8px; font-size: .92rem; }

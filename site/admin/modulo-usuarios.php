@@ -123,7 +123,7 @@ function usuarios_tela(string $tela): bool
           <li>
             <details class="usuario">
               <summary>
-                <span class="info"><strong><?= e($u['nome']) ?></strong><span><?= e($u['login']) ?> · <?= e(DH_PAPEIS[$u['papel']]) ?><?= !empty($u['unidade']) ? ' · ' . e(DH_UNIDADES[$u['unidade']]) : '' ?></span></span>
+                <span class="info"><strong><?= e($u['nome']) ?></strong><span><?= e($u['login']) ?> · <?= e(DH_PAPEIS[$u['papel']]) ?><?= isset($u['permissoes']) && $u['papel'] !== 'admin' ? ' (personalizado)' : '' ?><?= !empty($u['unidade']) ? ' · ' . e(DH_UNIDADES[$u['unidade']]) : '' ?></span></span>
                 <span class="seta">›</span>
               </summary>
               <form method="post" action="./?acao=usuario-salvar" class="form-cerveja">
@@ -139,6 +139,10 @@ function usuarios_tela(string $tela): bool
                 <label>Nova senha <small>(deixe em branco para manter)</small><input type="password" name="senha" autocomplete="new-password"></label>
                 <button class="btn primario">Salvar</button>
               </form>
+              <div class="abas-usuario">
+                <p><b>Abas que aparecem:</b> <?= $u['papel'] === 'admin' ? 'todas (administrador)' : e(implode(', ', array_map(fn($k) => DH_ABAS[$k][0], $u['permissoes'] ?? abas_da_funcao($u['papel'])))) ?></p>
+                <?php if ($u['papel'] !== 'admin'): ?><a class="btn secundario" href="./?acao=permissoes&amp;login=<?= e(rawurlencode($u['login'])) ?>">🔐 Escolher as abas de <?= e($u['nome']) ?></a><?php endif; ?>
+              </div>
               <?php if ($u['login'] !== $usuario['login']): ?>
                 <form method="post" action="./?acao=usuario-excluir" class="excluir" onsubmit="return confirm('Excluir o usuário <?= e($u['login']) ?>?');">
                   <?= $csrf ?><input type="hidden" name="login" value="<?= e($u['login']) ?>">
