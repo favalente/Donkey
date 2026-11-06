@@ -81,9 +81,16 @@ function dh_lote_dia(array $l, ?string $ate = null): int
     return (int) floor((strtotime($ate ?? date('Y-m-d')) - strtotime($l['data'])) / 86400);
 }
 
+// Anotações do acompanhamento, da mais antiga para a mais nova. As mudanças de situação (maturação,
+// finalização, reabertura) entram como anotação automática; lotes finalizados antes disso ganham a
+// linha da finalização aqui, só para mostrar.
 function dh_lote_registros(array $l): array
 {
     $r = $l['registros'] ?? [];
+    if (($l['status'] ?? '') === 'finalizado' && !empty($l['finalizado_em']) && !array_filter($r, fn($x) => ($x['evento'] ?? '') === 'finalizado')) {
+        $r[] = ['id' => '', 'data' => substr($l['finalizado_em'], 0, 10), 'brix' => '', 'pressao' => '', 'temp' => '', 'texto' => '✅ Lote finalizado: tanque liberado.',
+            'por' => '', 'em' => $l['finalizado_em'], 'evento' => 'finalizado'];
+    }
     usort($r, fn($a, $b) => [$a['data'], $a['em']] <=> [$b['data'], $b['em']]);
     return $r;
 }

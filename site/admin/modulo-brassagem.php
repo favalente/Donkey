@@ -309,6 +309,10 @@ function brassagem_acao(string $acao): bool
             if ($st === 'maturando' && empty($l['maturacao_em'])) {
                 $b['lotes'][$i]['maturacao_em'] = date('Y-m-d');
             }
+            // A mudança fica registrada no acompanhamento, com data e quem fez
+            $b['lotes'][$i]['registros'][] = ['id' => dh_id_novo('r'), 'data' => date('Y-m-d'), 'brix' => '', 'pressao' => '', 'temp' => '',
+                'texto' => $st === 'finalizado' ? '✅ Lote finalizado: tanque liberado.' : ($l['status'] === 'finalizado' ? '↩ Lote reaberto (' . mb_strtolower(DH_LOTE_STATUS[$st]) . ').' : ($st === 'maturando' ? '❄️ Passou para a maturação.' : '🔄 Voltou para a fermentação.')),
+                'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'evento' => $st === 'finalizado' ? 'finalizado' : ($l['status'] === 'finalizado' ? 'reaberto' : $st)];
             dh_brassagem_salvar($b);
             $fase = ['fermentando' => 'a fermentação', 'maturando' => 'a maturação'][$st] ?? '';
             brassagem_alertar($b['lotes'][$i], $st === 'finalizado' ? 'Lote finalizado: o tanque está livre.' : ($l['status'] === 'finalizado' ? 'Lote reaberto, voltou para ' . $fase . '.' : 'Passou para ' . $fase . '.'));
@@ -699,13 +703,14 @@ function brassagem_tela_lote(): void
           <!-- Do mais antigo para o mais novo, como no caderno; a próxima anotação vai embaixo -->
           <ol class="caderno-linhas">
             <?php foreach ($regs as $r): $med = brassagem_medidas($r); ?>
-              <li>
+              <li<?= !empty($r['evento']) ? ' class="linha-evento"' : '' ?>>
                 <span class="linha-data"><?= e(date('d/m', strtotime($r['data']))) ?><small>dia <?= dh_lote_dia($l, $r['data']) ?></small></span>
                 <span class="linha-texto">
                   <?php if ($med !== ''): ?><b class="linha-medidas"><?= e($med) ?></b><?php endif; ?>
                   <?php if (($corr = brassagem_brix_corrigido($l, $r)) !== ''): ?><small class="linha-corrigida">refratômetro corrigido: <?= e($corr) ?></small><?php endif; ?>
                   <?= nl2br(e($r['texto'])) ?>
                   <small class="linha-autor"><?= e($r['por']) ?></small>
+                  <?php if ($r['id'] !== ''): ?>
                   <details class="sem-impressao">
                     <summary>editar</summary>
                     <form method="post" action="./?acao=brassagem-registro-salvar" class="form-registro">
@@ -721,6 +726,7 @@ function brassagem_tela_lote(): void
                     </form>
                     <form method="post" action="./?acao=brassagem-registro-excluir" onsubmit="return confirm('Apagar esta anotação?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($l['id']) ?>"><input type="hidden" name="rid" value="<?= e($r['id']) ?>"><button class="link perigo-link">Apagar anotação</button></form>
                   </details>
+                  <?php endif; ?>
                 </span>
               </li>
             <?php endforeach; ?>
