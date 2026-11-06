@@ -80,7 +80,6 @@ function detalhe_delivery(array $c): string
                 <h3><button type="button" class="link-cerveja" data-cerveja="<?= e($c['id']) ?>"><?= e($c['nome']) ?></button></h3>
                 <?php if ($c['estilo'] !== ''): ?><p class="delivery-estilo"><?= e($c['estilo']) ?><?= ($c['abv'] ?? '') !== '' ? ' · ' . e(dh_num($c['abv'])) . '%' : '' ?></p><?php endif; ?>
                 <p class="delivery-litro"><strong><?= e(dh_moeda($l)) ?></strong> o litro</p>
-                <p class="delivery-onde">Engatada na <?= e(implode(' e na ', array_map(fn($u) => DH_UNIDADES[$u], $c['unidades']))) ?></p>
                 <p class="delivery-barris">Barril de 30 L: <strong><?= e(dh_moeda($l * 30)) ?></strong><br>Barril de 50 L: <strong><?= e(dh_moeda($l * 50)) ?></strong></p>
               </div>
             </article>

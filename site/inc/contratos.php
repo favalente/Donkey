@@ -320,7 +320,8 @@ function dh_cervejas_evento(): array
         }
     }
     $lista = [];
-    foreach (['aldeota' => $tapAldeota, 'maraponga' => dh_xmenu_taplist('maraponga', $dados['cervejas']) ?? []] as $u => $tap) {
+    // Só o que está engatado na Aldeota (é de lá que sai o chope do delivery)
+    foreach (['aldeota' => $tapAldeota] as $u => $tap) {
         foreach ($tap as $it) {
             $chave = $it['id'] ?: dh_slug($it['nome']);
             if (isset($lista[$chave])) {
@@ -331,6 +332,9 @@ function dh_cervejas_evento(): array
                 continue;
             }
             $c = ($it['id'] && isset($porId[$it['id']]) ? $porId[$it['id']] : $it) + ['estilo' => '', 'abv' => '', 'imagem' => 'assets/img/rotulo-padrao.png'];
+            if (!empty($c['fora_delivery'])) {
+                continue; // marcada no cadastro como fora do chope delivery
+            }
             // Base: "Preço 1 litro" do cadastro (preço da Aldeota). Sem cadastro, a planilha da Aldeota.
             $bar = is_numeric($c['preco_1l'] ?? '') && (float) $c['preco_1l'] > 0 ? (float) $c['preco_1l'] : null;
             foreach ([$c['nome'] ?? '', $c['nome_xmenu'] ?? '', $it['nome'] ?? ''] as $n) {

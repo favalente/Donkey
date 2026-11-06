@@ -50,6 +50,20 @@ function dh_carregar(): array
     if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['xmenu_duplicadas_2026'])) {
         $dados = dh_xmenu_juntar_duplicadas($dados);
     }
+    if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['strawberry_fora_delivery'])) {
+        // A Strawberry Fields Forever não está disponível para o chope delivery (uma vez só; depois é pelo cadastro)
+        foreach ($dados['cervejas'] as $i => $c) {
+            if (str_starts_with(dh_slug((string) $c['nome']), 'strawberry-fields')) {
+                $dados['cervejas'][$i]['fora_delivery'] = true;
+            }
+        }
+        $dados['migracoes']['strawberry_fora_delivery'] = date('c');
+        try {
+            dh_salvar($dados);
+        } catch (RuntimeException $e) {
+            // tenta de novo na próxima leitura
+        }
+    }
     if ($arq === DH_ARQ_DADOS && empty($dados['migracoes']['preco_1l_aldeota_2026'])) {
         // "Preço 1 litro" vazio recebe o preço da Aldeota da planilha de produtos (base do chope delivery)
         foreach ($dados['cervejas'] as $i => $c) {

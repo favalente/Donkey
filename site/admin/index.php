@@ -374,6 +374,7 @@ if (!$usuarios) {
                     'preco_1l' => $num('preco_1l'),
                     'descricao' => trim(str_replace("\r\n", "\n", (string) ($_POST['descricao'] ?? ''))),
                     'ativa' => !empty($_POST['ativa']),
+                    'fora_delivery' => !empty($_POST['fora_delivery']),
                 ]);
                 if (!empty($_FILES['imagem']['name'])) {
                     $antiga = $c['imagem'];
@@ -703,6 +704,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
           <textarea name="descricao" rows="9"><?= e($c['descricao']) ?></textarea>
         </label>
         <label class="check"><input type="checkbox" name="ativa" value="1" <?= !empty($c['ativa']) ? 'checked' : '' ?>> Mostrar no catálogo "Nossas cervejas" do site</label>
+        <label class="check"><input type="checkbox" name="fora_delivery" value="1" <?= !empty($c['fora_delivery']) ? 'checked' : '' ?>> Fora do chope delivery (não aparece na tabela de preços nem no pedido, mesmo engatada)</label>
         <div class="barra-salvar"><button class="btn primario">Salvar cerveja</button></div>
       </form>
       <?php if ($c['id']): ?>
