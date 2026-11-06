@@ -76,8 +76,10 @@ function contratos_acao(string $acao): bool
         case 'contratos-config':
         case 'contratos-cupons':
         case 'produtos':
-        case 'clientes':
             exigir('contratos');
+            return true;
+        case 'clientes':
+            exigir('clientes');
             return true;
 
         case 'contrato-comprovante':
@@ -199,7 +201,7 @@ function contratos_acao(string $acao): bool
 
         case 'cliente-salvar':
             exigir_post();
-            exigir('contratos');
+            exigir('clientes');
             $telaErro = 'clientes';
             $doc = dh_so_digitos((string) ($_POST['doc'] ?? ''));
             if (!dh_cpf_valido($doc) && !dh_cnpj_valido($doc)) {
@@ -230,7 +232,7 @@ function contratos_acao(string $acao): bool
 
         case 'cliente-novidades':
             exigir_post();
-            exigir('contratos');
+            exigir('clientes');
             $todos = dh_clientes();
             $doc = dh_so_digitos((string) ($_POST['doc'] ?? ''));
             if (!isset($todos[$doc])) {
@@ -245,7 +247,7 @@ function contratos_acao(string $acao): bool
         case 'cliente-excluir':
             // Tira o cliente da base (os contratos dele continuam guardados)
             exigir_post();
-            exigir('contratos');
+            exigir('clientes');
             $todos = dh_clientes();
             $doc = dh_so_digitos((string) ($_POST['doc'] ?? ''));
             if (!isset($todos[$doc])) {

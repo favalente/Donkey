@@ -24,6 +24,8 @@ site/                         tudo que vai para public_html
 
 ## Painel (admin)
 
+**Permissões por usuário:** em **Usuários → 🔐 Permissões**, escolha o usuário e marque as abas que ele vê (Tap List, Cervejas, Agenda ver/editar, Bandas ver/editar, valores dos shows, Financeiro → Bandas/Freelancers/Chope, Orçamentos, Contratos, Clientes, Escala, Brassagem, Receitas, Galeria). Sem escolha própria, valem as abas da função; mudar a função volta ao padrão dela, e há o botão "Voltar às abas padrão". Administrador sempre vê tudo, e Usuários e Importar são só dele. A tela inicial de cada um é a primeira aba que ele pode ver.
+
 Endereço: `/admin/`
 
 - **Usuários e funções:** cada pessoa tem login próprio. Funções: **Administrador** (tudo, inclusive usuários e importação), **Financeiro** (agenda e bandas com cachê/consumação, relatório), **Designer** (só visualiza: calendário da agenda e bandas com nome, tributo, Instagram e fotos para baixar; não edita nada) e **Barman** (tap list e cervejas). A senha única antiga virou o usuário `admin`.

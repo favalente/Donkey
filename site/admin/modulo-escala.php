@@ -484,7 +484,7 @@ function escala_tela_freelancers(): void
 // Abas do Financeiro: Freelancers · Bandas · Chope
 function financeiro_abas(string $ativa): void
 {
-    $abas = array_filter(['freelancers' => ['Freelancers', pode('freelancers')], 'relatorio' => ['Bandas', pode('relatorio')], 'relatorios' => ['Chope', pode('contratos')]], fn($a) => $a[1]);
+    $abas = array_filter(['freelancers' => ['Freelancers', pode('freelancers')], 'relatorio' => ['Bandas', pode('relatorio')], 'relatorios' => ['Chope', pode('vendas')]], fn($a) => $a[1]);
     if (count($abas) < 2) {
         return;
     }

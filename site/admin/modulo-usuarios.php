@@ -6,8 +6,41 @@ function usuarios_acao(string $acao): bool
     global $usuarios, $usuario, $telaErro;
     switch ($acao) {
         case 'usuarios':
+        case 'permissoes':
             exigir('usuarios');
             return true;
+
+        case 'permissoes-salvar':
+            // Abas que o usuário vê (no lugar das da função); "padrão" volta às da função
+            exigir_post();
+            exigir('usuarios');
+            $telaErro = 'permissoes';
+            $login = (string) ($_POST['login'] ?? '');
+            if (!isset($usuarios[$login])) {
+                throw new RuntimeException('Usuário não encontrado.');
+            }
+            if ($usuarios[$login]['papel'] === 'admin') {
+                throw new RuntimeException('O administrador sempre vê tudo.');
+            }
+            if (!empty($_POST['padrao'])) {
+                unset($usuarios[$login]['permissoes']);
+                $msg = 'voltou às abas padrão da função ' . DH_PAPEIS[$usuarios[$login]['papel']] . '.';
+            } else {
+                $abas = array_values(array_intersect(array_keys(DH_ABAS), (array) ($_POST['abas'] ?? [])));
+                // Editar pressupõe ver
+                foreach (['agenda_editar' => 'agenda', 'bandas_editar' => 'bandas'] as $editar => $ver) {
+                    if (in_array($editar, $abas, true) && !in_array($ver, $abas, true)) {
+                        $abas[] = $ver;
+                    }
+                }
+                if (!$abas) {
+                    throw new RuntimeException('Marque pelo menos uma aba (ou exclua o usuário).');
+                }
+                $usuarios[$login]['permissoes'] = $abas;
+                $msg = 'vê ' . count($abas) . ' aba(s): ' . implode(', ', array_map(fn($k) => DH_ABAS[$k][0], $abas)) . '.';
+            }
+            dh_usuarios_salvar($usuarios);
+            ir('./?acao=permissoes&login=' . rawurlencode($login), ($usuarios[$login]['nome'] ?? $login) . ' ' . $msg);
 
         case 'usuario-salvar':
             exigir_post();
@@ -34,6 +67,10 @@ function usuarios_acao(string $acao): bool
             }
             $u = $usuarios[$login] ?? ['login' => $login];
             $u['nome'] = mb_substr(trim((string) ($_POST['nome'] ?? '')), 0, 60) ?: $login;
+            // Mudou a função: as abas voltam às da nova função (dá para ajustar depois em Permissões)
+            if (($u['papel'] ?? '') !== $papel) {
+                unset($u['permissoes']);
+            }
             $u['papel'] = $papel;
             $u['unidade'] = isset(DH_UNIDADES[$_POST['unidade'] ?? '']) ? $_POST['unidade'] : '';
             if ($senha !== '') {
@@ -61,6 +98,10 @@ function usuarios_acao(string $acao): bool
 function usuarios_tela(string $tela): bool
 {
     global $usuarios, $usuario, $csrf;
+    if ($tela === 'permissoes') {
+        usuarios_tela_permissoes();
+        return true;
+    }
     if ($tela !== 'usuarios') {
         return false;
     }
@@ -75,6 +116,7 @@ function usuarios_tela(string $tela): bool
     ?>
       <div class="titulo-acao">
         <h1>Usuários</h1>
+        <a class="btn primario" href="./?acao=permissoes">🔐 Permissões</a>
         <?php if (pode('importar')): ?><a class="btn secundario" href="./?acao=importar">Importar Google Agenda</a><?php endif; ?>
       </div>
       <ul class="lista">
@@ -133,4 +175,45 @@ function usuarios_tela(string $tela): bool
       </dl>
     <?php
     return true;
+}
+
+// Escolhe o usuário e marca as abas que ele vê
+function usuarios_tela_permissoes(): void
+{
+    global $usuarios, $csrf;
+    $lista = array_filter($usuarios, fn($u) => $u['papel'] !== 'admin');
+    $login = (string) ($_GET['login'] ?? $_POST['login'] ?? array_key_first($lista) ?? '');
+    $u = $lista[$login] ?? null;
+    $proprias = $u && isset($u['permissoes']);
+    $marcadas = $u ? ($_SERVER['REQUEST_METHOD'] === 'POST' ? (array) ($_POST['abas'] ?? []) : ($u['permissoes'] ?? abas_da_funcao($u['papel']))) : [];
+    ?>
+      <p><a class="voltar" href="./?acao=usuarios">‹ Voltar para Usuários</a></p>
+      <h1>🔐 Permissões</h1>
+      <p class="dica">Escolha o usuário e marque as abas que aparecem para ele. Administradores veem tudo. Um usuário novo começa com as abas da função dele.</p>
+      <?php if (!$lista): ?><p class="aviso">Nenhum usuário além dos administradores. <a href="./?acao=usuarios">Crie um usuário</a> primeiro.</p><?php return; endif; ?>
+      <form method="get" class="form-cerveja escolher-usuario">
+        <input type="hidden" name="acao" value="permissoes">
+        <label>Usuário
+          <select name="login" onchange="this.form.submit()">
+            <?php foreach ($lista as $x): ?><option value="<?= e($x['login']) ?>" <?= $x['login'] === $login ? 'selected' : '' ?>><?= e($x['nome']) ?> (<?= e($x['login']) ?>) · <?= e(DH_PAPEIS[$x['papel']]) ?><?= isset($x['permissoes']) ? ' · personalizado' : '' ?></option><?php endforeach; ?>
+          </select>
+        </label>
+        <noscript><button class="btn secundario">Abrir</button></noscript>
+      </form>
+      <?php if ($u): ?>
+        <p class="dica"><?= $proprias ? 'Abas escolhidas para ' . e($u['nome']) . '.' : 'Usando as abas padrão da função ' . e(DH_PAPEIS[$u['papel']]) . '.' ?></p>
+        <form method="post" action="./?acao=permissoes-salvar" class="form-cerveja">
+          <?= $csrf ?><input type="hidden" name="login" value="<?= e($u['login']) ?>">
+          <div class="grade-abas">
+            <?php foreach (DH_ABAS as $k => [$rot, $desc]): ?>
+              <label class="check aba-check"><input type="checkbox" name="abas[]" value="<?= $k ?>" <?= in_array($k, $marcadas, true) ? 'checked' : '' ?>> <span><b><?= e($rot) ?></b><?= $desc !== '' ? '<small>' . e($desc) . '</small>' : '' ?></span></label>
+            <?php endforeach; ?>
+          </div>
+          <div class="barra-salvar"><button class="btn primario">Salvar permissões de <?= e($u['nome']) ?></button></div>
+        </form>
+        <?php if ($proprias): ?>
+          <form method="post" action="./?acao=permissoes-salvar" onsubmit="return confirm('Voltar <?= e(addslashes($u['nome'])) ?> às abas padrão da função <?= e(DH_PAPEIS[$u['papel']]) ?>?');"><?= $csrf ?><input type="hidden" name="login" value="<?= e($u['login']) ?>"><input type="hidden" name="padrao" value="1"><button class="link">Voltar às abas padrão da função <?= e(DH_PAPEIS[$u['papel']]) ?></button></form>
+        <?php endif; ?>
+      <?php endif; ?>
+    <?php
 }

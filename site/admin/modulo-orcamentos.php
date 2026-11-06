@@ -72,12 +72,12 @@ function orcamentos_acao(string $acao): bool
         case 'orcamentos':
         case 'orcamento':
         case 'orcamentos-config':
-            exigir('contratos');
+            exigir('orcamentos');
             return true;
 
         case 'orcamento-salvar':
             exigir_post();
-            exigir('contratos');
+            exigir('orcamentos');
             $telaErro = 'orcamento';
             $o = dh_orcamentos();
             $i = dh_orcamento_indice($o, (string) ($_POST['id'] ?? ''));
@@ -100,7 +100,7 @@ function orcamentos_acao(string $acao): bool
             ir('./?acao=orcamento&id=' . $k['id'], 'Orçamento ' . $k['numero'] . ' salvo. Baixe o PDF ou envie o link para o cliente.');
 
         case 'orcamento-pdf':
-            exigir('contratos');
+            exigir('orcamentos');
             $o = dh_orcamentos();
             $i = dh_orcamento_indice($o, (string) ($_GET['id'] ?? ''));
             if ($i === null) {
@@ -115,7 +115,7 @@ function orcamentos_acao(string $acao): bool
 
         case 'orcamento-email':
             exigir_post();
-            exigir('contratos');
+            exigir('orcamentos');
             $telaErro = 'orcamentos';
             $o = dh_orcamentos();
             $i = dh_orcamento_indice($o, (string) ($_POST['id'] ?? ''));
@@ -135,7 +135,7 @@ function orcamentos_acao(string $acao): bool
 
         case 'orcamento-status':
             exigir_post();
-            exigir('contratos');
+            exigir('orcamentos');
             $o = dh_orcamentos();
             $i = dh_orcamento_indice($o, (string) ($_POST['id'] ?? ''));
             $st = (string) ($_POST['status'] ?? '');
@@ -148,7 +148,7 @@ function orcamentos_acao(string $acao): bool
 
         case 'orcamento-duplicar':
             exigir_post();
-            exigir('contratos');
+            exigir('orcamentos');
             $o = dh_orcamentos();
             $i = dh_orcamento_indice($o, (string) ($_POST['id'] ?? ''));
             if ($i === null) {
@@ -163,7 +163,7 @@ function orcamentos_acao(string $acao): bool
 
         case 'orcamento-excluir':
             exigir_post();
-            exigir('contratos');
+            exigir('orcamentos');
             $o = dh_orcamentos();
             $i = dh_orcamento_indice($o, (string) ($_POST['id'] ?? ''));
             if ($i !== null) {
@@ -180,7 +180,7 @@ function orcamentos_acao(string $acao): bool
             // "Gerar pedido a partir deste orçamento (eu preencho)": rascunho que a Donkey revisa. "Gerar pedido para cliente preencher": link de pedido com os itens
             // e os preços do orçamento travados; o cliente completa os dados, anexa o comprovante e assina.
             exigir_post();
-            exigir('contratos');
+            exigir('orcamentos');
             $o = dh_orcamentos();
             $i = dh_orcamento_indice($o, (string) ($_POST['id'] ?? ''));
             if ($i === null) {
@@ -213,7 +213,7 @@ function orcamentos_acao(string $acao): bool
 
         case 'orcamentos-config-salvar':
             exigir_post();
-            exigir('contratos');
+            exigir('orcamentos');
             $o = dh_orcamentos();
             $o['config'] = ['validade' => max(1, min(120, (int) ($_POST['validade'] ?? 15))),
                 'banco' => mb_substr(trim(str_replace("\r", '', (string) ($_POST['banco'] ?? ''))), 0, 600)];

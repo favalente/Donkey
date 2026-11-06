@@ -26,12 +26,36 @@ const DH_PERMISSOES = [
     'valores' => ['admin', 'financeiro'],
     'relatorio' => ['admin', 'financeiro'],
     'contratos' => ['admin', 'financeiro'],
+    'orcamentos' => ['admin', 'financeiro'],
+    'clientes' => ['admin', 'financeiro'],
+    'vendas' => ['admin', 'financeiro'],
     'brassagem' => ['admin', 'cervejaria'],
     'receitas' => ['admin', 'cervejaria'],
     'escala' => ['admin', 'financeiro', 'gerente'],
     'freelancers' => ['admin', 'financeiro'],
     'usuarios' => ['admin'],
     'importar' => ['admin'],
+];
+// Abas que se liberam por usuário em Usuários → 🔐 Permissões (o administrador sempre vê tudo;
+// Usuários e Importar Google Agenda são só do administrador). Sem escolha própria, vale a função.
+const DH_ABAS = [
+    'taplist' => ['Tap List', 'torneiras e tap list da TV'],
+    'cervejas' => ['Cervejas', 'cadastro das cervejas'],
+    'agenda' => ['Agenda: ver', 'shows do mês'],
+    'agenda_editar' => ['Agenda: criar e editar shows', ''],
+    'bandas' => ['Bandas: ver', 'nome, tributo, Instagram e fotos'],
+    'bandas_editar' => ['Bandas: editar', 'dados, fotos e link da banda'],
+    'valores' => ['Valores dos shows', 'cachê e consumação'],
+    'relatorio' => ['Financeiro → Bandas', 'cachês do mês'],
+    'freelancers' => ['Financeiro → Freelancers', 'pagamento semanal'],
+    'vendas' => ['Financeiro → Chope', 'relatórios de vendas de chope'],
+    'orcamentos' => ['Orçamentos', ''],
+    'contratos' => ['Contratos', 'pedidos, contratos, produtos e cupons'],
+    'clientes' => ['Clientes', 'base de clientes'],
+    'escala' => ['Escala', 'escala da equipe e cadastro dos freelancers'],
+    'brassagem' => ['Brassagem', 'tanques e cadernos'],
+    'receitas' => ['Receitas', ''],
+    'galeria' => ['Galeria', 'fotos do site'],
 ];
 const DH_ARQ_FALHAS = DH_RAIZ . '/dados/login-falhas.json';
 const DH_DIR_UPLOAD = DH_RAIZ . '/uploads/cervejas';
@@ -84,7 +108,20 @@ function dh_usuarios_salvar(array $u): void
 function pode(string $permissao): bool
 {
     global $usuario;
-    return $usuario && in_array($usuario['papel'], DH_PERMISSOES[$permissao] ?? [], true);
+    if (!$usuario) {
+        return false;
+    }
+    // Abas escolhidas para o usuário (Permissões) valem no lugar da função, menos para o administrador
+    if ($usuario['papel'] !== 'admin' && isset($usuario['permissoes']) && isset(DH_ABAS[$permissao])) {
+        return in_array($permissao, $usuario['permissoes'], true);
+    }
+    return in_array($usuario['papel'], DH_PERMISSOES[$permissao] ?? [], true);
+}
+
+// Abas padrão de uma função
+function abas_da_funcao(string $papel): array
+{
+    return array_values(array_filter(array_keys(DH_ABAS), fn($k) => in_array($papel, DH_PERMISSOES[$k] ?? [], true)));
 }
 
 function exigir(string $permissao): void
@@ -271,7 +308,18 @@ if (empty($_SESSION['login']) && $usuarios && ($lembrado = lembrar_login($usuari
 $usuario = isset($_SESSION['login'], $usuarios[$_SESSION['login']]) ? $usuarios[$_SESSION['login']] : null;
 $erro = null;
 // Tela inicial de cada função
-$inicio = $usuario ? (pode('taplist') ? 'taplist' : (pode('agenda') ? 'agenda' : (pode('brassagem') ? 'brassagem' : (pode('escala') ? 'escala' : 'galeria')))) : 'login';
+// Tela inicial: a primeira aba que o usuário pode ver
+$inicio = 'login';
+if ($usuario) {
+    $inicio = 'galeria';
+    foreach (['taplist' => 'taplist', 'agenda' => 'agenda', 'contratos' => 'contratos', 'orcamentos' => 'orcamentos', 'brassagem' => 'brassagem', 'escala' => 'escala', 'cervejas' => 'cervejas',
+        'bandas' => 'bandas', 'clientes' => 'clientes', 'freelancers' => 'freelancers', 'relatorio' => 'relatorio', 'vendas' => 'relatorios', 'receitas' => 'receitas', 'galeria' => 'galeria', 'usuarios' => 'usuarios'] as $perm => $t) {
+        if (pode($perm)) {
+            $inicio = $t;
+            break;
+        }
+    }
+}
 $acao = $_GET['acao'] ?? $inicio;
 
 // Primeiro acesso: cria o usuário administrador
@@ -514,7 +562,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=57">
+  <link rel="stylesheet" href="admin.css?v=58">
   <script>
     // Tema escolhido neste aparelho (claro é o padrão)
     try { if (localStorage.getItem('dh-tema') === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}
@@ -551,14 +599,14 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (pode('agenda')): ?><a href="./?acao=agenda" class="<?= in_array($tela, ['agenda', 'show'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📅</span>Agenda</a><?php endif; ?>
       <?php if (pode('bandas')): ?><a href="./?acao=bandas" class="<?= in_array($tela, ['bandas', 'banda'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🎸</span>Bandas</a><?php endif; ?>
       <?php if (pode('escala')): ?><a href="./?acao=escala" class="<?= in_array($tela, ['escala', 'escala-equipe', 'escala-funcoes'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🗓️</span>Escala</a><?php endif; ?>
-      <?php if (pode('relatorio') || pode('freelancers')): ?><a href="./?acao=<?= pode('freelancers') ? 'freelancers' : 'relatorio' ?>" class="<?= in_array($tela, ['relatorio', 'freelancers', 'relatorios'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">💰</span>Financeiro</a><?php endif; ?>
-      <?php if (pode('contratos')): ?><a href="./?acao=orcamentos" class="<?= in_array($tela, ['orcamentos', 'orcamento', 'orcamentos-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📄</span>Orçamentos</a><?php endif; ?>
+      <?php if (pode('relatorio') || pode('freelancers') || pode('vendas')): ?><a href="./?acao=<?= pode('freelancers') ? 'freelancers' : (pode('relatorio') ? 'relatorio' : 'relatorios') ?>" class="<?= in_array($tela, ['relatorio', 'freelancers', 'relatorios'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">💰</span>Financeiro</a><?php endif; ?>
+      <?php if (pode('orcamentos')): ?><a href="./?acao=orcamentos" class="<?= in_array($tela, ['orcamentos', 'orcamento', 'orcamentos-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📄</span>Orçamentos</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=contratos" class="<?= in_array($tela, ['contratos', 'contrato', 'contratos-config', 'contratos-cupons', 'produtos'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📝</span>Contratos</a><?php endif; ?>
-      <?php if (pode('contratos')): ?><a href="./?acao=clientes" class="<?= $tela === 'clientes' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👤</span>Clientes</a><?php endif; ?>
+      <?php if (pode('clientes')): ?><a href="./?acao=clientes" class="<?= $tela === 'clientes' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👤</span>Clientes</a><?php endif; ?>
       <?php if (pode('brassagem')): ?><a href="./?acao=brassagem" class="<?= in_array($tela, ['brassagem', 'brassagem-lote', 'brassagem-tanques', 'brassagem-comparar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🧪</span>Brassagem<?php if ($nb = count(brassagem_alertas_novos())): ?><em class="badge-alerta" aria-label="<?= $nb ?> atualizações novas">🔔 <?= $nb ?></em><?php endif; ?></a><?php endif; ?>
       <?php if (pode('receitas')): ?><a href="./?acao=receitas" class="<?= in_array($tela, ['receitas', 'receita'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📖</span>Receitas</a><?php endif; ?>
       <?php if (pode('galeria')): ?><a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🖼️</span>Galeria</a><?php endif; ?>
-      <?php if (pode('usuarios')): ?><a href="./?acao=usuarios" class="<?= in_array($tela, ['usuarios', 'importar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👥</span>Usuários</a><?php endif; ?>
+      <?php if (pode('usuarios')): ?><a href="./?acao=usuarios" class="<?= in_array($tela, ['usuarios', 'importar', 'permissoes'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👥</span>Usuários</a><?php endif; ?>
       <a href="../" target="_blank"><span class="ic" aria-hidden="true">🌐</span>Ver site</a>
     </nav>
   </header>

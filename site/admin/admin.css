@@ -648,3 +648,10 @@ h3 small { font-weight: 400; color: var(--muted); }
 .valor-freela { font-size: 1.15rem; }
 .linha-funcao { align-items: end; }
 .sangria-dia { margin: 8px 12px 0; padding: 8px 10px; border-radius: 10px; background: var(--verde-bg); font-size: .92rem; } .valor-freela small { font-weight: 400; font-size: .78rem; color: var(--muted); }
+/* Permissões por usuário */
+.grade-abas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 8px; margin: 10px 0; }
+.aba-check { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 0; }
+.aba-check input { margin-top: 3px; width: 20px; height: 20px; flex: none; }
+.aba-check span { display: flex; flex-direction: column; }
+.aba-check small { font-weight: 400; }
+.aba-check:has(input:checked) { border-color: var(--amber); background: var(--caixa); }

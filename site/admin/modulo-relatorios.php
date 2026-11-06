@@ -10,12 +10,12 @@ function relatorios_acao(string $acao): bool
     global $telaErro;
     switch ($acao) {
         case 'relatorios':
-            exigir('contratos');
+            exigir('vendas');
             return true;
 
         case 'relatorios-importar':
             exigir_post();
-            exigir('contratos');
+            exigir('vendas');
             $telaErro = 'relatorios';
             $arq = $_FILES['planilha'] ?? null;
             if (!$arq || ($arq['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($arq['tmp_name'])) {
