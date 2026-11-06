@@ -259,6 +259,7 @@ function relatorios_tela_vendas(): void
     $link = fn(array $mais) => './?' . http_build_query(array_merge(['acao' => 'relatorios', 'periodo' => $periodo, 'de' => $_GET['de'] ?? null, 'ate' => $_GET['ate'] ?? null, 'top' => $top], $mais));
     $msgWhats = fn(string $nome) => 'Olá, ' . trim(explode(' ', $nome)[0]) . "! Aqui é a Donkey Head Cervejaria.\n\nTem algum evento vindo aí? Levamos o chope até você, com chopeira e tudo. Quer que eu monte um orçamento?";
     ?>
+      <?php financeiro_abas('relatorios'); ?>
       <div class="titulo-acao"><h1>Relatórios <small>vendas de chope</small></h1></div>
       <p class="dica">Pedidos de chope em barril: contratos importados da ZapSign + pedidos assinados aqui no site. Valores pela data do evento.</p>
 

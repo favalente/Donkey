@@ -1671,8 +1671,9 @@ function agenda_tela_relatorio(): void
         }
     }
     ?>
+      <?php financeiro_abas('relatorio'); ?>
       <div class="titulo-acao">
-        <h1>Financeiro</h1>
+        <h1>Bandas</h1>
         <a class="btn secundario" href="./?acao=relatorio-csv&mes=<?= e($mes) ?>">Baixar planilha</a>
       </div>
       <div class="mes-nav">

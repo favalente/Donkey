@@ -8,10 +8,11 @@ require __DIR__ . '/modulo-relatorios.php';
 require __DIR__ . '/modulo-orcamentos.php';
 require __DIR__ . '/modulo-brassagem.php';
 require __DIR__ . '/modulo-receitas.php';
+require __DIR__ . '/modulo-escala.php';
 
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
 const DH_ARQ_USUARIOS = DH_RAIZ . '/dados/usuarios.json';
-const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejaria' => 'Cervejaria'];
+const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejaria' => 'Cervejaria', 'gerente' => 'Gerente'];
 // O que cada função pode fazer no painel
 const DH_PERMISSOES = [
     'taplist' => ['admin', 'barman'],
@@ -27,6 +28,8 @@ const DH_PERMISSOES = [
     'contratos' => ['admin', 'financeiro'],
     'brassagem' => ['admin', 'cervejaria'],
     'receitas' => ['admin', 'cervejaria'],
+    'escala' => ['admin', 'financeiro', 'gerente'],
+    'freelancers' => ['admin', 'financeiro'],
     'usuarios' => ['admin'],
     'importar' => ['admin'],
 ];
@@ -268,7 +271,7 @@ if (empty($_SESSION['login']) && $usuarios && ($lembrado = lembrar_login($usuari
 $usuario = isset($_SESSION['login'], $usuarios[$_SESSION['login']]) ? $usuarios[$_SESSION['login']] : null;
 $erro = null;
 // Tela inicial de cada função
-$inicio = $usuario ? (pode('taplist') ? 'taplist' : (pode('agenda') ? 'agenda' : (pode('brassagem') ? 'brassagem' : 'galeria'))) : 'login';
+$inicio = $usuario ? (pode('taplist') ? 'taplist' : (pode('agenda') ? 'agenda' : (pode('brassagem') ? 'brassagem' : (pode('escala') ? 'escala' : 'galeria')))) : 'login';
 $acao = $_GET['acao'] ?? $inicio;
 
 // Primeiro acesso: cria o usuário administrador
@@ -487,7 +490,7 @@ if (!$usuarios) {
 
             default:
                 // Agenda, bandas, relatório, importação e usuários ficam em arquivos próprios
-                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao) && !brassagem_acao($acao) && !receitas_acao($acao)) {
+                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao) && !brassagem_acao($acao) && !receitas_acao($acao) && !escala_acao($acao)) {
                     $tela = $inicio;
                 }
         }
@@ -510,7 +513,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=54">
+  <link rel="stylesheet" href="admin.css?v=56">
   <script>
     // Tema escolhido neste aparelho (claro é o padrão)
     try { if (localStorage.getItem('dh-tema') === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}
@@ -546,10 +549,10 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (pode('cervejas')): ?><a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🏷️</span>Cervejas</a><?php endif; ?>
       <?php if (pode('agenda')): ?><a href="./?acao=agenda" class="<?= in_array($tela, ['agenda', 'show'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📅</span>Agenda</a><?php endif; ?>
       <?php if (pode('bandas')): ?><a href="./?acao=bandas" class="<?= in_array($tela, ['bandas', 'banda'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🎸</span>Bandas</a><?php endif; ?>
-      <?php if (pode('relatorio')): ?><a href="./?acao=relatorio" class="<?= $tela === 'relatorio' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">💰</span>Financeiro</a><?php endif; ?>
+      <?php if (pode('escala')): ?><a href="./?acao=escala" class="<?= in_array($tela, ['escala', 'escala-equipe', 'escala-funcoes'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🗓️</span>Escala</a><?php endif; ?>
+      <?php if (pode('relatorio') || pode('freelancers')): ?><a href="./?acao=<?= pode('freelancers') ? 'freelancers' : 'relatorio' ?>" class="<?= in_array($tela, ['relatorio', 'freelancers', 'relatorios'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">💰</span>Financeiro</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=orcamentos" class="<?= in_array($tela, ['orcamentos', 'orcamento', 'orcamentos-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📄</span>Orçamentos</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=contratos" class="<?= in_array($tela, ['contratos', 'contrato', 'contratos-config', 'contratos-cupons', 'produtos'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📝</span>Contratos</a><?php endif; ?>
-      <?php if (pode('contratos')): ?><a href="./?acao=relatorios" class="<?= $tela === 'relatorios' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📊</span>Relatórios</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=clientes" class="<?= $tela === 'clientes' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👤</span>Clientes</a><?php endif; ?>
       <?php if (pode('brassagem')): ?><a href="./?acao=brassagem" class="<?= in_array($tela, ['brassagem', 'brassagem-lote', 'brassagem-tanques', 'brassagem-comparar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🧪</span>Brassagem<?php if ($nb = count(brassagem_alertas_novos())): ?><em class="badge-alerta" aria-label="<?= $nb ?> atualizações novas">🔔 <?= $nb ?></em><?php endif; ?></a><?php endif; ?>
       <?php if (pode('receitas')): ?><a href="./?acao=receitas" class="<?= in_array($tela, ['receitas', 'receita'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📖</span>Receitas</a><?php endif; ?>
@@ -754,7 +757,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <label>Repita a nova senha <input type="password" name="senha2" required autocomplete="new-password"></label>
         <button class="btn primario">Trocar senha</button>
       </form>
-    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela) || brassagem_tela($tela) || receitas_tela($tela); endif; ?>
+    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela) || brassagem_tela($tela) || receitas_tela($tela) || escala_tela($tela); endif; ?>
 
     <footer class="rodape">
       <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a> · <button type="button" class="botao-tema" id="botao-tema"></button></span>

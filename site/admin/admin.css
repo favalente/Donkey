@@ -575,3 +575,75 @@ h3 small { font-weight: 400; color: var(--muted); }
 .btn-lida { padding: 6px 10px; font-size: .85rem; white-space: nowrap; }
 .lista-lembretes { list-style: none; padding: 0; margin: 6px 0 10px; } .lista-lembretes li { padding: 6px 0; border-bottom: 1px solid var(--line); } .lista-lembretes small { color: var(--muted); }
 .caderno-linhas > li.linha-evento .linha-texto { font-weight: 600; }
+/* Escala da equipe (parecida com a planilha: título do dia em amarelo, vaga em aberto em amarelo claro, fixo em azul) */
+.botoes-titulo { display: flex; flex-wrap: wrap; gap: 8px; }
+.botoes-semana { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+.botoes-semana form { margin: 0; flex: 1 1 auto; }
+.botoes-semana .btn { width: 100%; }
+.dias-escala { display: grid; gap: 16px; }
+@media (min-width: 1000px) { .dias-escala { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dia-escala { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.dia-titulo { margin: 0; padding: 10px 12px; background: #ffe600; color: #1a120a; font-size: 1.05rem; text-align: center; letter-spacing: .03em; }
+.dia-titulo small { font-weight: 500; font-size: .8rem; margin-left: 6px; }
+.dia-escala > .dica, .dia-escala .botoes-dia { padding: 0 12px; }
+.form-dia { margin: 0; }
+.tabela-escala { width: 100%; border-collapse: collapse; }
+.tabela-escala th { font-size: .72rem; text-transform: uppercase; color: var(--muted); text-align: left; padding: 6px 4px; border-bottom: 2px solid var(--line); }
+.tabela-escala td { padding: 3px 3px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tabela-escala input { margin: 0 !important; padding: 8px 6px !important; border-radius: 8px; font-size: .95rem; }
+.tabela-escala td:nth-child(1) { width: 34%; }
+.tabela-escala td:nth-child(2) { width: 30%; }
+.tabela-escala td:nth-child(2) input { font-weight: 700; text-transform: uppercase; }
+.tabela-escala td:nth-child(3), .tabela-escala td:nth-child(4) { width: 15%; }
+.tabela-escala tr.vaga td:first-child input { background: #fff6bf; }
+.tabela-escala tr.fixo td:first-child input { color: var(--azul-txt); font-weight: 700; }
+.tabela-escala tr.falta td:first-child input { text-decoration: line-through; color: var(--erro); }
+.acoes-linha { white-space: nowrap; width: 1%; }
+.acoes-linha .tirar-linha { border: 0; background: none; color: var(--erro); font-size: 1.3rem; cursor: pointer; padding: 0 4px; }
+.ajuste-linha { display: inline-block; position: relative; }
+.ajuste-linha > summary { list-style: none; cursor: pointer; color: var(--ambar-txt); font-weight: 700; padding: 2px 6px; border-radius: 8px; }
+.ajuste-linha > summary::-webkit-details-marker { display: none; }
+.ajuste-linha[open] > summary { background: var(--hover); }
+.ajuste-linha[open] { position: static; }
+.ajuste-linha[open] > :not(summary) { display: block; }
+.ajuste-linha label { white-space: normal; }
+.ajuste-linha[open] { display: block; }
+.tabela-escala tr:has(.ajuste-linha[open]) td { vertical-align: top; }
+.botoes-dia { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+.botoes-dia form { margin: 0; }
+.colar-excel { margin: 0 12px 12px; }
+.colar-excel > summary { cursor: pointer; color: var(--ambar-txt); font-weight: 600; }
+.colar-excel textarea { font-family: monospace; }
+.so-impressao { display: none; }
+@media (max-width: 560px) {
+  /* No celular: nome em cima; função, entrada e saída embaixo */
+  .tabela-escala thead { display: none; }
+  .tabela-escala tr { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, .8fr) minmax(0, .8fr) auto; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); }
+  .tabela-escala td { border: 0; padding: 0; width: auto !important; }
+  .tabela-escala td:nth-child(1) { grid-column: 1 / 4; grid-row: 1; }
+  .tabela-escala td:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .tabela-escala td:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .tabela-escala td:nth-child(4) { grid-column: 3; grid-row: 2; }
+  .tabela-escala td.acoes-linha { grid-column: 4; grid-row: 1 / 3; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .tabela-escala tr:has(.ajuste-linha[open]) td.acoes-linha { grid-column: 1 / -1; grid-row: 3; align-items: stretch; }
+}
+@media print {
+  .so-impressao { display: block; }
+  .dias-escala { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dia-escala { break-inside: avoid; border-color: #999; }
+  .dia-titulo { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .tabela-escala input { border: 0; padding: 2px !important; background: none !important; }
+}
+/* Abas do Financeiro e fechamento dos freelancers */
+.abas-financeiro { display: flex; gap: 6px; margin: 4px 0 14px; border-bottom: 2px solid var(--line); }
+.abas-financeiro a { padding: 10px 16px; font-weight: 700; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.abas-financeiro a.ativo { color: var(--text); border-bottom-color: var(--amber); }
+.centro { text-align: center; }
+.lista-freelas { list-style: none; padding: 0; margin: 10px 0 20px; }
+.lista-freelas > li { border: 1px solid var(--line); border-left: 6px solid var(--amber); border-radius: 12px; background: var(--surface); margin-bottom: 10px; padding: 10px 12px; }
+.lista-freelas > li.pago { border-left-color: var(--ok); }
+.lista-freelas summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; cursor: pointer; }
+.lista-freelas summary strong { flex: 1 1 100%; font-size: 1.1rem; }
+.lista-freelas summary span { color: var(--muted); font-size: .9rem; flex: 1 1 auto; }
+.valor-freela { font-size: 1.15rem; }
+.linha-funcao { align-items: end; }

@@ -58,6 +58,14 @@ Painel → **📄 Orçamentos** (administrador e financeiro): a proposta que vai
 - **Gerar pedido para cliente preencher:** gera o link do pedido com os mesmos itens e preços travados. O cliente só confere o pedido, completa os dados (CPF ou CNPJ, endereço, contato, horário), anexa o comprovante do Pix e assina. Se o orçamento não tiver frete, ele escolhe Fortaleza ou outra cidade como no pedido normal.
 - Padrões (validade e dados bancários) em "⚙ Padrões do orçamento". Dados em `dados/orcamentos.json`.
 
+## Escala e freelancers
+
+**🗓️ Escala** (perfis Administrador, Financeiro e **Gerente**, que só vê a Escala): a semana de segunda a domingo, com um cartão por dia de funcionamento (terça a domingo). Cada dia é uma lista de posições como na planilha: nome, função, entrada e saída; linha sem nome é vaga em aberto (amarela). O nome se digita como na planilha: quem ainda não está na **Equipe** entra como freelancer, e função nova entra em **Funções e diárias**. Botões: copiar o dia anterior ou o mesmo dia da semana passada, copiar a semana passada inteira (ou esta para a próxima), **📋 Colar do Excel** (colunas Nome, Função, Entrada, Saída), enviar o dia no WhatsApp e imprimir a semana. Em "⋯" marca-se falta ou ajuste de valor (+ hora extra / − desconto, com motivo).
+
+**Equipe:** fixos (funcionários, em azul na escala, não entram no pagamento) e freelancers (recebem diária), com celular, Pix e diária própria opcional. **Funções e diárias:** a diária de cada função.
+
+**💰 Financeiro** tem as abas **Freelancers · Bandas · Chope** (Bandas é o antigo Financeiro dos cachês; Chope é o antigo Relatórios). Em Freelancers, a semana (segunda a domingo, paga na segunda seguinte): o total de cada freelancer tirado da escala (diárias, sem as faltas, mais os ajustes), com o detalhe dia a dia, **Marcar como pago** (guarda o valor e o detalhe) e o extrato pronto para o WhatsApp. Dados em `dados/escala.json` (só no servidor), com cópia diária em `dados/backup`.
+
 ## Brassagem
 
 O caderno de produção em versão digital (painel → 🧪 Brassagem). A fábrica é única e atende as duas sedes.
