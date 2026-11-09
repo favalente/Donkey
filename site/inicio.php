@@ -90,7 +90,7 @@ function detalhe(array $c): string
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=28">
+  <link rel="stylesheet" href="assets/css/style.css?v=29">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -110,7 +110,7 @@ function detalhe(array $c): string
 
   <div class="age-gate" id="age-gate" role="dialog" aria-modal="true" aria-labelledby="age-title" hidden>
     <div class="age-card">
-      <img src="assets/img/logo-donkey-head.png" alt="" width="120" height="170">
+      <img src="assets/img/logo-donkey-head.png?v=2" alt="" width="120" height="170">
       <h2 id="age-title">Você tem 18 anos ou mais?</h2>
       <p>Este site contém informações sobre bebidas alcoólicas e é destinado a maiores de idade.</p>
       <div class="age-actions">
@@ -143,12 +143,12 @@ function detalhe(array $c): string
 
   <main>
     <section class="hero">
-      <video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/img/chope-poster.jpg" aria-hidden="true">
+      <video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/img/chope-poster.jpg?v=2" aria-hidden="true">
         <source src="assets/video/chope-celular.mp4" type="video/mp4" media="(max-width: 700px)">
         <source src="assets/video/chope.mp4" type="video/mp4">
       </video>
       <div class="container hero-inner">
-        <img class="hero-logo" src="assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="400" height="566">
+        <img class="hero-logo" src="assets/img/logo-donkey-head.png?v=2" alt="Donkey Head Cervejaria" width="400" height="566">
         <div class="hero-texto">
           <h1><img src="assets/img/mais-cerveja-menos-arenga.png" alt="Mais cerveja, menos arenga!" width="1003" height="324"></h1>
           <p class="lead">Cerveja artesanal feita aqui, gastronomia de verdade e muito rock. Aqui, a vida acontece fora da tela.</p>
@@ -159,7 +159,7 @@ function detalhe(array $c): string
     <section class="section" id="historia">
       <div class="container">
         <button type="button" class="historia-card" id="abrir-historia" aria-haspopup="dialog">
-          <span class="historia-card-foto"><img src="assets/img/historia-comeco.jpg" alt="Panela de brassagem caseira com mosto e, ao lado, uma garrafa da StigmAPA servida no copo" width="1200" height="906" loading="lazy"></span>
+          <span class="historia-card-foto"><img src="assets/img/historia-comeco.jpg?v=2" alt="Panela de brassagem caseira com mosto e, ao lado, uma garrafa da StigmAPA servida no copo" width="1200" height="906" loading="lazy"></span>
           <span class="historia-card-texto">
             <span class="eyebrow">Nossa história</span>
             <span class="historia-card-titulo">Começou no quintal de casa.</span>
@@ -176,14 +176,14 @@ function detalhe(array $c): string
         <p class="eyebrow">Nossa história</p>
         <h2 id="historia-titulo">Começou no quintal de casa.</h2>
         <figure class="foto-jornal">
-          <img src="assets/img/historia-comeco.jpg" alt="Panela de brassagem caseira com mosto e, ao lado, uma garrafa da StigmAPA servida no copo" width="1200" height="906" loading="lazy">
+          <img src="assets/img/historia-comeco.jpg?v=2" alt="Panela de brassagem caseira com mosto e, ao lado, uma garrafa da StigmAPA servida no copo" width="1200" height="906" loading="lazy">
           <figcaption>Lá no começo: a brassagem no equipamento de casa e uma das primeiras StigmAPA.</figcaption>
         </figure>
         <div class="prose">
           <p>Três amigos apaixonados por cerveja resolvem fazê-la no quintal de casa. O resultado da primeira produção foi inesperado: uma cerveja excelente. Entregamos para os amigos e alguns especialistas e logo começaram os elogios, então surgiu a ideia: por que não comercializá-la?</p>
           <p>Decidimos então fazer um teste mercadológico como cervejaria cigana, fizemos nossa cerveja em uma estrutura de outra cervejaria, a Patt Lou em Recife, a qual agradecemos ao cervejeiro Luiz imensamente por fazer parte da nossa história.</p>
           <figure class="foto-jornal">
-            <img src="assets/img/historia-pattlou.jpg" alt="Fermentador com o adesivo da Donkey Head Cervejaria, os sócios ao lado dele e a brassagem com saco de malte na Patt Lou" width="1200" height="915" loading="lazy">
+            <img src="assets/img/historia-pattlou.jpg?v=2" alt="Fermentador com o adesivo da Donkey Head Cervejaria, os sócios ao lado dele e a brassagem com saco de malte na Patt Lou" width="1200" height="915" loading="lazy">
             <figcaption>Nossa primeira brassagem na Patt Lou, em Recife, com o nosso fermentador.</figcaption>
           </figure>
           <p>Após a boa aceitação do mercado, surgiu mais uma ideia: e se nós produzíssemos localmente, proporcionando uma cerveja extremamente fresca, sem intervenção de mau armazenamento ou transporte?</p>
@@ -273,7 +273,7 @@ function detalhe(array $c): string
     <section class="section delivery-cta" id="chope-delivery">
       <div class="container">
         <a class="historia-card delivery-card" href="chope/">
-          <span class="historia-card-foto"><img src="assets/img/chope-delivery.jpg" alt="Chope Delivery da Donkey Head Cervejaria: o mascote com um copo de chope, barris de Premium Lager e a picape da Donkey Head" width="892" height="1042" loading="lazy"></span>
+          <span class="historia-card-foto"><img src="assets/img/chope-delivery.jpg?v=2" alt="Chope Delivery da Donkey Head Cervejaria: o mascote com um copo de chope, barris de Premium Lager e a picape da Donkey Head" width="892" height="1042" loading="lazy"></span>
           <span class="historia-card-texto">
             <span class="eyebrow">Chope Delivery</span>
             <span class="historia-card-titulo">Leve o nosso chope para o seu evento!</span>

@@ -584,7 +584,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
 <body>
 <?php if ($tela === 'primeiro-acesso' || $tela === 'login'): ?>
   <main class="login">
-    <img src="../assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="110">
+    <img src="../assets/img/logo-donkey-head.png?v=2" alt="Donkey Head Cervejaria" width="110">
     <h1>Painel Donkey Head Cervejaria</h1>
     <?php if ($tela === 'primeiro-acesso'): ?>
       <p>Primeiro acesso: crie o usuário administrador do painel. Depois, em "Usuários", você cria os acessos da equipe.</p>

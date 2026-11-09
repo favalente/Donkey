@@ -50,7 +50,7 @@ header('X-Robots-Tag: noindex');
     var DADOS = <?= json_encode($dadosTv, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     var UNIDADE = <?= json_encode($unidade) ?>;
 
-    DHTap.carregar(DADOS, '../assets/img/logo-donkey-head.png').then(function (imgs) {
+    DHTap.carregar(DADOS, '../assets/img/logo-donkey-head.png?v=2').then(function (imgs) {
       var telas = DHTap.paginas(DADOS.taps || []);
       var hoje = new Date().toISOString().slice(0, 10);
       var alvo = document.getElementById('paginas');

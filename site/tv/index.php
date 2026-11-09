@@ -31,7 +31,7 @@ header('Cache-Control: no-store');
     var UNIDADE = <?= json_encode($unidade) ?>;
     var TROCA_TELA = 15000;   // 15 s por tela quando há mais de uma
     var ATUALIZA = 60000;     // busca a tap list a cada 1 min
-    var LOGO = '../assets/img/logo-donkey-head.png';
+    var LOGO = '../assets/img/logo-donkey-head.png?v=2';
     var dados = <?= json_encode($inicial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     var imgs = {}, telas = [], atual = 0, assinatura = '';
     var cv = document.getElementById('tela');

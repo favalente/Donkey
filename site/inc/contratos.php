@@ -895,7 +895,7 @@ function dh_email(string $para, string $assunto, string $html, ?string &$erro = 
     }
     $de = DH_EMPRESA['email'];
     $corpo = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#222;line-height:1.5;max-width:720px">'
-        . '<p><img src="' . e(dh_url_site()) . 'assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="70"></p>' . $html
+        . '<p><img src="' . e(dh_url_site()) . 'assets/img/logo-donkey-head.png?v=2" alt="Donkey Head Cervejaria" width="70"></p>' . $html
         . '<p style="color:#777;font-size:12px;margin-top:24px">Donkey Head Cervejaria · ' . e(DH_EMPRESA['endereco']) . ' · ' . e(DH_EMPRESA['telefone']) . '</p></body></html>';
     $cab = [
         'MIME-Version: 1.0',
