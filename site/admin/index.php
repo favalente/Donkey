@@ -604,7 +604,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   </main>
 <?php else: ?>
   <header class="topo">
-    <a class="marca" href="./"><img src="../assets/img/logo-donkey-head.png" alt="" width="28"> Painel</a>
+    <a class="marca" href="./"><img src="../assets/img/logo-donkey-head-mini.png" alt="" width="28"> Painel</a>
     <nav>
       <?php if (pode('taplist')): ?><a href="./?acao=taplist" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🍺</span>Tap List</a><?php endif; ?>
       <?php if (pode('cervejas')): ?><a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🏷️</span>Cervejas</a><?php endif; ?>

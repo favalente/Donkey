@@ -8,6 +8,8 @@ const DH_XMENU_LOJAS = ['aldeota' => '20476', 'maraponga' => '20409'];
 const DH_XMENU_AUTOCADASTRO = 'aldeota';
 const DH_XMENU_GRUPO = 'TAP LIST';
 const DH_XMENU_CACHE_SEG = 60;
+// Lista salva há menos que isso é entregue na hora e atualizada depois da resposta (ninguém espera o xMenu)
+const DH_XMENU_VELHO_SEG = 1800;
 
 function dh_xmenu_url(string $loja): string
 {
@@ -56,6 +58,36 @@ function dh_xmenu_produtos(string $unidade): ?array
     if (is_array($guardado) && time() - ($guardado['t'] ?? 0) < DH_XMENU_CACHE_SEG) {
         return $guardado['produtos'];
     }
+    // Venceu há pouco: entrega a lista salva e atualiza com o xMenu depois que a página já foi enviada
+    // (só onde o servidor libera a resposta antes; a TV da tap list sempre atualiza na hora)
+    static $agendado = [];
+    if (is_array($guardado) && time() - ($guardado['t'] ?? 0) < DH_XMENU_VELHO_SEG && function_exists('fastcgi_finish_request') && !defined('DH_PODE_DEMORAR')) {
+        if (empty($agendado[$unidade])) {
+            $agendado[$unidade] = true;
+            register_shutdown_function(function () use ($unidade) {
+                ignore_user_abort(true);
+                fastcgi_finish_request();
+                try {
+                    dh_xmenu_atualizar($unidade);
+                } catch (Throwable $e) {
+                    error_log('xMenu: ' . $e->getMessage());
+                }
+            });
+        }
+        return $guardado['produtos'];
+    }
+    return dh_xmenu_atualizar($unidade);
+}
+
+// Busca no xMenu e guarda a lista (devolve a lista nova, a guardada se o xMenu não responder, ou null)
+function dh_xmenu_atualizar(string $unidade): ?array
+{
+    $loja = DH_XMENU_LOJAS[$unidade] ?? null;
+    if (!$loja) {
+        return null;
+    }
+    $cache = DH_RAIZ . '/dados/xmenu-' . $unidade . '.json';
+    $guardado = json_decode((string) @file_get_contents($cache), true);
     $todos = dh_xmenu_baixar($loja);
     if ($todos === null) {
         if (is_array($guardado)) {

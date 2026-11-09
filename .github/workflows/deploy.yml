@@ -66,3 +66,4 @@ jobs:
             uploads/cervejas/*.jpg
             uploads/galeria/**/*.jpg
             uploads/bandas/**
+            uploads/mini/**

@@ -513,7 +513,7 @@ function brassagem_tela_tanques(): void
             <?php if ($l): $ub = dh_lote_ultima($l, 'brix'); $up = dh_lote_ultima($l, 'pressao'); $ut = dh_lote_ultima($l, 'temp'); $regs = dh_lote_registros($l); $ult = end($regs); ?>
               <a class="tanque ocupado st-<?= e($l['status']) ?>" href="./?acao=brassagem-lote&amp;id=<?= e($l['id']) ?>">
                 <span class="tanque-nome"><?= e($t['nome']) ?><em class="tag <?= $l['status'] === 'maturando' ? 'ct-enviado' : 'ct-preenchimento' ?>"><?= e(DH_LOTE_STATUS[$l['status']]) ?></em></span>
-                <strong class="tanque-cerveja"><?php $cv = dh_lote_cerveja($l, $cadastro); if (!empty($cv['imagem'])): ?><img src="../<?= e($cv['imagem']) ?>" alt="" width="44" height="44" loading="lazy"><?php endif; ?><?= e($l['cerveja']) ?></strong>
+                <strong class="tanque-cerveja"><?php $cv = dh_lote_cerveja($l, $cadastro); if (!empty($cv['imagem'])): ?><img src="../<?= e(dh_imagem_mini($cv['imagem'], 120)) ?>" alt="" width="44" height="44" loading="lazy"><?php endif; ?><?= e($l['cerveja']) ?></strong>
                 <span>Lote <?= e($l['lote']) ?><?= !empty($l['unidade']) ? ' · ' . e(DH_UNIDADES[$l['unidade']]) : '' ?> · dia <?= dh_lote_dia($l) ?> <small>(<?= e(dh_data_br($l['data'])) ?>)</small></span>
                 <span class="tanque-medidas">
                   <?php if ($ub): $corr = brassagem_brix_corrigido($l, $ub); ?><b><?= e(dh_num($ub['brix'])) ?> °Bx<?= $corr !== '' ? ' <small>' . e($corr) . '</small>' : '' ?></b><?php endif; ?>
@@ -605,7 +605,7 @@ function brassagem_tela_lote(): void
       <section class="caderno">
         <?php if (!$novo): ?>
           <dl class="caderno-cabecalho">
-            <div><dt>Cerveja</dt><dd class="caderno-cerveja"><?php if (!empty($cv['imagem'])): ?><img src="../<?= e($cv['imagem']) ?>" alt="" width="48" height="48"><?php endif; ?><span><?= e($l['cerveja']) ?><?= !empty($cv['estilo']) ? '<small>' . e($cv['estilo']) . '</small>' : '' ?></span></dd></div>
+            <div><dt>Cerveja</dt><dd class="caderno-cerveja"><?php if (!empty($cv['imagem'])): ?><img src="../<?= e(dh_imagem_mini($cv['imagem'], 120)) ?>" alt="" width="48" height="48"><?php endif; ?><span><?= e($l['cerveja']) ?><?= !empty($cv['estilo']) ? '<small>' . e($cv['estilo']) . '</small>' : '' ?></span></dd></div>
             <div><dt>Data</dt><dd><?= e(dh_data_br($l['data'])) ?></dd></div>
             <div><dt>Lote</dt><dd><?= e($l['lote']) ?></dd></div>
             <div><dt>Levedura</dt><dd><?= e($l['levedura'] ?: '—') ?></dd></div>

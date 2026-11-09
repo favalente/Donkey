@@ -242,7 +242,7 @@ function receitas_tela_lista(): void
       <ul class="lista-lotes lista-receitas">
         <?php foreach ($cervejas as $c): $x = dh_receita_da_cerveja($r, $c['id']); ?>
           <li data-busca="<?= e(dh_sem_acento($c['nome'] . ' ' . ($x['nome'] ?? ''))) ?>" data-receita="<?= $x ? '1' : '' ?>"><a href="<?= $x ? './?acao=receita&amp;id=' . e($x['id']) : './?acao=receita&amp;cerveja=' . e(rawurlencode($c['id'])) ?>">
-            <?php if (!empty($c['imagem'])): ?><img src="../<?= e($c['imagem']) ?>" alt="" width="40" height="40" loading="lazy"><?php endif; ?>
+            <?php if (!empty($c['imagem'])): ?><img src="../<?= e(dh_imagem_mini($c['imagem'], 120)) ?>" alt="" width="40" height="40" loading="lazy"><?php endif; ?>
             <strong><?= e($c['nome']) ?></strong>
             <?php if ($x): ?>
               <span><?= e(receitas_linha($x) ?: count($x['insumos']) . ' insumos') ?><?= $x['imagem'] !== '' ? ' · 🖼 print' : '' ?></span>

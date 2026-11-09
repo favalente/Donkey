@@ -46,7 +46,7 @@ function detalhe_delivery(array $c): string
   <header class="site-header">
     <div class="container nav">
       <a class="brand" href="../" aria-label="Donkey Head Cervejaria, início">
-        <img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48">
+        <img src="../assets/img/logo-donkey-head-mini.png" alt="" width="34" height="48">
         <span>Donkey Head Cervejaria</span>
       </a>
       <a class="btn btn-ghost btn-sm" href="../">‹ Voltar ao site</a>
@@ -70,7 +70,7 @@ function detalhe_delivery(array $c): string
           <?php foreach ($cervejas as $c): $l = (float) $c['preco_evento']; ?>
             <article class="delivery-rotulo">
               <button type="button" class="delivery-ver" data-cerveja="<?= e($c['id']) ?>" aria-label="Ver detalhes da <?= e($c['nome']) ?>">
-                <?php if (!empty($c['imagem'])): ?><img src="../<?= e($c['imagem']) ?>" alt="Rótulo da <?= e($c['nome']) ?>" width="96" height="96" loading="lazy"><?php endif; ?>
+                <?php if (!empty($c['imagem'])): ?><img src="../<?= e(dh_imagem_mini($c['imagem'], 200)) ?>" alt="Rótulo da <?= e($c['nome']) ?>" width="96" height="96" loading="lazy"><?php endif; ?>
                 <span class="delivery-mais">Saiba mais</span>
               </button>
               <div class="detalhe" id="cerveja-<?= e($c['id']) ?>" hidden>

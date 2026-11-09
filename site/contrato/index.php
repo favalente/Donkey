@@ -380,7 +380,7 @@ $f = $k['campos'] ?? [];
 </head>
 <body>
   <div class="barra no-print">
-    <img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong>
+    <img src="../assets/img/logo-donkey-head-mini.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong>
     <?php if ($k && !$preencher && !$consulta): ?><a class="btn" href="./?t=<?= e($token) ?>&amp;pdf=1">⬇ Baixar PDF</a><?php endif; ?>
   </div>
   <main>
@@ -406,7 +406,7 @@ $f = $k['campos'] ?? [];
       <?php if ($podeAssinar): ?><p class="msg no-print">Leia o contrato abaixo. A assinatura fica no final da página.</p><?php endif; ?>
 
       <article class="papel">
-        <header class="timbre"><img src="../assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="56"><span><?= e(DH_EMPRESA['razao']) ?><br>CNPJ <?= e(DH_EMPRESA['cnpj']) ?></span></header>
+        <header class="timbre"><img src="../assets/img/logo-donkey-head-mini.png" alt="Donkey Head Cervejaria" width="56"><span><?= e(DH_EMPRESA['razao']) ?><br>CNPJ <?= e(DH_EMPRESA['cnpj']) ?></span></header>
         <?= dh_contrato_exibir($k['documento']) ?>
         <div class="assinam">
           <?php foreach (['contratada' => 'CONTRATADA', 'contratante' => 'CONTRATANTE'] as $parte => $rot): $a = $k['assinaturas'][$parte] ?? null; ?>

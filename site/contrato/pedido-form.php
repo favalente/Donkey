@@ -32,7 +32,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
 ?>
 <form method="post" class="papel pedido" id="pedido" enctype="multipart/form-data">
   <?= $csrf ?><input type="hidden" name="op" value="preencher">
-  <header class="timbre"><img src="../assets/img/logo-donkey-head.png" alt="Donkey Head Cervejaria" width="56"><span><?= e(DH_EMPRESA['razao']) ?><br>CNPJ <?= e(DH_EMPRESA['cnpj']) ?></span></header>
+  <header class="timbre"><img src="../assets/img/logo-donkey-head-mini.png" alt="Donkey Head Cervejaria" width="56"><span><?= e(DH_EMPRESA['razao']) ?><br>CNPJ <?= e(DH_EMPRESA['cnpj']) ?></span></header>
   <h1>Pedido de chope</h1>
   <p class="numero"><?= $travado ? 'Confira o pedido, preencha os seus dados e, em seguida, assine o contrato.' : 'Escolha o chope, preencha os seus dados e, em seguida, assine o contrato.' ?></p>
 

@@ -24,7 +24,7 @@ if ($q !== '') {
   <link rel="stylesheet" href="contrato.css?v=10">
 </head>
 <body>
-  <div class="barra"><img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong></div>
+  <div class="barra"><img src="../assets/img/logo-donkey-head-mini.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong></div>
   <main>
     <article class="papel">
       <h1>Verificar contrato</h1>

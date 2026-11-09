@@ -55,7 +55,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <header class="site-header">
     <div class="container nav">
       <a class="brand" href="../" aria-label="Donkey Head Cervejaria, início">
-        <img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48">
+        <img src="../assets/img/logo-donkey-head-mini.png" alt="" width="34" height="48">
         <span>Donkey Head Cervejaria</span>
       </a>
       <a class="btn btn-ghost btn-sm" href="../">‹ Voltar ao site</a>

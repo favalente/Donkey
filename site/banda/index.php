@@ -137,7 +137,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <header class="site-header">
     <div class="container nav">
       <span class="brand">
-        <img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48">
+        <img src="../assets/img/logo-donkey-head-mini.png" alt="" width="34" height="48">
         <span>Donkey Head Cervejaria</span>
       </span>
     </div>

@@ -123,7 +123,7 @@ function detalhe(array $c): string
   <header class="site-header" id="topo">
     <div class="container nav">
       <a class="brand" href="#topo" aria-label="Donkey Head Cervejaria, início">
-        <img src="assets/img/logo-donkey-head.png" alt="" width="34" height="48">
+        <img src="assets/img/logo-donkey-head-mini.png" alt="" width="34" height="48">
         <span>Donkey Head Cervejaria</span>
       </a>
       <button class="nav-toggle" aria-expanded="false" aria-controls="menu" aria-label="Abrir menu">
@@ -144,6 +144,7 @@ function detalhe(array $c): string
   <main>
     <section class="hero">
       <video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/img/chope-poster.jpg" aria-hidden="true">
+        <source src="assets/video/chope-celular.mp4" type="video/mp4" media="(max-width: 700px)">
         <source src="assets/video/chope.mp4" type="video/mp4">
       </video>
       <div class="container hero-inner">
@@ -214,7 +215,7 @@ function detalhe(array $c): string
             <article class="beer" data-unidades="<?= e(implode(' ', array_keys($onde))) ?>">
               <button class="beer-btn" data-cerveja="<?= e($c['id']) ?>">
                 <span class="beer-img">
-                  <img src="<?= e($c['imagem']) ?>" alt="Rótulo da <?= e($c['nome']) ?>" loading="lazy" width="640" height="640">
+                  <img src="<?= e(dh_imagem_mini($c['imagem'], 400)) ?>" alt="Rótulo da <?= e($c['nome']) ?>" loading="lazy" width="640" height="640">
                   <?php if ($onde): ?><span class="selo">Engatada</span><?php endif; ?>
                 </span>
                 <span class="beer-nome"><?= e($c['nome']) ?></span>

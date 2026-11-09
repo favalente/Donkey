@@ -91,7 +91,7 @@ if ($k && $_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
   <div class="barra no-print">
-    <img src="../assets/img/logo-donkey-head.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong>
+    <img src="../assets/img/logo-donkey-head-mini.png" alt="" width="34" height="48"><strong>Donkey Head Cervejaria</strong>
     <?php if ($k): ?><a class="btn" href="./?t=<?= e($token) ?>&amp;pdf=1">⬇ Baixar PDF</a><?php endif; ?>
   </div>
   <main>

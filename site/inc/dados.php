@@ -446,6 +446,34 @@ function dh_gravar_jpeg($img, string $destino, int $max, int $qualidade = 82): v
     imagecopyresampled($nova, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
     imagejpeg($nova, $destino, $qualidade);
 }
+
+// Versão pequena de uma imagem do site (rótulo na lista, miniatura): gerada uma vez em uploads/mini e
+// reaproveitada; se a imagem mudar, sai outra. Sem como gerar (GD, permissão), usa a original.
+function dh_imagem_mini(string $rel, int $lado = 320): string
+{
+    $orig = DH_RAIZ . '/' . ltrim($rel, '/');
+    if (!preg_match('/\.(jpe?g|png)$/i', $rel) || !is_file($orig) || !function_exists('imagecreatefromjpeg')) {
+        return $rel;
+    }
+    $mini = 'uploads/mini/' . substr(md5($rel . '|' . filemtime($orig)), 0, 16) . '-' . $lado . '.jpg';
+    if (is_file(DH_RAIZ . '/' . $mini)) {
+        return $mini;
+    }
+    $info = @getimagesize($orig);
+    if (!$info || max($info[0], $info[1]) <= $lado * 1.2) {
+        return $rel;
+    }
+    try {
+        $img = $info[2] === IMAGETYPE_PNG ? @imagecreatefrompng($orig) : @imagecreatefromjpeg($orig);
+        if (!$img) {
+            return $rel;
+        }
+        dh_gravar_jpeg($img, DH_RAIZ . '/' . $mini, $lado, 78);
+        return is_file(DH_RAIZ . '/' . $mini) ? $mini : $rel;
+    } catch (Throwable $e) {
+        return $rel;
+    }
+}
 require_once __DIR__ . '/agenda.php';
 require_once __DIR__ . '/contratos.php';
 require_once __DIR__ . '/clientes.php';
