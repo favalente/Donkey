@@ -696,3 +696,7 @@ h3 small { font-weight: 400; color: var(--muted); }
 .adicional-pessoa { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px 4px; margin: 0 0 12px; }
 .adicional-pessoa legend { font-weight: 600; padding: 0 4px; }
 .adicional-pessoa legend small { font-weight: 400; color: var(--muted); }
+.adicional-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.adicional-dias label { text-align: center; font-size: .8rem; font-weight: 700; color: var(--muted); }
+.adicional-dias input { padding: 10px 4px; text-align: center; }
+@media (max-width: 420px) { .adicional-dias { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

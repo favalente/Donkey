@@ -201,7 +201,7 @@ function escala_acao(string $acao): bool
             }
             $dados = ['nome' => mb_substr($nome, 0, 60), 'tipo' => ($_POST['tipo'] ?? '') === 'fixo' ? 'fixo' : 'freelancer', 'telefone' => mb_substr(trim((string) ($_POST['telefone'] ?? '')), 0, 30),
                 'pix' => mb_substr(trim((string) ($_POST['pix'] ?? '')), 0, 120), 'diaria' => brassagem_num($_POST['diaria'] ?? ''),
-                'adicional_semana' => brassagem_num($_POST['adicional_semana'] ?? ''), 'adicional_fds' => brassagem_num($_POST['adicional_fds'] ?? ''), 'ativo' => empty($_POST['inativo'])];
+                'adicionais' => array_map(fn($k) => brassagem_num($_POST['adicional'][$k] ?? ''), array_combine(array_keys(DH_ESCALA_DIAS_ADICIONAL), array_keys(DH_ESCALA_DIAS_ADICIONAL))), 'ativo' => empty($_POST['inativo'])];
             $id = (string) ($_POST['id'] ?? '');
             $i = null;
             foreach ($e['pessoas'] as $k => $p) {
@@ -540,11 +540,14 @@ function escala_tela_equipe(): void
               <label>Chave Pix <input name="pix" value="<?= e($p['pix']) ?>"></label>
             </div>
             <fieldset class="adicional-pessoa">
-              <legend>Ganha a mais que a função? <small>(em branco = só a diária da função)</small></legend>
-              <div class="duas">
-                <label>+ R$ na semana <small>(Ter a Qui e Dom)</small><input name="adicional_semana" inputmode="decimal" placeholder="0" value="<?= e(($p['adicional_semana'] ?? '') !== '' ? dh_num($p['adicional_semana']) : '') ?>"></label>
-                <label>+ R$ no fim de semana <small>(Sex, Sáb e ⭐)</small><input name="adicional_fds" inputmode="decimal" placeholder="0" value="<?= e(($p['adicional_fds'] ?? '') !== '' ? dh_num($p['adicional_fds']) : '') ?>"></label>
+              <legend>Ganha a mais que a função?</legend>
+              <p class="dica">Coloque o valor a mais só nos dias em que ganha. Em branco = só a diária da função.</p>
+              <div class="adicional-dias">
+                <?php $ad = dh_escala_adicionais($p); foreach (DH_ESCALA_DIAS_ADICIONAL as $k => $rot): ?>
+                  <label><?= e($rot) ?><input name="adicional[<?= $k ?>]" inputmode="decimal" placeholder="+0" value="<?= e(($ad[$k] ?? '') !== '' ? dh_num($ad[$k]) : '') ?>"></label>
+                <?php endforeach; ?>
               </div>
+              <p class="dica">⭐ = véspera de feriado / evento. Ex.: + 20 de Ter a Qui e Dom, + 10 na Sex, Sáb e ⭐.</p>
             </fieldset>
             <?php if ($p['diaria'] !== ''): ?>
               <label>Diária própria fixa (R$) <small>(vale em qualquer dia, no lugar da função; apague para usar a função + o adicional)</small><input name="diaria" inputmode="decimal" value="<?= e(dh_num($p['diaria'])) ?>"></label>
@@ -562,7 +565,7 @@ function escala_tela_equipe(): void
         <?php foreach ($pessoas as $p): ?>
           <li>
             <details>
-              <summary><strong><?= e($p['nome']) ?></strong> <span><?= $p['tipo'] === 'fixo' ? 'Fixo' : 'Freelancer' ?><?= $p['diaria'] !== '' ? ' · diária ' . e(dh_moeda($p['diaria'])) : '' ?><?= (float) ($p['adicional_semana'] ?? 0) || (float) ($p['adicional_fds'] ?? 0) ? ' · + ' . e(dh_moeda((float) ($p['adicional_semana'] ?? 0))) . ' semana / + ' . e(dh_moeda((float) ($p['adicional_fds'] ?? 0))) . ' fds' : '' ?><?= $p['pix'] === '' && $p['tipo'] === 'freelancer' ? ' · sem Pix' : '' ?></span><?= $p['ativo'] ? '' : ' <em class="tag cinza">Não trabalha mais</em>' ?><?= $p['tipo'] === 'fixo' ? ' <em class="tag ct-enviado">Fixo</em>' : '' ?></summary>
+              <summary><strong><?= e($p['nome']) ?></strong> <span><?= $p['tipo'] === 'fixo' ? 'Fixo' : 'Freelancer' ?><?= $p['diaria'] !== '' ? ' · diária ' . e(dh_moeda($p['diaria'])) : '' ?><?php $ad = array_filter(dh_escala_adicionais($p), fn($v) => (float) $v != 0); echo $ad ? ' · a mais: ' . e(implode(', ', array_map(fn($k, $v) => DH_ESCALA_DIAS_ADICIONAL[$k] . ' +' . dh_num($v), array_keys($ad), $ad))) : ''; ?><?= $p['pix'] === '' && $p['tipo'] === 'freelancer' ? ' · sem Pix' : '' ?></span><?= $p['ativo'] ? '' : ' <em class="tag cinza">Não trabalha mais</em>' ?><?= $p['tipo'] === 'fixo' ? ' <em class="tag ct-enviado">Fixo</em>' : '' ?></summary>
               <?php $form($p); ?>
             </details>
           </li>

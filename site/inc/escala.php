@@ -246,9 +246,23 @@ function dh_escala_diaria(array $e, array $pos, string $dia): float
     }
     $coluna = dh_escala_coluna_diaria($dia, !empty($e['dias'][$dia]['especial']));
     // Adicional da pessoa sobre a diária da função (ex.: + R$ 20 na semana e + R$ 10 na sexta, sábado e ⭐)
-    $adicional = $p ? (float) ($p[$coluna === 'diaria_fds' ? 'adicional_fds' : 'adicional_semana'] ?? 0) : 0;
+    $ad = $p ? dh_escala_adicionais($p) : [];
+    $adicional = (float) ($ad[!empty($e['dias'][$dia]['especial']) ? 'e' : (string) date('N', strtotime($dia))] ?? 0);
     $base = (float) ($f[$coluna] ?? 0);
     return $base > 0 ? $base + $adicional : 0;
+}
+
+// Quanto a pessoa ganha a mais que a função em cada dia: '2'..'7' (Ter a Dom) e 'e' (véspera de feriado / evento ⭐).
+// Cadastros da primeira versão (só semana / fim de semana) viram dia a dia.
+const DH_ESCALA_DIAS_ADICIONAL = ['2' => 'Ter', '3' => 'Qua', '4' => 'Qui', '5' => 'Sex', '6' => 'Sáb', '7' => 'Dom', 'e' => '⭐'];
+function dh_escala_adicionais(array $p): array
+{
+    if (isset($p['adicionais']) && is_array($p['adicionais'])) {
+        return $p['adicionais'];
+    }
+    $sem = (string) ($p['adicional_semana'] ?? '');
+    $fds = (string) ($p['adicional_fds'] ?? '');
+    return ['2' => $sem, '3' => $sem, '4' => $sem, '5' => $fds, '6' => $fds, '7' => $sem, 'e' => $fds];
 }
 
 // "ATENDENTE · ROOFTOP" para ambiente, ou o nome da função
