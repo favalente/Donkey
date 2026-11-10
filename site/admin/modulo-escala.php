@@ -379,7 +379,7 @@ function escala_tela_semana(): void
               <div class="botoes-dia sem-impressao">
                 <button type="button" class="btn secundario mais-linha">+ Linha</button>
                 <button class="btn primario">Salvar <?= e(mb_strtolower(DH_DIAS_SEMANA_ESCALA[(int) date('N', strtotime($dia))])) ?></button>
-                <?php if ($pos): ?><a class="btn secundario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode(escala_texto_dia($e, $dia))) ?>">📤 WhatsApp</a><?php endif; ?>
+                <?php if ($pos): ?><button type="button" class="btn secundario btn-imagem-escala" data-escala="<?= e(json_encode(escala_dados_imagem($e, $dia), JSON_UNESCAPED_UNICODE)) ?>" data-texto="<?= e(escala_texto_dia($e, $dia)) ?>">📤 WhatsApp</button><?php endif; ?>
               </div>
             </form>
             <details class="colar-excel sem-impressao">
@@ -405,6 +405,55 @@ function escala_tela_semana(): void
       </details>
       <p class="dica sem-impressao">Digite o nome como na planilha: quem ainda não está na <a href="./?acao=escala-equipe">Equipe</a> entra como freelancer. Linha sem nome é vaga em aberto (fica amarela). Fixos ficam em azul e não entram no pagamento. Em "⋯" anota-se a hora em que chegou (o desconto por atraso sai sozinho; 🏠 = voltou para casa), falta, ajuste de valor ou o que foi pago no dia pelo caixa (sangria).</p>
       <script>
+        // 📤 WhatsApp: desenha a escala do dia numa imagem (cores da casa, sem as vagas) e abre o compartilhar do
+        // celular; no computador, baixa a imagem e abre o WhatsApp com o texto
+        (function () {
+          var logo = new Image(); logo.src = '../assets/img/logo-donkey-head-mini.png';
+          function desenhar(d) {
+            var W = 1080, pad = 64, linhaH = 92, topo = 300, n = d.linhas.length;
+            var H = topo + n * linhaH + 150;
+            var c = document.createElement('canvas'); c.width = W; c.height = H;
+            var g = c.getContext('2d'), fonte = function (peso, px) { return peso + ' ' + px + 'px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'; };
+            g.fillStyle = '#16110d'; g.fillRect(0, 0, W, H);
+            // faixa do título
+            g.fillStyle = '#e9a23b'; g.fillRect(0, 0, W, 240);
+            if (logo.complete && logo.naturalWidth) g.drawImage(logo, pad, 30, 127, 180);
+            g.fillStyle = '#1a120a'; g.font = fonte(800, 40); g.fillText('ESCALA', pad + 160, 92);
+            g.font = fonte(900, 78); g.fillText(d.dia.toUpperCase() + ' ' + d.data, pad + 160, 172);
+            if (d.especial) { g.font = fonte(700, 30); g.fillText('⭐ Véspera de feriado / evento', pad + 160, 216); }
+            // cabeçalho das colunas
+            g.fillStyle = '#b9a58f'; g.font = fonte(700, 26);
+            g.fillText('FUNÇÃO', pad, topo - 22); g.fillText('NOME', pad + 340, topo - 22);
+            g.textAlign = 'right'; g.fillText('HORÁRIO', W - pad, topo - 22); g.textAlign = 'left';
+            d.linhas.forEach(function (l, i) {
+              var y = topo + i * linhaH;
+              if (i % 2 === 0) { g.fillStyle = '#261e18'; g.fillRect(pad - 20, y, W - 2 * pad + 40, linhaH); }
+              var meio = y + linhaH / 2 + 12;
+              g.fillStyle = '#e9a23b'; g.font = fonte(800, 30); g.fillText(l.funcao, pad, meio, 310);
+              g.fillStyle = '#f4ece1'; g.font = fonte(700, 42); g.fillText(l.nome, pad + 340, meio, W - 2 * pad - 340 - 260);
+              g.fillStyle = '#d2c3b0'; g.font = fonte(600, 34); g.textAlign = 'right'; g.fillText(l.entrada + ' – ' + l.saida, W - pad, meio); g.textAlign = 'left';
+            });
+            g.fillStyle = '#8a7a68'; g.font = fonte(600, 28);
+            g.fillText('Donkey Head Cervejaria · ' + n + ' pessoa' + (n === 1 ? '' : 's') + ' na escala', pad, H - 60);
+            return c;
+          }
+          document.querySelectorAll('.btn-imagem-escala').forEach(function (b) {
+            b.addEventListener('click', function () {
+              var d = JSON.parse(b.dataset.escala), texto = b.dataset.texto;
+              if (!d.linhas.length) { alert('Ninguém escalado neste dia ainda.'); return; }
+              desenhar(d).toBlob(function (blob) {
+                var arq = new File([blob], d.arquivo, { type: 'image/png' });
+                if (navigator.canShare && navigator.canShare({ files: [arq] })) {
+                  navigator.share({ files: [arq], title: 'Escala ' + d.dia + ' ' + d.data }).catch(function () {});
+                  return;
+                }
+                var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = d.arquivo; document.body.appendChild(a); a.click(); a.remove();
+                window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank', 'noopener');
+              }, 'image/png');
+            });
+          });
+        })();
+
         // + Linha copia a última linha do dia (vazia) e × tira a linha
         document.querySelectorAll('.form-dia').forEach(function (form) {
           var corpo = form.querySelector('tbody');
@@ -429,13 +478,29 @@ function escala_tela_semana(): void
 }
 
 // O dia em texto, para o WhatsApp
+// O dia em texto, para o WhatsApp (só quem está escalado; vaga em aberto não vai)
 function escala_texto_dia(array $e, string $dia): string
 {
-    $t = '*' . mb_strtoupper(escala_dia_nome($dia)) . "*\n";
-    foreach ($e['dias'][$dia]['posicoes'] ?? [] as $p) {
-        $t .= (dh_escala_funcao($e, $p['funcao'])['nome'] ?? '?') . ' – ' . (dh_escala_pessoa($e, $p['pessoa'])['nome'] ?? '(vaga)') . ' · ' . $p['entrada'] . '–' . $p['saida'] . "\n";
+    $t = '*Escala · ' . escala_dia_nome($dia) . "*\n";
+    foreach (escala_dados_imagem($e, $dia)['linhas'] as $l) {
+        $t .= $l['funcao'] . ' – ' . $l['nome'] . ' · ' . $l['entrada'] . '–' . $l['saida'] . "\n";
     }
     return $t;
+}
+
+// Dados da imagem do dia (gerada no navegador): título e quem trabalha, sem as vagas
+function escala_dados_imagem(array $e, string $dia): array
+{
+    $linhas = [];
+    foreach ($e['dias'][$dia]['posicoes'] ?? [] as $p) {
+        $pe = dh_escala_pessoa($e, $p['pessoa'] ?? '');
+        if (!$pe) {
+            continue;
+        }
+        $linhas[] = ['funcao' => dh_escala_funcao($e, $p['funcao'])['nome'] ?? '', 'nome' => $pe['nome'], 'entrada' => $p['entrada'], 'saida' => $p['saida']];
+    }
+    return ['dia' => DH_DIAS_SEMANA_ESCALA[(int) date('N', strtotime($dia))], 'data' => date('d/m', strtotime($dia)), 'especial' => !empty($e['dias'][$dia]['especial']),
+        'arquivo' => 'escala-' . $dia . '.png', 'linhas' => $linhas];
 }
 
 function escala_tela_equipe(): void
