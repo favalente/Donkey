@@ -13,10 +13,10 @@ const DH_ESCALA_DIAS_ABERTOS = [2 => '23:30', 3 => '23:30', 4 => '23:30', 5 => '
 const DH_ESCALA_ENTRADA_FIXO = '16:00';
 const DH_ESCALA_ENTRADA_FREELA = '17:00';
 // Funções e diárias de nov/2026: [Ter a Qui, Sex e Sáb, Domingo]. Atendentes (Rooftop, Pisos, Calçada) 90/120/80,
-// Barman e Barback como o Atendente, Apoio e Bar sup. 90/100/80, quem cobre o Caixa 120/120/100; Hostess (100) e Concierge (130)
-// só trabalham sexta e sábado.
+// Barman e Barback como o Atendente, Apoio 90/100/80, quem cobre o Caixa 120/120/100; o Bar superior (100), a Hostess
+// (100) e o Concierge (130) só funcionam sexta e sábado.
 const DH_ESCALA_FUNCOES_PADRAO = [
-    'CAIXA' => [120, 120, 100], 'ATENDENTE' => [90, 120, 80], 'BAR SUP.' => [90, 100, 80], 'BARMAN' => [90, 120, 80],
+    'CAIXA' => [120, 120, 100], 'ATENDENTE' => [90, 120, 80], 'BAR SUP.' => [null, 100, null], 'BARMAN' => [90, 120, 80],
     'BARBACK' => [90, 120, 80], 'APOIO' => [90, 100, 80], 'HOSTESS' => [null, 100, null], 'CONCIERGE' => [null, 130, null],
 ];
 // Ambientes onde trabalha o Atendente: na escala aparecem no lugar da função (como na planilha) e pagam a diária dela
@@ -91,6 +91,16 @@ function dh_escala(): array
             }
         }
         $e['config']['barman_barback_2026_11'] = true;
+    }
+    // O bar superior só abre sexta e sábado (uma vez só: tira o 90 de Ter a Qui e o 80 de Domingo da tabela anterior)
+    if (empty($e['config']['bar_sup_fds'])) {
+        foreach ($e['funcoes'] as $i => $f) {
+            if ($f['nome'] === 'BAR SUP.' && (float) ($f['diaria_semana'] ?? 0) === 90.0 && (float) ($f['diaria_dom'] ?? 0) === 80.0) {
+                $e['funcoes'][$i]['diaria_semana'] = '';
+                $e['funcoes'][$i]['diaria_dom'] = '';
+            }
+        }
+        $e['config']['bar_sup_fds'] = true;
     }
     $e['config']['diarias_2026_11'] = true;
     return $e;
