@@ -932,7 +932,8 @@ function contratos_tela_contrato(): void
       <?php if ($k['status'] === 'assinado'): ?>
         <form method="post" action="./?acao=contrato-reenviar-copia" onsubmit="return confirm('Reenviar a cópia do contrato assinado?');" class="form-editar">
           <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>">
-          <button class="btn secundario largo">✉️ Reenviar cópia para <?= e(implode(', ', dh_emails_equipe())) ?></button>
+          <button class="btn secundario largo">✉️ Reenviar cópia por e-mail</button>
+          <p class="dica emails-copia">Vai para: <?= e(implode(', ', dh_emails_equipe())) ?></p>
         </form>
       <?php endif; ?>
       <div class="botoes-link">

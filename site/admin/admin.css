@@ -700,3 +700,25 @@ h3 small { font-weight: 400; color: var(--muted); }
 .adicional-dias label { text-align: center; font-size: .8rem; font-weight: 700; color: var(--muted); }
 .adicional-dias input { padding: 10px 4px; text-align: center; }
 @media (max-width: 420px) { .adicional-dias { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Sino de notificações no topo */
+.sino { position: relative; margin-left: auto; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); text-decoration: none; font-size: 1.45rem; line-height: 1; }
+.sino.ativo { border-color: var(--amber); }
+.sino em { position: absolute; top: -5px; right: -5px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--erro); color: #fff; font-style: normal; font-size: .75rem; font-weight: 800; display: grid; place-items: center; }
+.notif-lista { display: grid; gap: 8px; margin-top: 8px; }
+.notif { margin: 0; display: block; }
+.notif button, a.notif { width: 100%; display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; text-decoration: none; }
+.notif button:hover, a.notif:hover { background: var(--hover); }
+.notif.nova button, a.notif.nova { border: 2px solid var(--amber); background: var(--caixa); }
+.notif-ic { font-size: 1.5rem; line-height: 1.2; }
+.notif strong { display: block; }
+.notif small { display: block; color: var(--muted); font-size: .92rem; }
+.notif em { display: block; color: var(--muted); font-style: normal; font-size: .8rem; margin-top: 2px; }
+.notif:not(.nova) strong { font-weight: 600; }
+.notif-todas { text-align: right; margin: 8px 0 0; }
+.push-caixa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 14px 16px; border-radius: 16px; background: var(--azul-bg); margin: 0 0 14px; }
+.push-caixa .dica { margin: 4px 0 0; }
+.push-ok { display: flex; gap: 8px; flex-wrap: wrap; }
+.push-ok form { margin: 0; }
+.emails-copia { margin-top: -6px; word-break: break-word; }
+.push-ok[hidden], .push-caixa[hidden] { display: none; }

@@ -47,6 +47,7 @@ if ($k && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $o['orcamentos'][$i]['status'] = 'aprovado';
         $o['orcamentos'][$i]['aprovado'] = ['nome' => $nome, 'em' => date('Y-m-d H:i:s'), 'ip' => (string) ($_SERVER['REMOTE_ADDR'] ?? '')];
         dh_orcamentos_salvar($o);
+        dh_notificar('orcamentos', '👍', 'Orçamento ' . $k['numero'] . ' aprovado', $nome . ' aprovou (' . $k['cliente']['nome'] . ', ' . dh_moeda(dh_orcamento_total($k)) . '). Gere o pedido.', './?acao=orcamento&id=' . $k['id']);
         dh_email_equipe('Orçamento aprovado: ' . $k['numero'] . ' · ' . $k['cliente']['nome'],
             '<p><b>' . e($nome) . '</b> aprovou o orçamento <b>' . e($k['numero']) . '</b> (' . e($k['cliente']['nome']) . ', ' . e(dh_moeda(dh_orcamento_total($k))) . ').</p>'
             . '<p>No painel, em Orçamentos, toque em "Gerar pedido a partir deste orçamento (eu preencho)" ou "Gerar pedido para cliente preencher".</p>');

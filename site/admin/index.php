@@ -9,54 +9,9 @@ require __DIR__ . '/modulo-orcamentos.php';
 require __DIR__ . '/modulo-brassagem.php';
 require __DIR__ . '/modulo-receitas.php';
 require __DIR__ . '/modulo-escala.php';
+require __DIR__ . '/modulo-notificacoes.php';
 
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
-const DH_ARQ_USUARIOS = DH_RAIZ . '/dados/usuarios.json';
-const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejaria' => 'Cervejaria'];
-// O que cada função pode fazer no painel
-const DH_PERMISSOES = [
-    'taplist' => ['admin', 'barman'],
-    'cervejas' => ['admin', 'barman'],
-    'galeria' => ['admin'],
-    'agenda' => ['admin', 'financeiro', 'designer'],
-    'bandas' => ['admin', 'financeiro', 'designer'],
-    // Designer só vê: editar banda, fotos e link é para admin e financeiro
-    'bandas_editar' => ['admin', 'financeiro'],
-    'agenda_editar' => ['admin', 'financeiro'],
-    'valores' => ['admin', 'financeiro'],
-    'relatorio' => ['admin', 'financeiro'],
-    'contratos' => ['admin', 'financeiro'],
-    'orcamentos' => ['admin', 'financeiro'],
-    'clientes' => ['admin', 'financeiro'],
-    'vendas' => ['admin', 'financeiro'],
-    'brassagem' => ['admin', 'cervejaria'],
-    'receitas' => ['admin', 'cervejaria'],
-    'escala' => ['admin', 'financeiro'],
-    'freelancers' => ['admin', 'financeiro'],
-    'usuarios' => ['admin'],
-    'importar' => ['admin'],
-];
-// Abas que se liberam por usuário em Usuários → 🔐 Permissões (o administrador sempre vê tudo;
-// Usuários e Importar Google Agenda são só do administrador). Sem escolha própria, vale a função.
-const DH_ABAS = [
-    'taplist' => ['Tap List', 'torneiras e tap list da TV'],
-    'cervejas' => ['Cervejas', 'cadastro das cervejas'],
-    'agenda' => ['Agenda: ver', 'shows do mês'],
-    'agenda_editar' => ['Agenda: criar e editar shows', ''],
-    'bandas' => ['Bandas: ver', 'nome, tributo, Instagram e fotos'],
-    'bandas_editar' => ['Bandas: editar', 'dados, fotos e link da banda'],
-    'valores' => ['Valores dos shows', 'cachê e consumação'],
-    'relatorio' => ['Financeiro → Bandas', 'cachês do mês'],
-    'freelancers' => ['Financeiro → Freelancers', 'pagamento semanal'],
-    'vendas' => ['Financeiro → Chope', 'relatórios de vendas de chope'],
-    'orcamentos' => ['Orçamentos', ''],
-    'contratos' => ['Contratos', 'pedidos, contratos, produtos e cupons'],
-    'clientes' => ['Clientes', 'base de clientes'],
-    'escala' => ['Escala', 'escala da equipe e cadastro dos freelancers'],
-    'brassagem' => ['Brassagem', 'tanques e cadernos'],
-    'receitas' => ['Receitas', ''],
-    'galeria' => ['Galeria', 'fotos do site'],
-];
 const DH_ARQ_FALHAS = DH_RAIZ . '/dados/login-falhas.json';
 const DH_DIR_UPLOAD = DH_RAIZ . '/uploads/cervejas';
 const DH_DIR_GALERIA = DH_RAIZ . '/uploads/galeria';
@@ -123,11 +78,7 @@ function pode(string $permissao): bool
     if (!$usuario) {
         return false;
     }
-    // Abas escolhidas para o usuário (Permissões) valem no lugar da função, menos para o administrador
-    if ($usuario['papel'] !== 'admin' && isset($usuario['permissoes']) && isset(DH_ABAS[$permissao])) {
-        return in_array($permissao, $usuario['permissoes'], true);
-    }
-    return in_array($usuario['papel'], DH_PERMISSOES[$permissao] ?? [], true);
+    return dh_usuario_pode($usuario, $permissao);
 }
 
 // Abas padrão de uma função
@@ -551,7 +502,7 @@ if (!$usuarios) {
 
             default:
                 // Agenda, bandas, relatório, importação e usuários ficam em arquivos próprios
-                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao) && !brassagem_acao($acao) && !receitas_acao($acao) && !escala_acao($acao)) {
+                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao) && !brassagem_acao($acao) && !receitas_acao($acao) && !escala_acao($acao) && !notificacoes_acao($acao)) {
                     $tela = $inicio;
                 }
         }
@@ -574,7 +525,10 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=64">
+  <link rel="stylesheet" href="admin.css?v=65">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#e9a23b">
+  <link rel="apple-touch-icon" href="../assets/img/icone-192.png">
   <script>
     // Tema escolhido neste aparelho (claro é o padrão)
     try { if (localStorage.getItem('dh-tema') === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}
@@ -605,6 +559,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
 <?php else: ?>
   <header class="topo">
     <a class="marca" href="./"><img src="../assets/img/logo-donkey-head-mini.png" alt="" width="28"> Painel</a>
+    <?php $nNotif = notificacoes_nao_lidas(); ?>
+    <a class="sino<?= $tela === 'notificacoes' ? ' ativo' : '' ?>" href="./?acao=notificacoes" aria-label="Notificações<?= $nNotif ? ': ' . $nNotif . ' novas' : '' ?>">🔔<?php if ($nNotif): ?><em><?= $nNotif > 99 ? '99+' : $nNotif ?></em><?php endif; ?></a>
     <nav>
       <?php if (pode('taplist')): ?><a href="./?acao=taplist" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🍺</span>Tap List</a><?php endif; ?>
       <?php if (pode('cervejas')): ?><a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🏷️</span>Cervejas</a><?php endif; ?>
@@ -819,7 +775,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <label>Repita a nova senha <input type="password" name="senha2" required autocomplete="new-password"></label>
         <button class="btn primario">Trocar senha</button>
       </form>
-    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela) || brassagem_tela($tela) || receitas_tela($tela) || escala_tela($tela); endif; ?>
+    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela) || brassagem_tela($tela) || receitas_tela($tela) || escala_tela($tela) || notificacoes_tela($tela); endif; ?>
 
     <footer class="rodape">
       <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a> · <button type="button" class="botao-tema" id="botao-tema"></button></span>

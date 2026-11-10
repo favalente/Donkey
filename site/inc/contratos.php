@@ -735,6 +735,8 @@ function dh_contrato_concluir(array &$k): bool
     $k['status'] = 'assinado';
     $k['concluido_em'] = date('Y-m-d H:i:s');
     dh_contrato_enviar_copia($k, array_merge([$k['assinaturas']['contratante']['email']], dh_emails_equipe()));
+    dh_notificar('contratos', '✅', 'Contrato nº ' . $k['numero'] . ' assinado', ($k['campos']['contratante_nome'] ?? '') . ' · ' . (DH_CONTRATO_TIPOS[$k['tipo']] ?? '') . '. Assinado pelas duas partes.',
+        './?acao=contrato&id=' . $k['id'], (string) ($GLOBALS['usuario']['login'] ?? ''));
     return true;
 }
 
