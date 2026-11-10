@@ -580,6 +580,32 @@ h3 small { font-weight: 400; color: var(--muted); }
 .botoes-semana { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
 .botoes-semana form { margin: 0; flex: 1 1 auto; }
 .botoes-semana .btn { width: 100%; }
+.botoes-semana .btn-acao { width: 100%; height: 100%; }
+.botoes-semana > .btn-acao { width: auto; flex: 1 1 auto; }
+.btn-acao { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-acao:hover { background: var(--hover); }
+/* Topo da escala: título, atalhos, semana e dias */
+.escala-topo { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
+.escala-topo h1 { margin: 0; }
+.escala-atalhos { display: flex; gap: 8px; flex-wrap: wrap; }
+.escala-atalhos a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--text); text-decoration: none; font-size: .88rem; font-weight: 600; }
+.escala-atalhos a:hover { background: var(--hover); }
+.semana-nav { display: grid; grid-template-columns: 52px 1fr 52px; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 8px; margin: 0 0 10px; }
+.semana-seta { display: grid; place-items: center; height: 52px; border-radius: 12px; background: var(--caixa); color: var(--text); text-decoration: none; font-size: 1.9rem; line-height: 1; font-weight: 600; }
+.semana-seta:hover { background: var(--hover); }
+.semana-centro { text-align: center; line-height: 1.25; }
+.semana-centro small { display: block; color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+.semana-centro strong { display: block; font-size: 1.25rem; }
+.semana-hoje { display: inline-block; margin-top: 3px; font-size: .8rem; font-weight: 600; }
+.escala-dias { display: grid; grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); gap: 6px; margin: 0 0 6px; }
+.escala-dias a { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; line-height: 1.2; }
+.escala-dias b { font-size: .72rem; text-transform: uppercase; color: var(--muted); }
+.escala-dias span { font-size: 1.15rem; font-weight: 700; }
+.escala-dias small { font-size: .7rem; font-weight: 600; padding: 0 6px; border-radius: 999px; }
+.escala-dias .cheio small { background: var(--verde-bg); color: var(--verde-txt); }
+.escala-dias .falta small { background: var(--vermelho-bg); color: var(--vermelho-txt); }
+.escala-dias .vazio small { color: var(--muted); }
+.escala-dias .hoje { border: 2px solid var(--amber); }
 .dias-escala { display: grid; gap: 16px; }
 @media (min-width: 1000px) { .dias-escala { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .dia-escala { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }

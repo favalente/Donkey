@@ -298,13 +298,17 @@ function escala_tela(string $tela): bool
 
 function escala_nav_semana(string $acao, string $segunda): void
 {
+    $atual = $segunda === dh_semana_inicio(date('Y-m-d'));
     ?>
-      <div class="mes-nav">
-        <a class="btn mini" href="./?acao=<?= $acao ?>&amp;semana=<?= date('Y-m-d', strtotime($segunda . ' -7 days')) ?>" aria-label="Semana anterior">‹</a>
-        <strong>Semana de <?= date('d/m', strtotime($segunda)) ?> a <?= date('d/m', strtotime($segunda . ' +6 days')) ?></strong>
-        <a class="btn mini" href="./?acao=<?= $acao ?>&amp;semana=<?= date('Y-m-d', strtotime($segunda . ' +7 days')) ?>" aria-label="Próxima semana">›</a>
+      <div class="semana-nav">
+        <a class="semana-seta" href="./?acao=<?= $acao ?>&amp;semana=<?= date('Y-m-d', strtotime($segunda . ' -7 days')) ?>" aria-label="Semana anterior">‹</a>
+        <div class="semana-centro">
+          <small><?= $atual ? 'Esta semana' : 'Semana' ?></small>
+          <strong><?= date('d/m', strtotime($segunda)) ?> a <?= date('d/m', strtotime($segunda . ' +6 days')) ?></strong>
+          <?php if (!$atual): ?><a class="semana-hoje" href="./?acao=<?= $acao ?>">↺ Voltar para esta semana</a><?php endif; ?>
+        </div>
+        <a class="semana-seta" href="./?acao=<?= $acao ?>&amp;semana=<?= date('Y-m-d', strtotime($segunda . ' +7 days')) ?>" aria-label="Próxima semana">›</a>
       </div>
-      <?php if ($segunda !== dh_semana_inicio(date('Y-m-d'))): ?><p class="centro"><a href="./?acao=<?= $acao ?>">Ir para esta semana</a></p><?php endif; ?>
     <?php
 }
 
@@ -320,16 +324,29 @@ function escala_tela_semana(): void
     $ativos = array_filter($e['pessoas'], fn($p) => $p['ativo']);
     usort($ativos, fn($a, $b) => strcoll(dh_sem_acento($a['nome']), dh_sem_acento($b['nome'])));
     ?>
-      <div class="titulo-acao sem-impressao"><h1>Escala</h1><span class="botoes-titulo"><a class="btn secundario" href="./?acao=escala-equipe">👥 Equipe</a><a class="btn secundario" href="./?acao=escala-funcoes">Funções e diárias</a></span></div>
+      <div class="escala-topo sem-impressao">
+        <h1>Escala</h1>
+        <nav class="escala-atalhos">
+          <a href="./?acao=escala-equipe"><span>👥</span>Equipe</a>
+          <a href="./?acao=escala-funcoes"><span>💰</span>Funções e diárias</a>
+        </nav>
+      </div>
       <div class="sem-impressao"><?php escala_nav_semana('escala', $segunda); ?></div>
+      <?php if ($dias): ?>
+        <nav class="escala-dias sem-impressao" aria-label="Ir para o dia">
+          <?php foreach ($dias as $d): $ps = $e['dias'][$d]['posicoes'] ?? []; $ok = count(array_filter($ps, fn($p) => $p['pessoa'] !== '')); $cls = !$ps ? 'vazio' : ($ok < count($ps) ? 'falta' : 'cheio'); ?>
+            <a class="<?= $cls ?><?= $d === date('Y-m-d') ? ' hoje' : '' ?>" href="#dia-<?= $d ?>"><b><?= e(mb_substr(escala_dia_nome($d, true), 0, 3)) ?><?= !empty($e['dias'][$d]['especial']) ? '⭐' : '' ?></b><span><?= date('d', strtotime($d)) ?></span><small><?= $ps ? $ok . '/' . count($ps) : '—' ?></small></a>
+          <?php endforeach; ?>
+        </nav>
+      <?php endif; ?>
       <h1 class="so-impressao">Escala · semana de <?= date('d/m', strtotime($segunda)) ?> a <?= date('d/m', strtotime($segunda . ' +6 days')) ?></h1>
       <div class="botoes-semana sem-impressao">
         <?php if ($vazia && $temAnterior): ?>
           <form method="post" action="./?acao=escala-copiar-semana"><?= $csrf ?><input type="hidden" name="semana" value="<?= $anterior ?>"><button class="btn primario largo">📋 Copiar a escala da semana passada</button></form>
         <?php endif; ?>
         <?php if (!$vazia): ?>
-          <form method="post" action="./?acao=escala-copiar-semana" onsubmit="return confirm('Copiar esta escala para a próxima semana? Dias que já têm escala lá não mudam.');"><?= $csrf ?><input type="hidden" name="semana" value="<?= $segunda ?>"><button class="btn secundario">📋 Copiar esta semana para a próxima</button></form>
-          <button type="button" class="btn secundario" onclick="window.print()">🖨 Imprimir a semana</button>
+          <form method="post" action="./?acao=escala-copiar-semana" onsubmit="return confirm('Copiar esta escala para a próxima semana? Dias que já têm escala lá não mudam.');"><?= $csrf ?><input type="hidden" name="semana" value="<?= $segunda ?>"><button class="btn-acao">📋 Copiar p/ próxima semana</button></form>
+          <button type="button" class="btn-acao" onclick="window.print()">🖨 Imprimir</button>
         <?php endif; ?>
       </div>
       <datalist id="lista-funcoes"><?php foreach ($e['funcoes'] as $f): ?><option value="<?= e($f['nome']) ?>"><?php endforeach; ?></datalist>

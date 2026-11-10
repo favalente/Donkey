@@ -102,7 +102,26 @@ function dh_escala(): array
         }
         $e['config']['bar_sup_fds'] = true;
     }
+    // Saída 00:30 é só sexta e sábado: a importação de 10 a 15/11 trouxe 00:30 em todos os dias (uma vez só)
+    if (empty($e['config']['saida_0030_fds'])) {
+        foreach ($e['dias'] as $dia => $d) {
+            $padrao = DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? null;
+            if (!$padrao || $padrao === '00:30' || !empty($d['especial'])) {
+                continue;
+            }
+            foreach ($d['posicoes'] ?? [] as $k => $pos) {
+                if (($pos['saida'] ?? '') === '00:30') {
+                    $e['dias'][$dia]['posicoes'][$k]['saida'] = $padrao;
+                }
+            }
+        }
+        $e['config']['saida_0030_fds'] = true;
+        $salvar = is_file(DH_ARQ_ESCALA);
+    }
     $e['config']['diarias_2026_11'] = true;
+    if (!empty($salvar)) {
+        dh_escala_salvar($e);
+    }
     return $e;
 }
 
