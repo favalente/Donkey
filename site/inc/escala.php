@@ -9,7 +9,7 @@
 const DH_ARQ_ESCALA = DH_RAIZ . '/dados/escala.json';
 const DH_DIAS_SEMANA_ESCALA = [1 => 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 // Dias de funcionamento e a saída de costume (Ter a Qui até 23h, Sex e Sáb até 0h, Dom até 22h; a equipe sai 30 min depois)
-const DH_ESCALA_DIAS_ABERTOS = [2 => '23:30', 3 => '23:30', 4 => '23:30', 5 => '00:30', 6 => '00:30', 7 => '22:30'];
+const DH_ESCALA_DIAS_ABERTOS = [2 => '23:00', 3 => '23:00', 4 => '23:00', 5 => '00:00', 6 => '00:00', 7 => '22:00'];
 const DH_ESCALA_ENTRADA_FIXO = '16:00';
 const DH_ESCALA_ENTRADA_FREELA = '17:00';
 // Funções e diárias de nov/2026: [Ter a Qui, Sex e Sáb, Domingo]. Atendentes (Rooftop, Pisos, Calçada) 90/120/80,
@@ -116,6 +116,21 @@ function dh_escala(): array
             }
         }
         $e['config']['saida_0030_fds'] = true;
+        $salvar = is_file(DH_ARQ_ESCALA);
+    }
+    // Horário único da casa (uma vez só): todos entram 17:00 e saem Ter a Qui 23:00, Sex e Sáb 00:00, Dom 22:00
+    // (véspera de feriado / evento sai como sexta e sábado)
+    if (empty($e['config']['horarios_2026_11'])) {
+        foreach ($e['dias'] as $dia => $d) {
+            $saida = !empty($d['especial']) ? '00:00' : (DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? null);
+            foreach ($d['posicoes'] ?? [] as $k => $pos) {
+                $e['dias'][$dia]['posicoes'][$k]['entrada'] = DH_ESCALA_ENTRADA_FREELA;
+                if ($saida) {
+                    $e['dias'][$dia]['posicoes'][$k]['saida'] = $saida;
+                }
+            }
+        }
+        $e['config']['horarios_2026_11'] = true;
         $salvar = is_file(DH_ARQ_ESCALA);
     }
     $e['config']['diarias_2026_11'] = true;

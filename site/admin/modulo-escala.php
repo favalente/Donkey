@@ -38,7 +38,7 @@ function escala_ler_posicoes(array &$e, array $linhas, string $dia): array
         if ($funcao === '') {
             throw new RuntimeException('Escolha a função de ' . $nome . ' em ' . escala_dia_nome($dia) . '.');
         }
-        $saidaPadrao = DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:30';
+        $saidaPadrao = DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:00';
         $pos[] = ['funcao' => dh_escala_funcao_por_nome($e, $funcao), 'pessoa' => $nome !== '' ? dh_escala_pessoa_por_nome($e, $nome) : '',
             'entrada' => dh_escala_hora((string) ($l['entrada'] ?? '')) ?: DH_ESCALA_ENTRADA_FREELA, 'saida' => dh_escala_hora((string) ($l['saida'] ?? '')) ?: $saidaPadrao,
             'falta' => !empty($l['falta']), 'ajuste' => brassagem_num(str_replace(['−', '+'], ['-', ''], (string) ($l['ajuste'] ?? ''))),
@@ -375,7 +375,7 @@ function escala_tela_semana(): void
                       <td><input name="linhas[<?= $k ?>][nome]" list="lista-pessoas" value="<?= e($pe['nome'] ?? '') ?>" placeholder="vaga" aria-label="Nome" autocomplete="off"></td>
                       <td><input name="linhas[<?= $k ?>][funcao]" list="lista-funcoes" value="<?= e($fu['nome'] ?? '') ?>" placeholder="Função" aria-label="Função" autocomplete="off"></td>
                       <td><input name="linhas[<?= $k ?>][entrada]" value="<?= e($p['entrada']) ?>" inputmode="numeric" placeholder="<?= DH_ESCALA_ENTRADA_FREELA ?>" aria-label="Entrada"></td>
-                      <td><input name="linhas[<?= $k ?>][saida]" value="<?= e($p['saida']) ?>" inputmode="numeric" placeholder="<?= e(DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:30') ?>" aria-label="Saída"></td>
+                      <td><input name="linhas[<?= $k ?>][saida]" value="<?= e($p['saida']) ?>" inputmode="numeric" placeholder="<?= e(DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:00') ?>" aria-label="Saída"></td>
                       <td class="sem-impressao acoes-linha">
                         <button type="button" class="tirar-linha" aria-label="Tirar esta linha" title="Tirar esta linha">×</button>
                         <details class="ajuste-linha"><summary title="Chegada, falta, ajuste de valor ou pago no caixa"><?php [$atrMin, $atrDesc, $atrCasa] = dh_escala_atraso($e, $p); ?><?= $atrCasa ? '🏠' : (!empty($p['falta']) ? 'falta' : (($p['ajuste'] ?? '') !== '' ? ((float) $p['ajuste'] > 0 ? '+' : '−') . dh_num(abs((float) $p['ajuste'])) : (($p['pago_caixa'] ?? '') === '' && $atrDesc == 0 ? '⋯' : ''))) ?><?= $atrDesc > 0 ? ' ⏰−' . dh_num($atrDesc) : '' ?><?= ($p['pago_caixa'] ?? '') !== '' ? ' 💵' : '' ?></summary>
