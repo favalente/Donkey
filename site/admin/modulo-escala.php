@@ -200,7 +200,8 @@ function escala_acao(string $acao): bool
                 throw new RuntimeException('Escreva o nome.');
             }
             $dados = ['nome' => mb_substr($nome, 0, 60), 'tipo' => ($_POST['tipo'] ?? '') === 'fixo' ? 'fixo' : 'freelancer', 'telefone' => mb_substr(trim((string) ($_POST['telefone'] ?? '')), 0, 30),
-                'pix' => mb_substr(trim((string) ($_POST['pix'] ?? '')), 0, 120), 'diaria' => brassagem_num($_POST['diaria'] ?? ''), 'ativo' => empty($_POST['inativo'])];
+                'pix' => mb_substr(trim((string) ($_POST['pix'] ?? '')), 0, 120), 'diaria' => brassagem_num($_POST['diaria'] ?? ''),
+                'adicional_semana' => brassagem_num($_POST['adicional_semana'] ?? ''), 'adicional_fds' => brassagem_num($_POST['adicional_fds'] ?? ''), 'ativo' => empty($_POST['inativo'])];
             $id = (string) ($_POST['id'] ?? '');
             $i = null;
             foreach ($e['pessoas'] as $k => $p) {
@@ -538,7 +539,16 @@ function escala_tela_equipe(): void
               <label>Celular <input name="telefone" inputmode="tel" value="<?= e($p['telefone']) ?>" placeholder="(85) 99999-9999"></label>
               <label>Chave Pix <input name="pix" value="<?= e($p['pix']) ?>"></label>
             </div>
-            <label>Diária própria (R$) <small>(em branco = a diária da função)</small><input name="diaria" inputmode="decimal" value="<?= e($p['diaria'] !== '' ? dh_num($p['diaria']) : '') ?>"></label>
+            <fieldset class="adicional-pessoa">
+              <legend>Ganha a mais que a função? <small>(em branco = só a diária da função)</small></legend>
+              <div class="duas">
+                <label>+ R$ na semana <small>(Ter a Qui e Dom)</small><input name="adicional_semana" inputmode="decimal" placeholder="0" value="<?= e(($p['adicional_semana'] ?? '') !== '' ? dh_num($p['adicional_semana']) : '') ?>"></label>
+                <label>+ R$ no fim de semana <small>(Sex, Sáb e ⭐)</small><input name="adicional_fds" inputmode="decimal" placeholder="0" value="<?= e(($p['adicional_fds'] ?? '') !== '' ? dh_num($p['adicional_fds']) : '') ?>"></label>
+              </div>
+            </fieldset>
+            <?php if ($p['diaria'] !== ''): ?>
+              <label>Diária própria fixa (R$) <small>(vale em qualquer dia, no lugar da função; apague para usar a função + o adicional)</small><input name="diaria" inputmode="decimal" value="<?= e(dh_num($p['diaria'])) ?>"></label>
+            <?php endif; ?>
             <?php if ($p['id']): ?><label class="check"><input type="checkbox" name="inativo" value="1" <?= $p['ativo'] ? '' : 'checked' ?>> Não trabalha mais (sai da lista de nomes)</label><?php endif; ?>
             <button class="btn primario"><?= $p['id'] ? 'Salvar' : 'Adicionar' ?></button>
           </form>
@@ -552,7 +562,7 @@ function escala_tela_equipe(): void
         <?php foreach ($pessoas as $p): ?>
           <li>
             <details>
-              <summary><strong><?= e($p['nome']) ?></strong> <span><?= $p['tipo'] === 'fixo' ? 'Fixo' : 'Freelancer' ?><?= $p['diaria'] !== '' ? ' · diária ' . e(dh_moeda($p['diaria'])) : '' ?><?= $p['pix'] === '' && $p['tipo'] === 'freelancer' ? ' · sem Pix' : '' ?></span><?= $p['ativo'] ? '' : ' <em class="tag cinza">Não trabalha mais</em>' ?><?= $p['tipo'] === 'fixo' ? ' <em class="tag ct-enviado">Fixo</em>' : '' ?></summary>
+              <summary><strong><?= e($p['nome']) ?></strong> <span><?= $p['tipo'] === 'fixo' ? 'Fixo' : 'Freelancer' ?><?= $p['diaria'] !== '' ? ' · diária ' . e(dh_moeda($p['diaria'])) : '' ?><?= (float) ($p['adicional_semana'] ?? 0) || (float) ($p['adicional_fds'] ?? 0) ? ' · + ' . e(dh_moeda((float) ($p['adicional_semana'] ?? 0))) . ' semana / + ' . e(dh_moeda((float) ($p['adicional_fds'] ?? 0))) . ' fds' : '' ?><?= $p['pix'] === '' && $p['tipo'] === 'freelancer' ? ' · sem Pix' : '' ?></span><?= $p['ativo'] ? '' : ' <em class="tag cinza">Não trabalha mais</em>' ?><?= $p['tipo'] === 'fixo' ? ' <em class="tag ct-enviado">Fixo</em>' : '' ?></summary>
               <?php $form($p); ?>
             </details>
           </li>

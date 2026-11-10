@@ -692,3 +692,7 @@ h3 small { font-weight: 400; color: var(--muted); }
 @media (max-width: 560px) { .tres-campos { grid-template-columns: 1fr; } }
 .importar-escala { margin: 16px 0; }
 .dia-especial { margin: 8px 12px 4px; font-size: .9rem; } .dia-especial small { display: block; margin-left: 28px; }
+
+.adicional-pessoa { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px 4px; margin: 0 0 12px; }
+.adicional-pessoa legend { font-weight: 600; padding: 0 4px; }
+.adicional-pessoa legend small { font-weight: 400; color: var(--muted); }

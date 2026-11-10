@@ -244,7 +244,11 @@ function dh_escala_diaria(array $e, array $pos, string $dia): float
     if (!empty($f['de'])) {
         $f = dh_escala_funcao($e, $f['de']) ?? [];
     }
-    return (float) ($f[dh_escala_coluna_diaria($dia, !empty($e['dias'][$dia]['especial']))] ?? 0);
+    $coluna = dh_escala_coluna_diaria($dia, !empty($e['dias'][$dia]['especial']));
+    // Adicional da pessoa sobre a diária da função (ex.: + R$ 20 na semana e + R$ 10 na sexta, sábado e ⭐)
+    $adicional = $p ? (float) ($p[$coluna === 'diaria_fds' ? 'adicional_fds' : 'adicional_semana'] ?? 0) : 0;
+    $base = (float) ($f[$coluna] ?? 0);
+    return $base > 0 ? $base + $adicional : 0;
 }
 
 // "ATENDENTE · ROOFTOP" para ambiente, ou o nome da função
