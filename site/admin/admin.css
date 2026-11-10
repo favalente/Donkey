@@ -721,4 +721,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .push-ok { display: flex; gap: 8px; flex-wrap: wrap; }
 .push-ok form { margin: 0; }
 .emails-copia { margin-top: -6px; word-break: break-word; }
-.push-ok[hidden], .push-caixa[hidden] { display: none; }
+.push-caixa[hidden], .push-caixa [hidden] { display: none !important; }

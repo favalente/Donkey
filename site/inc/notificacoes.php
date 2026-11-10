@@ -10,7 +10,7 @@ const DH_NOTIFICACOES_MAX = 300;
 function dh_notificacoes(): array
 {
     $n = json_decode((string) @file_get_contents(DH_ARQ_NOTIFICACOES), true);
-    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => []];
+    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => []];
 }
 
 function dh_notificacoes_salvar(array $n): void
@@ -82,6 +82,7 @@ function dh_notificacoes_do_usuario(string $login, callable $pode, ?array $n = n
             continue;
         }
         $it['lida'] = $it['em'] <= $ate || isset($lidos[$it['id']]);
+        $it['vista'] = $it['lida'] || $it['em'] <= ($n['vistas_ate'][$login] ?? '');
         $r[] = $it;
     }
     return $r;
@@ -262,4 +263,20 @@ function dh_notificacao_destinatarios(string $perm, string $login): array
         }
     }
     return $r;
+}
+
+// Abriu a lista do sino: o número do sino zera (as não lidas continuam destacadas na lista)
+function dh_notificacoes_vistas(string $login): void
+{
+    $fp = @fopen(DH_ARQ_NOTIFICACOES . '.lock', 'c');
+    if ($fp) {
+        flock($fp, LOCK_EX);
+    }
+    $n = dh_notificacoes();
+    $n['vistas_ate'][$login] = date('Y-m-d H:i:s');
+    dh_notificacoes_salvar($n);
+    if ($fp) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
 }

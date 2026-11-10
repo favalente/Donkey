@@ -10,7 +10,7 @@ function notificacoes_minhas(): array
 
 function notificacoes_nao_lidas(): int
 {
-    $n = count(array_filter(notificacoes_minhas(), fn($x) => !$x['lida']));
+    $n = count(array_filter(notificacoes_minhas(), fn($x) => !$x['vista']));
     return $n + (pode('brassagem') ? count(brassagem_alertas_novos()) : 0);
 }
 
@@ -19,6 +19,9 @@ function notificacoes_acao(string $acao): bool
     global $usuario;
     switch ($acao) {
         case 'notificacoes':
+            if (array_filter(notificacoes_minhas(), fn($x) => !$x['vista'])) {
+                dh_notificacoes_vistas($usuario['login']);
+            }
             return true;
 
         case 'notificacao-abrir':
