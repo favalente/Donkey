@@ -656,3 +656,12 @@ h3 small { font-weight: 400; color: var(--muted); }
 .aba-check small { font-weight: 400; }
 .aba-check:has(input:checked) { border-color: var(--amber); background: var(--caixa); }
 .abas-usuario { margin: 10px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--caixa); border: 1px solid var(--line); } .abas-usuario p { margin: 0 0 8px; font-size: .92rem; }
+.tabela-diarias { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+.tabela-diarias th { font-size: .75rem; text-transform: uppercase; color: var(--muted); text-align: left; padding: 4px; }
+.tabela-diarias td { padding: 3px; }
+.tabela-diarias td:first-child { width: 37%; }
+.tabela-diarias td:first-child input { font-weight: 700; text-transform: uppercase; }
+.tabela-diarias input { margin: 0 !important; padding: 8px 6px !important; }
+.tres-campos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 560px) { .tres-campos { grid-template-columns: 1fr; } }
+.importar-escala { margin: 16px 0; }

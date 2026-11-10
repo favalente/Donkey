@@ -42,7 +42,7 @@ function escala_ler_posicoes(array &$e, array $linhas, string $dia): array
         $pos[] = ['funcao' => dh_escala_funcao_por_nome($e, $funcao), 'pessoa' => $nome !== '' ? dh_escala_pessoa_por_nome($e, $nome) : '',
             'entrada' => dh_escala_hora((string) ($l['entrada'] ?? '')) ?: DH_ESCALA_ENTRADA_FREELA, 'saida' => dh_escala_hora((string) ($l['saida'] ?? '')) ?: $saidaPadrao,
             'falta' => !empty($l['falta']), 'ajuste' => brassagem_num(str_replace(['−', '+'], ['-', ''], (string) ($l['ajuste'] ?? ''))),
-            'motivo' => mb_substr(trim((string) ($l['motivo'] ?? '')), 0, 80), 'pago_caixa' => brassagem_num($l['pago_caixa'] ?? '')];
+            'motivo' => mb_substr(trim((string) ($l['motivo'] ?? '')), 0, 80), 'pago_caixa' => brassagem_num($l['pago_caixa'] ?? ''), 'chegada' => dh_escala_hora((string) ($l['chegada'] ?? ''))];
     }
     return $pos;
 }
@@ -116,7 +116,7 @@ function escala_acao(string $acao): bool
             }
             $saida = DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? null;
             $mudaSaida = (DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($de))] ?? null) !== $saida;
-            $e['dias'][$dia] = ['posicoes' => array_map(fn($p) => array_merge($p, ['falta' => false, 'ajuste' => '', 'motivo' => '', 'pago_caixa' => ''], $mudaSaida && $saida ? ['saida' => $saida] : []), $e['dias'][$de]['posicoes']),
+            $e['dias'][$dia] = ['posicoes' => array_map(fn($p) => array_merge($p, ['falta' => false, 'ajuste' => '', 'motivo' => '', 'pago_caixa' => '', 'chegada' => ''], $mudaSaida && $saida ? ['saida' => $saida] : []), $e['dias'][$de]['posicoes']),
                 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s')];
             dh_escala_salvar($e);
             ir('./?acao=escala&semana=' . dh_semana_inicio($dia) . '#dia-' . $dia, escala_dia_nome($dia) . ': copiada de ' . escala_dia_nome($de) . '. Ajuste quem mudou e salve.');
@@ -133,7 +133,7 @@ function escala_acao(string $acao): bool
             foreach (dh_semana_dias($de) as $k => $dia) {
                 $alvo = dh_semana_dias($para)[$k];
                 if (!empty($e['dias'][$dia]['posicoes']) && empty($e['dias'][$alvo]['posicoes'])) {
-                    $e['dias'][$alvo] = ['posicoes' => array_map(fn($p) => array_merge($p, ['falta' => false, 'ajuste' => '', 'motivo' => '', 'pago_caixa' => '']), $e['dias'][$dia]['posicoes']),
+                    $e['dias'][$alvo] = ['posicoes' => array_map(fn($p) => array_merge($p, ['falta' => false, 'ajuste' => '', 'motivo' => '', 'pago_caixa' => '', 'chegada' => '']), $e['dias'][$dia]['posicoes']),
                         'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s')];
                     $n++;
                 }
@@ -143,6 +143,50 @@ function escala_acao(string $acao): bool
             }
             dh_escala_salvar($e);
             ir('./?acao=escala&semana=' . $para, $n . ' dia(s) copiado(s) para a semana de ' . date('d/m', strtotime($para)) . '. Ajuste quem mudou.');
+
+        case 'escala-importar':
+            // Semana inteira de um arquivo .json: {"fixos": [nomes], "dias": {"AAAA-MM-DD": [[nome, função, entrada, saída], ...]}}
+            exigir_post();
+            exigir('escala');
+            $telaErro = 'escala';
+            $arq = $_FILES['arquivo'] ?? null;
+            if (!$arq || ($arq['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($arq['tmp_name']) || $arq['size'] > 2 * 1024 * 1024) {
+                throw new RuntimeException('Escolha o arquivo .json da escala.');
+            }
+            $dados = json_decode((string) file_get_contents($arq['tmp_name']), true);
+            if (!is_array($dados['dias'] ?? null) || !$dados['dias']) {
+                throw new RuntimeException('Arquivo inválido: não encontrei os dias da escala.');
+            }
+            $e = dh_escala();
+            $substituir = !empty($_POST['substituir']);
+            $feitos = $pulados = [];
+            foreach ($dados['dias'] as $dia => $linhas) {
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $dia) || !is_array($linhas)) {
+                    continue;
+                }
+                if (!empty($e['dias'][$dia]['posicoes']) && !$substituir) {
+                    $pulados[] = escala_dia_nome($dia, true);
+                    continue;
+                }
+                $pos = escala_ler_posicoes($e, array_map(fn($l) => ['nome' => $l[0] ?? '', 'funcao' => $l[1] ?? '', 'entrada' => $l[2] ?? '', 'saida' => $l[3] ?? ''], $linhas), $dia);
+                $e['dias'][$dia] = ['posicoes' => $pos, 'por' => $usuario['nome'] . ' (importado)', 'em' => date('Y-m-d H:i:s')];
+                $feitos[] = escala_dia_nome($dia, true);
+            }
+            // Fixos (os nomes em azul da planilha)
+            foreach ((array) ($dados['fixos'] ?? []) as $nome) {
+                $id = dh_escala_pessoa_por_nome($e, (string) $nome);
+                foreach ($e['pessoas'] as $k => $pp) {
+                    if ($pp['id'] === $id) {
+                        $e['pessoas'][$k]['tipo'] = 'fixo';
+                    }
+                }
+            }
+            if (!$feitos) {
+                throw new RuntimeException('Nenhum dia importado: ' . implode(', ', $pulados) . ' já têm escala. Marque "substituir" para trocar.');
+            }
+            dh_escala_salvar($e);
+            $primeiro = array_key_first($dados['dias']);
+            ir('./?acao=escala&semana=' . dh_semana_inicio($primeiro), 'Escala importada: ' . implode(', ', $feitos) . '.' . ($pulados ? ' Já tinham escala (ficaram como estavam): ' . implode(', ', $pulados) . '.' : ''));
 
         case 'escala-pessoa-salvar':
             exigir_post();
@@ -183,7 +227,8 @@ function escala_acao(string $acao): bool
                 if ($nome === '') {
                     continue;
                 }
-                $novas[] = ['id' => preg_match('/^[a-z0-9]+$/', (string) ($f['id'] ?? '')) && $f['id'] !== '' ? $f['id'] : dh_id_novo('f'), 'nome' => mb_substr($nome, 0, 30), 'diaria' => brassagem_num($f['diaria'] ?? '')];
+                $novas[] = ['id' => preg_match('/^[a-z0-9]+$/', (string) ($f['id'] ?? '')) && $f['id'] !== '' ? $f['id'] : dh_id_novo('f'), 'nome' => mb_substr($nome, 0, 30),
+                    'diaria_semana' => brassagem_num($f['diaria_semana'] ?? ''), 'diaria_fds' => brassagem_num($f['diaria_fds'] ?? ''), 'diaria_dom' => brassagem_num($f['diaria_dom'] ?? '')];
             }
             // Função que está em alguma escala não some (só muda de nome ou diária)
             $usadas = [];
@@ -198,6 +243,8 @@ function escala_acao(string $acao): bool
                 }
             }
             $e['funcoes'] = $novas;
+            $e['config']['atraso'] = ['faixa' => max(1, min(120, (int) ($_POST['atraso_faixa'] ?? 15))), 'desconto' => brassagem_num($_POST['atraso_desconto'] ?? '') ?: '0',
+                'limite' => max(0, min(600, (int) ($_POST['atraso_limite'] ?? 30)))];
             dh_escala_salvar($e);
             ir('./?acao=escala-funcoes', 'Funções e diárias salvas.');
 
@@ -297,7 +344,8 @@ function escala_tela_semana(): void
                       <td><input name="linhas[<?= $k ?>][saida]" value="<?= e($p['saida']) ?>" inputmode="numeric" placeholder="<?= e(DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:30') ?>" aria-label="Saída"></td>
                       <td class="sem-impressao acoes-linha">
                         <button type="button" class="tirar-linha" aria-label="Tirar esta linha" title="Tirar esta linha">×</button>
-                        <details class="ajuste-linha"><summary title="Falta, ajuste de valor ou pago no caixa"><?= !empty($p['falta']) ? 'falta' : (($p['ajuste'] ?? '') !== '' ? ((float) $p['ajuste'] > 0 ? '+' : '−') . dh_num(abs((float) $p['ajuste'])) : (($p['pago_caixa'] ?? '') === '' ? '⋯' : '')) ?><?= ($p['pago_caixa'] ?? '') !== '' ? ' 💵' : '' ?></summary>
+                        <details class="ajuste-linha"><summary title="Chegada, falta, ajuste de valor ou pago no caixa"><?php [$atrMin, $atrDesc, $atrCasa] = dh_escala_atraso($e, $p); ?><?= $atrCasa ? '🏠' : (!empty($p['falta']) ? 'falta' : (($p['ajuste'] ?? '') !== '' ? ((float) $p['ajuste'] > 0 ? '+' : '−') . dh_num(abs((float) $p['ajuste'])) : (($p['pago_caixa'] ?? '') === '' && $atrDesc == 0 ? '⋯' : ''))) ?><?= $atrDesc > 0 ? ' ⏰−' . dh_num($atrDesc) : '' ?><?= ($p['pago_caixa'] ?? '') !== '' ? ' 💵' : '' ?></summary>
+                          <label>Chegou às <small>(desconto por atraso automático)</small><input name="linhas[<?= $k ?>][chegada]" value="<?= e($p['chegada'] ?? '') ?>" inputmode="numeric" placeholder="ex.: 17:10"></label>
                           <label class="check"><input type="checkbox" name="linhas[<?= $k ?>][falta]" value="1" <?= !empty($p['falta']) ? 'checked' : '' ?>> Faltou</label>
                           <label>Ajuste (R$) <small>(+ hora extra / − desconto)</small><input name="linhas[<?= $k ?>][ajuste]" value="<?= e(($p['ajuste'] ?? '') !== '' ? dh_num($p['ajuste']) : '') ?>" inputmode="decimal" placeholder="ex.: 20 ou -15"></label>
                           <label>Motivo <input name="linhas[<?= $k ?>][motivo]" value="<?= e($p['motivo'] ?? '') ?>" maxlength="80"></label>
@@ -329,7 +377,16 @@ function escala_tela_semana(): void
           </section>
         <?php endforeach; ?>
       </div>
-      <p class="dica sem-impressao">Digite o nome como na planilha: quem ainda não está na <a href="./?acao=escala-equipe">Equipe</a> entra como freelancer. Linha sem nome é vaga em aberto (fica amarela). Fixos ficam em azul e não entram no pagamento. Em "⋯" marca-se falta, ajuste de valor ou o que foi pago no dia pelo caixa (sangria).</p>
+      <details class="colar-excel sem-impressao importar-escala">
+        <summary>📥 Importar escala de um arquivo</summary>
+        <form method="post" action="./?acao=escala-importar" enctype="multipart/form-data">
+          <?= $csrf ?>
+          <label>Arquivo .json da escala <input type="file" name="arquivo" accept=".json,application/json" required></label>
+          <label class="check"><input type="checkbox" name="substituir" value="1"> Substituir os dias que já têm escala</label>
+          <button class="btn secundario">Importar</button>
+        </form>
+      </details>
+      <p class="dica sem-impressao">Digite o nome como na planilha: quem ainda não está na <a href="./?acao=escala-equipe">Equipe</a> entra como freelancer. Linha sem nome é vaga em aberto (fica amarela). Fixos ficam em azul e não entram no pagamento. Em "⋯" anota-se a hora em que chegou (o desconto por atraso sai sozinho; 🏠 = voltou para casa), falta, ajuste de valor ou o que foi pago no dia pelo caixa (sangria).</p>
       <script>
         // + Linha copia a última linha do dia (vazia) e × tira a linha
         document.querySelectorAll('.form-dia').forEach(function (form) {
@@ -412,21 +469,38 @@ function escala_tela_funcoes(): void
 {
     global $csrf;
     $e = dh_escala();
-    $linhas = array_merge($e['funcoes'], array_fill(0, 2, ['id' => '', 'nome' => '', 'diaria' => '']));
+    $linhas = array_merge($e['funcoes'], array_fill(0, 2, ['id' => '', 'nome' => '', 'diaria_semana' => '', 'diaria_fds' => '', 'diaria_dom' => '']));
+    $a = $e['config']['atraso'];
+    // Valor redondo sem centavos (cabe na coluna do celular): 120 em vez de 120,00
+    $v = fn($x) => e(($x ?? '') === '' ? '' : (floor((float) $x) == (float) $x ? (string) (int) $x : dh_num($x)));
     ?>
       <p><a class="voltar" href="./?acao=escala">‹ Voltar para a Escala</a></p>
       <h1>Funções e diárias</h1>
-      <p class="dica">A diária que o freelancer recebe por dia em cada função. Para alguém com valor diferente, use a diária própria na Equipe. Função nova digitada na escala entra aqui sozinha.</p>
+      <p class="dica">A diária que o freelancer recebe por dia em cada função, conforme o dia da semana. Para alguém com valor diferente, use a diária própria na Equipe. Função nova digitada na escala entra aqui sozinha.</p>
       <form method="post" action="./?acao=escala-funcoes-salvar" class="form-cerveja">
         <?= $csrf ?>
-        <?php foreach ($linhas as $k => $f): ?>
-          <div class="duas linha-funcao">
-            <label>Função <input name="funcoes[<?= $k ?>][nome]" value="<?= e($f['nome']) ?>" placeholder="Nova função"></label>
-            <label>Diária (R$) <input name="funcoes[<?= $k ?>][diaria]" inputmode="decimal" value="<?= e($f['diaria'] !== '' ? dh_num($f['diaria']) : '') ?>" placeholder="0,00"></label>
-            <input type="hidden" name="funcoes[<?= $k ?>][id]" value="<?= e($f['id']) ?>">
-          </div>
-        <?php endforeach; ?>
-        <div class="barra-salvar"><button class="btn primario">Salvar funções e diárias</button></div>
+        <table class="tabela-diarias">
+          <thead><tr><th>Função</th><th>Ter a Qui</th><th>Sex e Sáb</th><th>Domingo</th></tr></thead>
+          <tbody>
+            <?php foreach ($linhas as $k => $f): ?>
+              <tr>
+                <td><input name="funcoes[<?= $k ?>][nome]" value="<?= e($f['nome']) ?>" placeholder="Nova função" aria-label="Função"><input type="hidden" name="funcoes[<?= $k ?>][id]" value="<?= e($f['id']) ?>"></td>
+                <?php foreach (['diaria_semana' => 'Ter a Qui', 'diaria_fds' => 'Sex e Sáb', 'diaria_dom' => 'Domingo'] as $col => $rot): ?>
+                  <td><input name="funcoes[<?= $k ?>][<?= $col ?>]" inputmode="decimal" value="<?= $v($f[$col] ?? '') ?>" placeholder="0,00" aria-label="<?= e(($f['nome'] ?: 'Nova função') . ' · ' . $rot) ?>"></td>
+                <?php endforeach; ?>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+        <h2>Desconto por atraso</h2>
+        <p class="dica">Conta a partir da entrada marcada na escala, pelo "Chegou às" anotado no ⋯ da linha.</p>
+        <div class="tres-campos">
+          <label>A cada (minutos) <input name="atraso_faixa" inputmode="numeric" value="<?= (int) $a['faixa'] ?>"></label>
+          <label>Desconta (R$) <input name="atraso_desconto" inputmode="decimal" value="<?= $v($a['desconto']) ?>"></label>
+          <label>Passou de (minutos), volta para casa <input name="atraso_limite" inputmode="numeric" value="<?= (int) $a['limite'] ?>"></label>
+        </div>
+        <p class="dica">Hoje: chegou até <?= (int) $a['faixa'] ?> min depois, −<?= e(dh_moeda((float) $a['desconto'])) ?>; até <?= 2 * (int) $a['faixa'] ?> min, −<?= e(dh_moeda(2 * (float) $a['desconto'])) ?>; passou de <?= (int) $a['limite'] ?> min, volta para casa sem diária.</p>
+        <div class="barra-salvar"><button class="btn primario">Salvar funções, diárias e atraso</button></div>
       </form>
     <?php
 }
@@ -439,7 +513,7 @@ function escala_tela_freelancers(): void
     $linhas = dh_escala_a_receber($e, $segunda);
     $pagos = $e['pagamentos'][$segunda] ?? [];
     $total = array_sum(array_column($linhas, 'total'));
-    $semDiaria = array_filter($e['funcoes'], fn($f) => $f['diaria'] === '');
+    $semDiaria = array_filter($e['funcoes'], fn($f) => ($f['diaria_semana'] ?? '') === '' && ($f['diaria_fds'] ?? '') === '' && ($f['diaria_dom'] ?? '') === '');
     $paga = date('d/m', strtotime($segunda . ' +7 days'));
     financeiro_abas('freelancers');
     ?>
@@ -461,7 +535,7 @@ function escala_tela_freelancers(): void
               <table class="tabela-receita">
                 <?php foreach ($l['itens'] as $it): ?>
                   <tr><td><?= e(escala_dia_nome($it['dia'], true)) ?> · <?= e($it['funcao']) ?> <small><?= e($it['entrada']) ?>–<?= e($it['saida']) ?></small><?= $it['motivo'] !== '' ? '<br><small>' . e($it['motivo']) . '</small>' : '' ?></td>
-                    <td><?= $it['falta'] ? '<b style="color:var(--erro)">falta</b>' : e(dh_moeda($it['diaria'])) ?></td><td><?= $it['ajuste'] != 0 ? ($it['ajuste'] > 0 ? '+' : '−') . e(dh_moeda(abs($it['ajuste']))) : '' ?><?= $it['pago_caixa'] > 0 ? '<br><small>pago no caixa −' . e(dh_moeda($it['pago_caixa'])) . '</small>' : '' ?></td></tr>
+                    <td><?= $it['dispensado'] ? '<b style="color:var(--erro)">chegou ' . e($it['chegada']) . ', voltou para casa</b>' : ($it['falta'] ? '<b style="color:var(--erro)">falta</b>' : e(dh_moeda($it['diaria'])) . ($it['desconto_atraso'] > 0 ? '<br><small>chegou ' . e($it['chegada']) . ' · −' . e(dh_moeda($it['desconto_atraso'])) . '</small>' : '')) ?></td><td><?= $it['ajuste'] != 0 ? ($it['ajuste'] > 0 ? '+' : '−') . e(dh_moeda(abs($it['ajuste']))) : '' ?><?= $it['pago_caixa'] > 0 ? '<br><small>pago no caixa −' . e(dh_moeda($it['pago_caixa'])) . '</small>' : '' ?></td></tr>
                 <?php endforeach; ?>
               </table>
               <?php if ($pg && abs($pg['valor'] - $l['total']) > 0.005): ?><p class="aviso">A escala mudou depois do pagamento: foi pago <?= e(dh_moeda($pg['valor'])) ?>, agora soma <?= e(dh_moeda($l['total'])) ?>.</p><?php endif; ?>

@@ -12,17 +12,38 @@ const DH_DIAS_SEMANA_ESCALA = [1 => 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Se
 const DH_ESCALA_DIAS_ABERTOS = [2 => '23:30', 3 => '23:30', 4 => '23:30', 5 => '00:30', 6 => '00:30', 7 => '22:30'];
 const DH_ESCALA_ENTRADA_FIXO = '16:00';
 const DH_ESCALA_ENTRADA_FREELA = '17:00';
-const DH_ESCALA_FUNCOES_PADRAO = ['CAIXA', 'ROOFTOP', 'BAR SUP.', 'PISO SUP.', 'BARMAN', 'BARBACK', 'PISO INF.', 'CALÇADA', 'APOIO', 'HOSTESS', 'CONCIERGE'];
+// Funções e diárias de nov/2026: [Ter a Qui, Sex e Sáb, Domingo]. Atendentes (Rooftop, Pisos, Calçada) 90/120/80,
+// Apoio e Bar sup. 90/100/80, quem cobre Caixa, Barman ou Barback 120/120/100, Hostess 100 e Concierge 130.
+const DH_ESCALA_FUNCOES_PADRAO = [
+    'CAIXA' => [120, 120, 100], 'ROOFTOP' => [90, 120, 80], 'BAR SUP.' => [90, 100, 80], 'PISO SUP.' => [90, 120, 80], 'BARMAN' => [120, 120, 100],
+    'BARBACK' => [120, 120, 100], 'PISO INF.' => [90, 120, 80], 'CALÇADA' => [90, 120, 80], 'APOIO' => [90, 100, 80], 'HOSTESS' => [100, 100, 100], 'CONCIERGE' => [130, 130, 130],
+];
+// Atraso (a partir da entrada marcada na escala): R$ 10 a menos a cada 15 min; passou de 30 min, volta para casa sem diária
+const DH_ESCALA_ATRASO_PADRAO = ['faixa' => 15, 'desconto' => '10', 'limite' => 30];
 
 function dh_escala(): array
 {
     $e = json_decode((string) @file_get_contents(DH_ARQ_ESCALA), true);
-    $e = (is_array($e) ? $e : []) + ['pessoas' => [], 'funcoes' => [], 'dias' => [], 'pagamentos' => []];
+    $e = (is_array($e) ? $e : []) + ['pessoas' => [], 'funcoes' => [], 'dias' => [], 'pagamentos' => [], 'config' => []];
+    $e['config'] += ['atraso' => DH_ESCALA_ATRASO_PADRAO];
     if (!$e['funcoes']) {
-        foreach (DH_ESCALA_FUNCOES_PADRAO as $n => $f) {
-            $e['funcoes'][] = ['id' => 'f' . ($n + 1), 'nome' => $f, 'diaria' => ''];
+        $n = 0;
+        foreach (DH_ESCALA_FUNCOES_PADRAO as $f => $_) {
+            $e['funcoes'][] = ['id' => 'f' . ++$n, 'nome' => $f];
         }
     }
+    // Diária por dia da semana (Ter a Qui / Sex e Sáb / Domingo). Uma vez só: as funções da casa sem valor
+    // recebem a tabela de nov/2026, e a diária única antiga vale para os três.
+    foreach ($e['funcoes'] as $i => $f) {
+        $tab = empty($e['config']['diarias_2026_11']) ? (DH_ESCALA_FUNCOES_PADRAO[$f['nome']] ?? null) : null;
+        foreach (['diaria_semana' => 0, 'diaria_fds' => 1, 'diaria_dom' => 2] as $k => $n) {
+            if (($f[$k] ?? '') === '') {
+                $e['funcoes'][$i][$k] = ($f['diaria'] ?? '') !== '' ? $f['diaria'] : ($tab ? number_format($tab[$n], 2, '.', '') : '');
+            }
+        }
+        unset($e['funcoes'][$i]['diaria']);
+    }
+    $e['config']['diarias_2026_11'] = true;
     return $e;
 }
 
@@ -111,14 +132,45 @@ function dh_escala_hora(string $h): string
     return '';
 }
 
-// Valor da diária de uma posição: o da pessoa (se tiver) ou o da função
-function dh_escala_diaria(array $e, array $pos): float
+// Coluna da diária pelo dia da semana: Sex e Sáb, Domingo ou Ter a Qui (e segunda)
+function dh_escala_coluna_diaria(string $dia): string
+{
+    $n = (int) date('N', strtotime($dia));
+    return $n === 7 ? 'diaria_dom' : ($n >= 5 ? 'diaria_fds' : 'diaria_semana');
+}
+
+// Valor da diária de uma posição no dia: o da pessoa (se tiver) ou o da função naquele dia da semana
+function dh_escala_diaria(array $e, array $pos, string $dia): float
 {
     $p = dh_escala_pessoa($e, $pos['pessoa'] ?? '');
     if ($p && ($p['diaria'] ?? '') !== '') {
         return (float) $p['diaria'];
     }
-    return (float) (dh_escala_funcao($e, $pos['funcao'] ?? '')['diaria'] ?? 0);
+    $f = dh_escala_funcao($e, $pos['funcao'] ?? '') ?? [];
+    $v = $f[dh_escala_coluna_diaria($dia)] ?? '';
+    return (float) ($v !== '' ? $v : ($f['diaria_semana'] ?? 0));
+}
+
+// Atraso pela chegada anotada: [minutos, desconto em R$, voltou para casa]
+function dh_escala_atraso(array $e, array $pos): array
+{
+    $chegada = $pos['chegada'] ?? '';
+    if ($chegada === '' || ($pos['entrada'] ?? '') === '') {
+        return [0, 0.0, false];
+    }
+    $min = fn($h) => (int) substr($h, 0, 2) * 60 + (int) substr($h, 3, 2);
+    $atraso = $min($chegada) - $min($pos['entrada']);
+    if ($atraso < -360) {
+        $atraso += 1440; // chegou depois da meia-noite
+    }
+    if ($atraso <= 0) {
+        return [0, 0.0, false];
+    }
+    $c = $e['config']['atraso'] ?? DH_ESCALA_ATRASO_PADRAO;
+    if ($atraso > (int) $c['limite']) {
+        return [$atraso, 0.0, true];
+    }
+    return [$atraso, (int) ceil($atraso / max(1, (int) $c['faixa'])) * (float) $c['desconto'], false];
 }
 
 // O que cada freelancer tem a receber numa semana: [pessoa_id => ['pessoa', 'itens' => [...], 'total']]
@@ -131,13 +183,15 @@ function dh_escala_a_receber(array $e, string $segunda): array
             if (!$p || ($p['tipo'] ?? 'freelancer') !== 'freelancer') {
                 continue;
             }
-            $falta = !empty($pos['falta']);
-            $diaria = $falta ? 0.0 : dh_escala_diaria($e, $pos);
+            [$atrasoMin, $descAtraso, $dispensado] = dh_escala_atraso($e, $pos);
+            $falta = !empty($pos['falta']) || $dispensado;
+            $diaria = $falta ? 0.0 : dh_escala_diaria($e, $pos, $dia) - $descAtraso;
             $ajuste = (float) ($pos['ajuste'] ?? 0);
             $caixa = (float) ($pos['pago_caixa'] ?? 0);
             $r[$p['id']] ??= ['pessoa' => $p, 'itens' => [], 'total' => 0.0, 'caixa' => 0.0];
             $r[$p['id']]['itens'][] = ['dia' => $dia, 'funcao' => dh_escala_funcao($e, $pos['funcao'])['nome'] ?? '?', 'entrada' => $pos['entrada'], 'saida' => $pos['saida'],
-                'diaria' => $diaria, 'falta' => $falta, 'ajuste' => $ajuste, 'motivo' => $pos['motivo'] ?? '', 'pago_caixa' => $caixa];
+                'diaria' => $diaria, 'falta' => $falta, 'ajuste' => $ajuste, 'motivo' => $pos['motivo'] ?? '', 'pago_caixa' => $caixa,
+                'chegada' => $pos['chegada'] ?? '', 'atraso' => $atrasoMin, 'desconto_atraso' => $descAtraso, 'dispensado' => $dispensado];
             // "total" é o que falta pagar na segunda: o que já saiu do caixa no dia (sangria) não entra
             $r[$p['id']]['total'] += $diaria + $ajuste - $caixa;
             $r[$p['id']]['caixa'] += $caixa;
@@ -153,7 +207,8 @@ function dh_escala_extrato(array $linha, string $segunda): string
     $t = 'Donkey Head Cervejaria · semana de ' . date('d/m', strtotime($segunda)) . ' a ' . date('d/m', strtotime($segunda . ' +6 days')) . "\n" . $linha['pessoa']['nome'] . "\n\n";
     foreach ($linha['itens'] as $it) {
         $t .= mb_substr(DH_DIAS_SEMANA_ESCALA[(int) date('N', strtotime($it['dia']))], 0, 3) . ' ' . date('d/m', strtotime($it['dia'])) . ' · ' . $it['funcao']
-            . ($it['falta'] ? ' · FALTA' : ' · ' . dh_moeda($it['diaria']))
+            . (!empty($it['dispensado']) ? ' · chegou ' . $it['chegada'] . ', voltou para casa' : ($it['falta'] ? ' · FALTA' : ' · ' . dh_moeda($it['diaria'])
+                . (!empty($it['desconto_atraso']) ? ' (chegou ' . $it['chegada'] . ', −' . dh_moeda($it['desconto_atraso']) . ')' : '')))
             . ($it['ajuste'] != 0 ? ' · ajuste ' . ($it['ajuste'] > 0 ? '+' : '−') . dh_moeda(abs($it['ajuste'])) . ($it['motivo'] !== '' ? ' (' . $it['motivo'] . ')' : '') : '')
             . (($it['pago_caixa'] ?? 0) > 0 ? ' · já recebido no caixa ' . dh_moeda($it['pago_caixa']) : '') . "\n";
     }
