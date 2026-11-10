@@ -831,9 +831,10 @@ function agenda_acao(string $acao): bool
             $hist = dh_ics_historico($todas, $a['bandas']);
             // Na agenda entram só os shows de hoje em diante, completados pelo histórico
             $hoje = date('Y-m-d');
-            $linhas = [];
+            $comAntigos = !empty($_POST['antigos']);
+            $linhas = $antigos = [];
             foreach ($todas as $l) {
-                if ($l['data'] < $hoje) {
+                if ($l['data'] < $hoje && !$comAntigos) {
                     continue;
                 }
                 $h = $hist[dh_chave_banda($l['banda'])];
@@ -851,12 +852,20 @@ function agenda_acao(string $acao): bool
                         $l['completado'][] = $rot;
                     }
                 }
+                if ($l['data'] < $hoje) {
+                    // Show antigo (histórico): já aconteceu, entra como pago (ou cancelado, se o evento dizia)
+                    $l['status'] = $l['status'] === 'cancelado' ? 'cancelado' : 'pago';
+                    $l['incluir'] = 1;
+                    $antigos[] = $l;
+                    continue;
+                }
                 if ($l['status'] === '') {
                     $l['status'] = 'confirmado';
                 }
                 $linhas[] = $l;
             }
             usort($linhas, fn($x, $y) => [$x['data'], $x['hora']] <=> [$y['data'], $y['hora']]);
+            usort($antigos, fn($x, $y) => [$y['data'], $y['hora']] <=> [$x['data'], $x['hora']]);
             // Cadastro das bandas: só o que o histórico acrescenta (banda nova, tributo novo, valor que falta)
             $porChave = [];
             foreach ($a['bandas'] as $b) {
@@ -874,12 +883,13 @@ function agenda_acao(string $acao): bool
                 }
             }
             usort($bandas, fn($x, $y) => strcoll(dh_slug($x['nome']), dh_slug($y['nome'])));
-            if (!$linhas && !$bandas) {
+            if (!$linhas && !$bandas && !$antigos) {
                 throw new RuntimeException('Nada novo nessa agenda: nenhum show de hoje em diante e nenhuma banda para completar (reservas e outros compromissos são ignorados).');
             }
             $_SESSION['importacao'] = $linhas;
             $_SESSION['importacao_bandas'] = $bandas;
-            ir('./?acao=importar&revisar=1', count($linhas) . ' shows de hoje em diante e ' . count($bandas) . ' bandas para cadastrar ou completar. Revise antes de importar.');
+            $_SESSION['importacao_antigos'] = $antigos;
+            ir('./?acao=importar&revisar=1', count($linhas) . ' shows de hoje em diante' . ($comAntigos ? ', ' . count($antigos) . ' shows antigos' : '') . ' e ' . count($bandas) . ' bandas para cadastrar ou completar. Revise antes de importar.');
 
         case 'importar-confirmar':
             exigir_post();
@@ -927,6 +937,9 @@ function agenda_acao(string $acao): bool
             $recebidas = json_decode((string) ($_POST['json'] ?? ''), true);
             if (!is_array($recebidas)) {
                 $recebidas = (array) ($_POST['l'] ?? []);
+            }
+            if (!empty($_POST['incluir_antigos'])) {
+                $recebidas = array_merge($recebidas, (array) ($_SESSION['importacao_antigos'] ?? []));
             }
             foreach ($recebidas as $l) {
                 if (empty($l['incluir'])) {
@@ -977,7 +990,7 @@ function agenda_acao(string $acao): bool
                 $novosShows++;
             }
             dh_agenda_salvar($a);
-            unset($_SESSION['importacao'], $_SESSION['importacao_bandas']);
+            unset($_SESSION['importacao'], $_SESSION['importacao_bandas'], $_SESSION['importacao_antigos']);
             ir('./?acao=agenda', "Importação concluída: $novosShows shows, $novasBandas bandas novas e $completadas bandas completadas" . ($repetidos ? " ($repetidos shows já existiam e foram ignorados)" : '') . '.');
     }
     return false;
@@ -1762,7 +1775,7 @@ function agenda_tela_importar(): void
       <h1>Importar do Google Agenda</h1>
       <?php if (!$revisar): ?>
         <p class="dica">No Google Agenda (no computador): passe o mouse na agenda dos shows → <strong>⋮ → Configurações e compartilhamento</strong> → role até <strong>"Integrar agenda"</strong> → copie o <strong>"Endereço secreto no formato iCal"</strong> e cole abaixo.</p>
-        <p class="dica">Só os shows <strong>de hoje em diante</strong> entram na agenda. Os eventos antigos servem para cadastrar as bandas e completar tributo, cachê e consumação: quando o evento traz só o nome da banda, vale o tributo completo escrito em outro evento dela.</p>
+        <p class="dica">Normalmente só os shows <strong>de hoje em diante</strong> entram na agenda (marque a opção abaixo para trazer também os antigos). Os eventos antigos servem para cadastrar as bandas e completar tributo, cachê e consumação: quando o evento traz só o nome da banda, vale o tributo completo escrito em outro evento dela.</p>
         <form method="post" action="./?acao=importar-ler" enctype="multipart/form-data" class="form-cerveja">
           <?= $csrf ?>
           <label>Endereço secreto no formato iCal <input name="url" type="url" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"></label>
@@ -1770,6 +1783,7 @@ function agenda_tela_importar(): void
           <label>De qual unidade é essa agenda? <small>(vale para os eventos que não dizem a unidade no texto)</small>
             <select name="unidade"><?php foreach (DH_UNIDADES as $u => $nomeU): ?><option value="<?= $u ?>" <?= $u === ($usuario['unidade'] ?? '') ? 'selected' : '' ?>><?= e($nomeU) ?></option><?php endforeach; ?></select>
           </label>
+          <label class="check"><input type="checkbox" name="antigos" value="1"> Trazer também os shows antigos (todo o histórico da agenda), para a busca e o histórico das bandas</label>
           <button class="btn primario">Ler eventos</button>
         </form>
       <?php else: ?>
@@ -1800,6 +1814,17 @@ function agenda_tela_importar(): void
               <small class="original"><?= e($l['original']) ?><?php if (!empty($l['completado'])): ?><br><strong>Completado pelo histórico: <?= e(implode(', ', $l['completado'])) ?></strong><?php endif; ?></small>
             </fieldset>
           <?php endforeach; ?>
+
+          <?php $antigos = $_SESSION['importacao_antigos'] ?? []; if ($antigos): ?>
+            <h2>Shows antigos (<?= count($antigos) ?>)</h2>
+            <label class="check"><input type="checkbox" name="incluir_antigos" value="1" checked> Importar os <?= count($antigos) ?> shows antigos (entram como <b>pago</b>; os cancelados, como cancelado). Os que já estão na agenda são ignorados.</label>
+            <details class="bandas-hist">
+              <summary>Ver a lista</summary>
+              <ul class="lista-antigos">
+                <?php foreach ($antigos as $l): ?><li><?= e(dh_data_curta($l['data']) . '/' . substr($l['data'], 0, 4)) ?> · <strong><?= e($l['banda']) ?></strong><?= $l['tributo'] !== '' ? ' · ' . e($l['tributo']) : '' ?> · <?= e(DH_UNIDADES[$l['unidade']] ?? '') ?><?= $l['status'] === 'cancelado' ? ' · cancelado' : '' ?></li><?php endforeach; ?>
+              </ul>
+            </details>
+          <?php endif; ?>
 
           <h2>Bandas aprendidas com o histórico (<?= count($bandas) ?>)</h2>
           <?php if ($bandas): ?>
