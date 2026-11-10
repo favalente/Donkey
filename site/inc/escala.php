@@ -276,14 +276,26 @@ function dh_escala_funcao_rotulo(array $e, string $id): string
 }
 
 // Atraso pela chegada anotada: [minutos, desconto em R$, voltou para casa]
-function dh_escala_atraso(array $e, array $pos): array
+// Horário de chegada combinado com a pessoa naquele dia da semana (faculdade, outro trabalho): até ele não há desconto
+function dh_escala_chegada_combinada(array $e, string $pessoa, string $dia): string
+{
+    $p = dh_escala_pessoa($e, $pessoa);
+    return $p && $dia !== '' ? (string) (($p['chegada_combinada'] ?? [])[(string) date('N', strtotime($dia))] ?? '') : '';
+}
+
+function dh_escala_atraso(array $e, array $pos, string $dia = ''): array
 {
     $chegada = $pos['chegada'] ?? '';
     if ($chegada === '' || ($pos['entrada'] ?? '') === '') {
         return [0, 0.0, false];
     }
     $min = fn($h) => (int) substr($h, 0, 2) * 60 + (int) substr($h, 3, 2);
-    $atraso = $min($chegada) - $min($pos['entrada']);
+    $ref = $pos['entrada'];
+    $comb = dh_escala_chegada_combinada($e, (string) ($pos['pessoa'] ?? ''), $dia);
+    if ($comb !== '' && ($min($comb) - $min($ref) + 1440) % 1440 < 720) {
+        $ref = $comb; // o combinado é mais tarde que a entrada da escala
+    }
+    $atraso = $min($chegada) - $min($ref);
     if ($atraso < -360) {
         $atraso += 1440; // chegou depois da meia-noite
     }
@@ -307,7 +319,7 @@ function dh_escala_a_receber(array $e, string $segunda): array
             if (!$p || ($p['tipo'] ?? 'freelancer') !== 'freelancer') {
                 continue;
             }
-            [$atrasoMin, $descAtraso, $dispensado] = dh_escala_atraso($e, $pos);
+            [$atrasoMin, $descAtraso, $dispensado] = dh_escala_atraso($e, $pos, $dia);
             $falta = !empty($pos['falta']) || $dispensado;
             $diaria = $falta ? 0.0 : dh_escala_diaria($e, $pos, $dia) - $descAtraso;
             $ajuste = (float) ($pos['ajuste'] ?? 0);

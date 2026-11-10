@@ -39,8 +39,9 @@ function escala_ler_posicoes(array &$e, array $linhas, string $dia): array
             throw new RuntimeException('Escolha a função de ' . $nome . ' em ' . escala_dia_nome($dia) . '.');
         }
         $saidaPadrao = DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:00';
-        $pos[] = ['funcao' => dh_escala_funcao_por_nome($e, $funcao), 'pessoa' => $nome !== '' ? dh_escala_pessoa_por_nome($e, $nome) : '',
-            'entrada' => dh_escala_hora((string) ($l['entrada'] ?? '')) ?: DH_ESCALA_ENTRADA_FREELA, 'saida' => dh_escala_hora((string) ($l['saida'] ?? '')) ?: $saidaPadrao,
+        $pessoa = $nome !== '' ? dh_escala_pessoa_por_nome($e, $nome) : '';
+        $pos[] = ['funcao' => dh_escala_funcao_por_nome($e, $funcao), 'pessoa' => $pessoa,
+            'entrada' => dh_escala_hora((string) ($l['entrada'] ?? '')) ?: (dh_escala_chegada_combinada($e, $pessoa, $dia) ?: DH_ESCALA_ENTRADA_FREELA), 'saida' => dh_escala_hora((string) ($l['saida'] ?? '')) ?: $saidaPadrao,
             'falta' => !empty($l['falta']), 'ajuste' => brassagem_num(str_replace(['−', '+'], ['-', ''], (string) ($l['ajuste'] ?? ''))),
             'motivo' => mb_substr(trim((string) ($l['motivo'] ?? '')), 0, 80), 'pago_caixa' => brassagem_num($l['pago_caixa'] ?? ''), 'chegada' => dh_escala_hora((string) ($l['chegada'] ?? ''))];
     }
@@ -201,6 +202,7 @@ function escala_acao(string $acao): bool
             }
             $dados = ['nome' => mb_substr($nome, 0, 60), 'tipo' => ($_POST['tipo'] ?? '') === 'fixo' ? 'fixo' : 'freelancer', 'telefone' => mb_substr(trim((string) ($_POST['telefone'] ?? '')), 0, 30),
                 'pix' => mb_substr(trim((string) ($_POST['pix'] ?? '')), 0, 120), 'diaria' => brassagem_num($_POST['diaria'] ?? ''),
+                'chegada_combinada' => array_filter(array_map(fn($k) => dh_escala_hora((string) ($_POST['chegada_combinada'][$k] ?? '')), array_combine(['2', '3', '4', '5', '6', '7'], ['2', '3', '4', '5', '6', '7']))),
                 'adicionais' => array_map(fn($k) => brassagem_num($_POST['adicional'][$k] ?? ''), array_combine(array_keys(DH_ESCALA_DIAS_ADICIONAL), array_keys(DH_ESCALA_DIAS_ADICIONAL))), 'ativo' => empty($_POST['inativo'])];
             $id = (string) ($_POST['id'] ?? '');
             $i = null;
@@ -379,7 +381,7 @@ function escala_tela_semana(): void
                       <td><input name="linhas[<?= $k ?>][saida]" value="<?= e($p['saida']) ?>" inputmode="numeric" placeholder="<?= e(DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:00') ?>" aria-label="Saída"></td>
                       <td class="sem-impressao acoes-linha">
                         <button type="button" class="tirar-linha" aria-label="Tirar esta linha" title="Tirar esta linha">×</button>
-                        <details class="ajuste-linha"><summary title="Chegada, falta, ajuste de valor ou pago no caixa"><?php [$atrMin, $atrDesc, $atrCasa] = dh_escala_atraso($e, $p); ?><?= $atrCasa ? '🏠' : (!empty($p['falta']) ? 'falta' : (($p['ajuste'] ?? '') !== '' ? ((float) $p['ajuste'] > 0 ? '+' : '−') . dh_num(abs((float) $p['ajuste'])) : (($p['pago_caixa'] ?? '') === '' && $atrDesc == 0 ? '⋯' : ''))) ?><?= $atrDesc > 0 ? ' ⏰−' . dh_num($atrDesc) : '' ?><?= ($p['pago_caixa'] ?? '') !== '' ? ' 💵' : '' ?></summary>
+                        <details class="ajuste-linha"><summary title="Chegada, falta, ajuste de valor ou pago no caixa"><?php [$atrMin, $atrDesc, $atrCasa] = dh_escala_atraso($e, $p, $dia); ?><?= $atrCasa ? '🏠' : (!empty($p['falta']) ? 'falta' : (($p['ajuste'] ?? '') !== '' ? ((float) $p['ajuste'] > 0 ? '+' : '−') . dh_num(abs((float) $p['ajuste'])) : (($p['pago_caixa'] ?? '') === '' && $atrDesc == 0 ? '⋯' : ''))) ?><?= $atrDesc > 0 ? ' ⏰−' . dh_num($atrDesc) : '' ?><?= ($p['pago_caixa'] ?? '') !== '' ? ' 💵' : '' ?></summary>
                           <label>Chegou às <small>(em branco = chegou no horário; atrasado, o desconto sai sozinho)</small><input name="linhas[<?= $k ?>][chegada]" value="<?= e($p['chegada'] ?? '') ?>" inputmode="numeric" placeholder="ex.: 17:10"></label>
                           <label class="check"><input type="checkbox" name="linhas[<?= $k ?>][falta]" value="1" <?= !empty($p['falta']) ? 'checked' : '' ?>> Faltou</label>
                           <label>Ajuste (R$) <small>(+ hora extra / − desconto)</small><input name="linhas[<?= $k ?>][ajuste]" value="<?= e(($p['ajuste'] ?? '') !== '' ? dh_num($p['ajuste']) : '') ?>" inputmode="decimal" placeholder="ex.: 20 ou -15"></label>
@@ -549,6 +551,15 @@ function escala_tela_equipe(): void
               </div>
               <p class="dica">⭐ = véspera de feriado / evento. Ex.: + 20 de Ter a Qui e Dom, + 10 na Sex, Sáb e ⭐.</p>
             </fieldset>
+            <fieldset class="adicional-pessoa">
+              <legend>Chega mais tarde por combinado?</legend>
+              <p class="dica">Faculdade, outro trabalho… Coloque o horário só nos dias combinados. Até esse horário não há desconto de atraso, e ele já entra como a entrada da pessoa na escala.</p>
+              <div class="adicional-dias">
+                <?php $cc = $p['chegada_combinada'] ?? []; foreach (['2' => 'Ter', '3' => 'Qua', '4' => 'Qui', '5' => 'Sex', '6' => 'Sáb', '7' => 'Dom'] as $k => $rot): ?>
+                  <label><?= $rot ?><input name="chegada_combinada[<?= $k ?>]" inputmode="numeric" placeholder="—" value="<?= e($cc[$k] ?? '') ?>"></label>
+                <?php endforeach; ?>
+              </div>
+            </fieldset>
             <?php if ($p['diaria'] !== ''): ?>
               <label>Diária própria fixa (R$) <small>(vale em qualquer dia, no lugar da função; apague para usar a função + o adicional)</small><input name="diaria" inputmode="decimal" value="<?= e(dh_num($p['diaria'])) ?>"></label>
             <?php endif; ?>
@@ -565,7 +576,7 @@ function escala_tela_equipe(): void
         <?php foreach ($pessoas as $p): ?>
           <li>
             <details>
-              <summary><strong><?= e($p['nome']) ?></strong> <span><?= $p['tipo'] === 'fixo' ? 'Fixo' : 'Freelancer' ?><?= $p['diaria'] !== '' ? ' · diária ' . e(dh_moeda($p['diaria'])) : '' ?><?php $ad = array_filter(dh_escala_adicionais($p), fn($v) => (float) $v != 0); echo $ad ? ' · a mais: ' . e(implode(', ', array_map(fn($k, $v) => DH_ESCALA_DIAS_ADICIONAL[$k] . ' +' . dh_num($v), array_keys($ad), $ad))) : ''; ?><?= $p['pix'] === '' && $p['tipo'] === 'freelancer' ? ' · sem Pix' : '' ?></span><?= $p['ativo'] ? '' : ' <em class="tag cinza">Não trabalha mais</em>' ?><?= $p['tipo'] === 'fixo' ? ' <em class="tag ct-enviado">Fixo</em>' : '' ?></summary>
+              <summary><strong><?= e($p['nome']) ?></strong> <span><?= $p['tipo'] === 'fixo' ? 'Fixo' : 'Freelancer' ?><?= $p['diaria'] !== '' ? ' · diária ' . e(dh_moeda($p['diaria'])) : '' ?><?php $ad = array_filter(dh_escala_adicionais($p), fn($v) => (float) $v != 0); echo $ad ? ' · a mais: ' . e(implode(', ', array_map(fn($k, $v) => DH_ESCALA_DIAS_ADICIONAL[$k] . ' +' . dh_num($v), array_keys($ad), $ad))) : ''; ?><?php $cc = $p['chegada_combinada'] ?? []; echo $cc ? ' · chega ' . e(implode(', ', array_map(fn($k, $v) => ['2' => 'Ter', '3' => 'Qua', '4' => 'Qui', '5' => 'Sex', '6' => 'Sáb', '7' => 'Dom'][$k] . ' ' . $v, array_keys($cc), $cc))) : ''; ?><?= $p['pix'] === '' && $p['tipo'] === 'freelancer' ? ' · sem Pix' : '' ?></span><?= $p['ativo'] ? '' : ' <em class="tag cinza">Não trabalha mais</em>' ?><?= $p['tipo'] === 'fixo' ? ' <em class="tag ct-enviado">Fixo</em>' : '' ?></summary>
               <?php $form($p); ?>
             </details>
           </li>
