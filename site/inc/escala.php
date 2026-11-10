@@ -192,10 +192,11 @@ function dh_escala_hora(string $h): string
 }
 
 // Coluna da diária pelo dia da semana: Sex e Sáb, Domingo ou Ter a Qui (e segunda)
-function dh_escala_coluna_diaria(string $dia): string
+// Véspera de feriado ou dia de evento (marcado na escala) paga como sexta e sábado
+function dh_escala_coluna_diaria(string $dia, bool $especial = false): string
 {
     $n = (int) date('N', strtotime($dia));
-    return $n === 7 ? 'diaria_dom' : ($n >= 5 ? 'diaria_fds' : 'diaria_semana');
+    return $especial ? 'diaria_fds' : ($n === 7 ? 'diaria_dom' : ($n >= 5 ? 'diaria_fds' : 'diaria_semana'));
 }
 
 // Valor da diária de uma posição no dia: o da pessoa (se tiver) ou o da função naquele dia da semana
@@ -209,7 +210,7 @@ function dh_escala_diaria(array $e, array $pos, string $dia): float
     if (!empty($f['de'])) {
         $f = dh_escala_funcao($e, $f['de']) ?? [];
     }
-    return (float) ($f[dh_escala_coluna_diaria($dia)] ?? 0);
+    return (float) ($f[dh_escala_coluna_diaria($dia, !empty($e['dias'][$dia]['especial']))] ?? 0);
 }
 
 // "ATENDENTE · ROOFTOP" para ambiente, ou o nome da função

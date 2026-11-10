@@ -99,9 +99,11 @@ function escala_acao(string $acao): bool
             } else {
                 $pos = escala_ler_posicoes($e, (array) ($_POST['linhas'] ?? []), $dia);
             }
-            $e['dias'][$dia] = ['posicoes' => $pos, 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s')];
+            // A colagem do Excel mantém a marcação de véspera/evento do dia; o formulário do dia traz a sua
+            $especial = $acao === 'escala-colar' ? !empty($e['dias'][$dia]['especial']) : !empty($_POST['especial']);
+            $e['dias'][$dia] = ['posicoes' => $pos, 'especial' => $especial, 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s')];
             dh_escala_salvar($e);
-            ir('./?acao=escala&semana=' . dh_semana_inicio($dia) . '#dia-' . $dia, escala_dia_nome($dia) . ' salva: ' . count($pos) . ' posições.');
+            ir('./?acao=escala&semana=' . dh_semana_inicio($dia) . '#dia-' . $dia, escala_dia_nome($dia) . ' salva: ' . count($pos) . ' posições' . ($especial ? ' (véspera de feriado / evento: diárias de sexta e sábado)' : '') . '.');
 
         case 'escala-copiar-dia':
             // Copia as posições de outro dia (o dia anterior ou o mesmo dia da semana passada)
@@ -335,7 +337,7 @@ function escala_tela_semana(): void
       <div class="dias-escala">
         <?php foreach ($dias as $n => $dia): $pos = $e['dias'][$dia]['posicoes'] ?? []; $antes = date('Y-m-d', strtotime($dia . ' -1 day')); while (!isset(DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($antes))]) && empty($e['dias'][$antes]['posicoes']) && $antes > date('Y-m-d', strtotime($dia . ' -7 days'))) { $antes = date('Y-m-d', strtotime($antes . ' -1 day')); } $semPassada = date('Y-m-d', strtotime($dia . ' -7 days')); ?>
           <section class="dia-escala" id="dia-<?= $dia ?>">
-            <h2 class="dia-titulo"><?= e(mb_strtoupper(escala_dia_nome($dia))) ?><?php if ($pos): $preench = count(array_filter($pos, fn($p) => $p['pessoa'] !== '')); ?> <small><?= $preench ?> de <?= count($pos) ?> preenchidas</small><?php endif; ?></h2>
+            <h2 class="dia-titulo"><?= e(mb_strtoupper(escala_dia_nome($dia))) ?><?= !empty($e['dias'][$dia]['especial']) ? ' ⭐' : '' ?><?php if ($pos): $preench = count(array_filter($pos, fn($p) => $p['pessoa'] !== '')); ?> <small><?= $preench ?> de <?= count($pos) ?> preenchidas</small><?php endif; ?></h2>
             <?php if (!$pos): ?>
               <p class="dica sem-impressao">Sem escala ainda.</p>
               <div class="botoes-dia sem-impressao">
@@ -345,6 +347,9 @@ function escala_tela_semana(): void
             <?php endif; ?>
             <form method="post" action="./?acao=escala-dia-salvar" class="form-dia">
               <?= $csrf ?><input type="hidden" name="dia" value="<?= $dia ?>">
+              <?php if (!in_array((int) date('N', strtotime($dia)), [5, 6], true)): ?>
+                <label class="check dia-especial sem-impressao"><input type="checkbox" name="especial" value="1" <?= !empty($e['dias'][$dia]['especial']) ? 'checked' : '' ?>> ⭐ Véspera de feriado / evento <small>(abre Rooftop e piso superior; diárias de sexta e sábado)</small></label>
+              <?php endif; ?>
               <table class="tabela-escala">
                 <thead><tr><th>Nome</th><th>Função / ambiente</th><th>Entrada</th><th>Saída</th><th class="sem-impressao"></th></tr></thead>
                 <tbody>
