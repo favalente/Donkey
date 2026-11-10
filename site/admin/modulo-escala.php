@@ -519,6 +519,8 @@ function escala_tela_freelancers(): void
     ?>
       <h1>Freelancers</h1>
       <?php escala_nav_semana('freelancers', $segunda); ?>
+      <?php $foraDoDia = []; foreach ($linhas as $l) { foreach ($l['itens'] as $it) { if (!empty($it['sem_diaria'])) { $foraDoDia[] = $l['pessoa']['nome'] . ' (' . $it['funcao'] . ', ' . escala_dia_nome($it['dia'], true) . ')'; } } } ?>
+      <?php if ($foraDoDia): ?><p class="aviso">Sem diária para o dia: <?= e(implode('; ', $foraDoDia)) ?>. Confira a função ou a <a href="./?acao=escala-funcoes">diária desse dia da semana</a>.</p><?php endif; ?>
       <?php if ($semDiaria): ?><p class="aviso">Sem diária cadastrada: <?= e(implode(', ', array_column($semDiaria, 'nome'))) ?>. <a href="./?acao=escala-funcoes">Cadastrar as diárias</a>.</p><?php endif; ?>
       <div class="grade-metricas tres receita-metricas">
         <div class="cartao-metrica"><span>A pagar na segunda</span><strong><?= e(dh_moeda($total)) ?></strong><small><?= $paga ?><?= ($cx = array_sum(array_column($linhas, 'caixa'))) > 0 ? ' · ' . e(dh_moeda($cx)) . ' já saiu do caixa' : '' ?></small></div>

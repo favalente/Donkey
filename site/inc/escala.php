@@ -13,10 +13,11 @@ const DH_ESCALA_DIAS_ABERTOS = [2 => '23:30', 3 => '23:30', 4 => '23:30', 5 => '
 const DH_ESCALA_ENTRADA_FIXO = '16:00';
 const DH_ESCALA_ENTRADA_FREELA = '17:00';
 // Funções e diárias de nov/2026: [Ter a Qui, Sex e Sáb, Domingo]. Atendentes (Rooftop, Pisos, Calçada) 90/120/80,
-// Apoio e Bar sup. 90/100/80, quem cobre Caixa, Barman ou Barback 120/120/100, Hostess 100 e Concierge 130.
+// Apoio e Bar sup. 90/100/80, quem cobre Caixa, Barman ou Barback 120/120/100; Hostess (100) e Concierge (130)
+// só trabalham sexta e sábado.
 const DH_ESCALA_FUNCOES_PADRAO = [
     'CAIXA' => [120, 120, 100], 'ROOFTOP' => [90, 120, 80], 'BAR SUP.' => [90, 100, 80], 'PISO SUP.' => [90, 120, 80], 'BARMAN' => [120, 120, 100],
-    'BARBACK' => [120, 120, 100], 'PISO INF.' => [90, 120, 80], 'CALÇADA' => [90, 120, 80], 'APOIO' => [90, 100, 80], 'HOSTESS' => [100, 100, 100], 'CONCIERGE' => [130, 130, 130],
+    'BARBACK' => [120, 120, 100], 'PISO INF.' => [90, 120, 80], 'CALÇADA' => [90, 120, 80], 'APOIO' => [90, 100, 80], 'HOSTESS' => [null, 100, null], 'CONCIERGE' => [null, 130, null],
 ];
 // Atraso (a partir da entrada marcada na escala): R$ 10 a menos a cada 15 min; passou de 30 min, volta para casa sem diária
 const DH_ESCALA_ATRASO_PADRAO = ['faixa' => 15, 'desconto' => '10', 'limite' => 30];
@@ -38,11 +39,20 @@ function dh_escala(): array
         $tab = empty($e['config']['diarias_2026_11']) ? (DH_ESCALA_FUNCOES_PADRAO[$f['nome']] ?? null) : null;
         foreach (['diaria_semana' => 0, 'diaria_fds' => 1, 'diaria_dom' => 2] as $k => $n) {
             if (($f[$k] ?? '') === '') {
-                $e['funcoes'][$i][$k] = ($f['diaria'] ?? '') !== '' ? $f['diaria'] : ($tab ? number_format($tab[$n], 2, '.', '') : '');
+                $e['funcoes'][$i][$k] = ($f['diaria'] ?? '') !== '' ? $f['diaria'] : ($tab && $tab[$n] !== null ? number_format($tab[$n], 2, '.', '') : '');
             }
         }
         unset($e['funcoes'][$i]['diaria']);
+        // Hostess e Concierge só sexta e sábado (uma vez só: tira os valores de Ter a Qui e Domingo da tabela anterior)
+        if (empty($e['config']['hostess_concierge_fds']) && in_array($f['nome'], ['HOSTESS', 'CONCIERGE'], true)) {
+            foreach (['diaria_semana', 'diaria_dom'] as $k) {
+                if (in_array((float) ($e['funcoes'][$i][$k] ?? 0), [100.0, 130.0], true)) {
+                    $e['funcoes'][$i][$k] = '';
+                }
+            }
+        }
     }
+    $e['config']['hostess_concierge_fds'] = true;
     $e['config']['diarias_2026_11'] = true;
     return $e;
 }
@@ -147,8 +157,7 @@ function dh_escala_diaria(array $e, array $pos, string $dia): float
         return (float) $p['diaria'];
     }
     $f = dh_escala_funcao($e, $pos['funcao'] ?? '') ?? [];
-    $v = $f[dh_escala_coluna_diaria($dia)] ?? '';
-    return (float) ($v !== '' ? $v : ($f['diaria_semana'] ?? 0));
+    return (float) ($f[dh_escala_coluna_diaria($dia)] ?? 0);
 }
 
 // Atraso pela chegada anotada: [minutos, desconto em R$, voltou para casa]
@@ -189,7 +198,8 @@ function dh_escala_a_receber(array $e, string $segunda): array
             $ajuste = (float) ($pos['ajuste'] ?? 0);
             $caixa = (float) ($pos['pago_caixa'] ?? 0);
             $r[$p['id']] ??= ['pessoa' => $p, 'itens' => [], 'total' => 0.0, 'caixa' => 0.0];
-            $r[$p['id']]['itens'][] = ['dia' => $dia, 'funcao' => dh_escala_funcao($e, $pos['funcao'])['nome'] ?? '?', 'entrada' => $pos['entrada'], 'saida' => $pos['saida'],
+            $semDiaria = !$falta && dh_escala_diaria($e, $pos, $dia) <= 0;
+            $r[$p['id']]['itens'][] = ['sem_diaria' => $semDiaria, 'dia' => $dia, 'funcao' => dh_escala_funcao($e, $pos['funcao'])['nome'] ?? '?', 'entrada' => $pos['entrada'], 'saida' => $pos['saida'],
                 'diaria' => $diaria, 'falta' => $falta, 'ajuste' => $ajuste, 'motivo' => $pos['motivo'] ?? '', 'pago_caixa' => $caixa,
                 'chegada' => $pos['chegada'] ?? '', 'atraso' => $atrasoMin, 'desconto_atraso' => $descAtraso, 'dispensado' => $dispensado];
             // "total" é o que falta pagar na segunda: o que já saiu do caixa no dia (sangria) não entra
