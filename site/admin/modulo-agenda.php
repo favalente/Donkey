@@ -1177,23 +1177,19 @@ function agenda_tela_lista(): void
         <?php if (pode('agenda_editar')): ?><a class="btn primario" href="./?acao=show">+ Novo show</a><?php endif; ?>
       </div>
       <?php if (pode('agenda_editar')):
-          // Shows já feitos para buscar e duplicar: o mais recente de cada banda + tributo (sem os cancelados)
+          // Todos os shows de todo o período para buscar e duplicar (mais recentes primeiro)
           $todos = $a['shows'];
           usort($todos, fn($x, $y) => strcmp($y['data'] . $y['hora'], $x['data'] . $x['hora']));
-          $busca = $vistos = [];
+          $busca = [];
           foreach ($todos as $x) {
               $b = $bandas[$x['banda_id']] ?? null;
-              $chave = $x['banda_id'] . '|' . mb_strtolower($x['tributo']);
-              if (!$b || $x['status'] === 'cancelado' || isset($vistos[$chave])) {
-                  continue;
-              }
-              $vistos[$chave] = true;
-              $busca[] = ['id' => $x['id'], 'banda' => $b['nome'], 'tributo' => $x['tributo'], 'data' => date('d/m/Y', strtotime($x['data'])), 'un' => DH_UNIDADES[$x['unidade']] ?? '', 'foto' => '../' . str_replace('media-', 'mini-', dh_banda_foto($b))];
+              $busca[] = ['id' => $x['id'], 'banda' => $b['nome'] ?? '—', 'tributo' => $x['tributo'], 'data' => date('d/m/Y', strtotime($x['data'])), 'un' => DH_UNIDADES[$x['unidade']] ?? '',
+                  'st' => $x['status'] === 'cancelado' ? 'cancelado' : '', 'foto' => '../' . str_replace('media-', 'mini-', dh_banda_foto($b))];
           }
       ?>
         <div class="busca-show">
           <label for="busca-show">🔎 Buscar um show para duplicar</label>
-          <input type="search" id="busca-show" placeholder="Nome da banda ou tributo" autocomplete="off">
+          <input type="search" id="busca-show" placeholder="Banda, tributo, data (ex.: 2025) ou casa" autocomplete="off">
           <ul class="busca-show-lista" id="busca-show-lista" hidden></ul>
         </div>
         <script>
@@ -1205,10 +1201,12 @@ function agenda_tela_lista(): void
           campo.addEventListener('input', function () {
             var q = norm(campo.value.trim());
             if (q.length < 2) { lista.hidden = true; lista.innerHTML = ''; return; }
-            var achados = shows.filter(function (s) { return norm(s.banda + ' ' + s.tributo).indexOf(q) >= 0; }).slice(0, 15);
-            lista.innerHTML = achados.length ? achados.map(function (s) {
+            var palavras = q.split(/\s+/);
+            var todos = shows.filter(function (s) { var t = norm(s.banda + ' ' + s.tributo + ' ' + s.data + ' ' + s.un); return palavras.every(function (p) { return t.indexOf(p) >= 0; }); });
+            var achados = todos.slice(0, 60);
+            lista.innerHTML = achados.length ? '<li class="dica">' + todos.length + ' show' + (todos.length > 1 ? 's' : '') + ' encontrado' + (todos.length > 1 ? 's' : '') + (todos.length > achados.length ? ' (mostrando os ' + achados.length + ' mais recentes; digite mais para filtrar)' : '') + '</li>' + achados.map(function (s) {
               return '<li><a href="./?acao=show&amp;duplicar=' + encodeURIComponent(s.id) + '"><img src="' + esc(s.foto) + '" alt="" width="44" height="44" loading="lazy">'
-                + '<span><strong>' + esc(s.banda) + '</strong><small>' + esc(s.tributo || 'Sem tributo') + '</small><small>Último: ' + esc(s.data) + ' · ' + esc(s.un) + '</small></span><em>⧉ Duplicar</em></a></li>';
+                + '<span><strong>' + esc(s.banda) + '</strong><small>' + esc(s.tributo || 'Sem tributo') + '</small><small>' + esc(s.data) + ' · ' + esc(s.un) + (s.st ? ' · <b>cancelado</b>' : '') + '</small></span><em>⧉ Duplicar</em></a></li>';
             }).join('') : '<li class="dica">Nenhum show encontrado.</li>';
             lista.hidden = false;
           });
