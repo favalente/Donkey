@@ -13,11 +13,11 @@ const DH_ESCALA_DIAS_ABERTOS = [2 => '23:30', 3 => '23:30', 4 => '23:30', 5 => '
 const DH_ESCALA_ENTRADA_FIXO = '16:00';
 const DH_ESCALA_ENTRADA_FREELA = '17:00';
 // Funções e diárias de nov/2026: [Ter a Qui, Sex e Sáb, Domingo]. Atendentes (Rooftop, Pisos, Calçada) 90/120/80,
-// Apoio e Bar sup. 90/100/80, quem cobre Caixa, Barman ou Barback 120/120/100; Hostess (100) e Concierge (130)
+// Barman e Barback como o Atendente, Apoio e Bar sup. 90/100/80, quem cobre o Caixa 120/120/100; Hostess (100) e Concierge (130)
 // só trabalham sexta e sábado.
 const DH_ESCALA_FUNCOES_PADRAO = [
-    'CAIXA' => [120, 120, 100], 'ATENDENTE' => [90, 120, 80], 'BAR SUP.' => [90, 100, 80], 'BARMAN' => [120, 120, 100],
-    'BARBACK' => [120, 120, 100], 'APOIO' => [90, 100, 80], 'HOSTESS' => [null, 100, null], 'CONCIERGE' => [null, 130, null],
+    'CAIXA' => [120, 120, 100], 'ATENDENTE' => [90, 120, 80], 'BAR SUP.' => [90, 100, 80], 'BARMAN' => [90, 120, 80],
+    'BARBACK' => [90, 120, 80], 'APOIO' => [90, 100, 80], 'HOSTESS' => [null, 100, null], 'CONCIERGE' => [null, 130, null],
 ];
 // Ambientes onde trabalha o Atendente: na escala aparecem no lugar da função (como na planilha) e pagam a diária dela
 const DH_ESCALA_AMBIENTES_PADRAO = ['ROOFTOP' => 'ATENDENTE', 'PISO SUP.' => 'ATENDENTE', 'PISO INF.' => 'ATENDENTE', 'CALÇADA' => 'ATENDENTE'];
@@ -81,6 +81,17 @@ function dh_escala(): array
         }
     }
     $e['config']['hostess_concierge_fds'] = true;
+    // Barman e Barback ganham como o Atendente (uma vez só: troca o 120/120/100 da tabela anterior)
+    if (empty($e['config']['barman_barback_2026_11'])) {
+        foreach ($e['funcoes'] as $i => $f) {
+            if (in_array($f['nome'], ['BARMAN', 'BARBACK'], true) && (float) ($f['diaria_semana'] ?? 0) === 120.0 && (float) ($f['diaria_dom'] ?? 0) === 100.0) {
+                $e['funcoes'][$i]['diaria_semana'] = '90.00';
+                $e['funcoes'][$i]['diaria_fds'] = '120.00';
+                $e['funcoes'][$i]['diaria_dom'] = '80.00';
+            }
+        }
+        $e['config']['barman_barback_2026_11'] = true;
+    }
     $e['config']['diarias_2026_11'] = true;
     return $e;
 }
