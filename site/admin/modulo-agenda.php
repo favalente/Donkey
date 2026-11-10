@@ -1176,6 +1176,45 @@ function agenda_tela_lista(): void
         <h1>Agenda</h1>
         <?php if (pode('agenda_editar')): ?><a class="btn primario" href="./?acao=show">+ Novo show</a><?php endif; ?>
       </div>
+      <?php if (pode('agenda_editar')):
+          // Shows já feitos para buscar e duplicar: o mais recente de cada banda + tributo (sem os cancelados)
+          $todos = $a['shows'];
+          usort($todos, fn($x, $y) => strcmp($y['data'] . $y['hora'], $x['data'] . $x['hora']));
+          $busca = $vistos = [];
+          foreach ($todos as $x) {
+              $b = $bandas[$x['banda_id']] ?? null;
+              $chave = $x['banda_id'] . '|' . mb_strtolower($x['tributo']);
+              if (!$b || $x['status'] === 'cancelado' || isset($vistos[$chave])) {
+                  continue;
+              }
+              $vistos[$chave] = true;
+              $busca[] = ['id' => $x['id'], 'banda' => $b['nome'], 'tributo' => $x['tributo'], 'data' => date('d/m/Y', strtotime($x['data'])), 'un' => DH_UNIDADES[$x['unidade']] ?? '', 'foto' => '../' . str_replace('media-', 'mini-', dh_banda_foto($b))];
+          }
+      ?>
+        <div class="busca-show">
+          <label for="busca-show">🔎 Buscar um show para duplicar</label>
+          <input type="search" id="busca-show" placeholder="Nome da banda ou tributo" autocomplete="off">
+          <ul class="busca-show-lista" id="busca-show-lista" hidden></ul>
+        </div>
+        <script>
+        (function () {
+          var shows = <?= json_encode($busca, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+          var campo = document.getElementById('busca-show'), lista = document.getElementById('busca-show-lista');
+          var norm = function (t) { return (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
+          var esc = function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+          campo.addEventListener('input', function () {
+            var q = norm(campo.value.trim());
+            if (q.length < 2) { lista.hidden = true; lista.innerHTML = ''; return; }
+            var achados = shows.filter(function (s) { return norm(s.banda + ' ' + s.tributo).indexOf(q) >= 0; }).slice(0, 15);
+            lista.innerHTML = achados.length ? achados.map(function (s) {
+              return '<li><a href="./?acao=show&amp;duplicar=' + encodeURIComponent(s.id) + '"><img src="' + esc(s.foto) + '" alt="" width="44" height="44" loading="lazy">'
+                + '<span><strong>' + esc(s.banda) + '</strong><small>' + esc(s.tributo || 'Sem tributo') + '</small><small>Último: ' + esc(s.data) + ' · ' + esc(s.un) + '</small></span><em>⧉ Duplicar</em></a></li>';
+            }).join('') : '<li class="dica">Nenhum show encontrado.</li>';
+            lista.hidden = false;
+          });
+        })();
+        </script>
+      <?php endif; ?>
       <div class="abas">
         <a href="./?acao=agenda&mes=<?= e($mes) ?>" class="<?= !$un ? 'ativo' : '' ?>">Todas</a>
         <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
