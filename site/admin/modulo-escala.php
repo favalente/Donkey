@@ -227,8 +227,13 @@ function escala_acao(string $acao): bool
                 if ($nome === '') {
                     continue;
                 }
-                $novas[] = ['id' => preg_match('/^[a-z0-9]+$/', (string) ($f['id'] ?? '')) && $f['id'] !== '' ? $f['id'] : dh_id_novo('f'), 'nome' => mb_substr($nome, 0, 30),
+                $nova = ['id' => preg_match('/^[a-z0-9]+$/', (string) ($f['id'] ?? '')) && $f['id'] !== '' ? $f['id'] : dh_id_novo('f'), 'nome' => mb_substr($nome, 0, 30),
                     'diaria_semana' => brassagem_num($f['diaria_semana'] ?? ''), 'diaria_fds' => brassagem_num($f['diaria_fds'] ?? ''), 'diaria_dom' => brassagem_num($f['diaria_dom'] ?? '')];
+                // Ambiente (Rooftop, Calçada…): só aponta para a função que paga a diária
+                if (isset($f['de'])) {
+                    $nova = ['id' => $nova['id'], 'nome' => $nova['nome'], 'de' => (string) $f['de'], 'diaria_semana' => '', 'diaria_fds' => '', 'diaria_dom' => ''];
+                }
+                $novas[] = $nova;
             }
             // Função que está em alguma escala não some (só muda de nome ou diária)
             $usadas = [];
@@ -242,7 +247,14 @@ function escala_acao(string $acao): bool
                     $novas[] = $f;
                 }
             }
-            $e['funcoes'] = $novas;
+            // Ambiente ligado a uma função que não existe mais fica sem ligação (e aparece como função comum)
+            $ids = array_column(array_filter($novas, fn($f) => empty($f['de'])), 'id');
+            foreach ($novas as $k => $f) {
+                if (isset($f['de']) && !in_array($f['de'], $ids, true)) {
+                    unset($novas[$k]['de']);
+                }
+            }
+            $e['funcoes'] = array_values($novas);
             $e['config']['atraso'] = ['faixa' => max(1, min(120, (int) ($_POST['atraso_faixa'] ?? 15))), 'desconto' => brassagem_num($_POST['atraso_desconto'] ?? '') ?: '0',
                 'limite' => max(0, min(600, (int) ($_POST['atraso_limite'] ?? 30)))];
             dh_escala_salvar($e);
@@ -334,7 +346,7 @@ function escala_tela_semana(): void
             <form method="post" action="./?acao=escala-dia-salvar" class="form-dia">
               <?= $csrf ?><input type="hidden" name="dia" value="<?= $dia ?>">
               <table class="tabela-escala">
-                <thead><tr><th>Nome</th><th>Função</th><th>Entrada</th><th>Saída</th><th class="sem-impressao"></th></tr></thead>
+                <thead><tr><th>Nome</th><th>Função / ambiente</th><th>Entrada</th><th>Saída</th><th class="sem-impressao"></th></tr></thead>
                 <tbody>
                   <?php foreach (array_merge($pos, $pos ? [] : array_fill(0, 1, ['funcao' => '', 'pessoa' => '', 'entrada' => '', 'saida' => '', 'falta' => false, 'ajuste' => '', 'motivo' => ''])) as $k => $p): $pe = dh_escala_pessoa($e, $p['pessoa']); $fu = dh_escala_funcao($e, $p['funcao']); ?>
                     <tr class="<?= $p['pessoa'] === '' && $p['funcao'] !== '' ? 'vaga' : '' ?><?= !empty($p['falta']) ? ' falta' : '' ?><?= $pe && $pe['tipo'] === 'fixo' ? ' fixo' : '' ?>">
@@ -469,7 +481,10 @@ function escala_tela_funcoes(): void
 {
     global $csrf;
     $e = dh_escala();
-    $linhas = array_merge($e['funcoes'], array_fill(0, 2, ['id' => '', 'nome' => '', 'diaria_semana' => '', 'diaria_fds' => '', 'diaria_dom' => '']));
+    $funcoes = array_values(array_filter($e['funcoes'], fn($f) => empty($f['de'])));
+    $ambientes = array_values(array_filter($e['funcoes'], fn($f) => !empty($f['de'])));
+    $linhas = array_merge($funcoes, array_fill(0, 2, ['id' => '', 'nome' => '', 'diaria_semana' => '', 'diaria_fds' => '', 'diaria_dom' => '']));
+    $amb = array_merge($ambientes, [['id' => '', 'nome' => '', 'de' => '']]);
     $a = $e['config']['atraso'];
     // Valor redondo sem centavos (cabe na coluna do celular): 120 em vez de 120,00
     $v = fn($x) => e(($x ?? '') === '' ? '' : (floor((float) $x) == (float) $x ? (string) (int) $x : dh_num($x)));
@@ -479,6 +494,7 @@ function escala_tela_funcoes(): void
       <p class="dica">A diária que o freelancer recebe por dia em cada função, conforme o dia da semana. Para alguém com valor diferente, use a diária própria na Equipe. Função nova digitada na escala entra aqui sozinha.</p>
       <form method="post" action="./?acao=escala-funcoes-salvar" class="form-cerveja">
         <?= $csrf ?>
+        <h2>Funções</h2>
         <table class="tabela-diarias">
           <thead><tr><th>Função</th><th>Ter a Qui</th><th>Sex e Sáb</th><th>Domingo</th></tr></thead>
           <tbody>
@@ -486,8 +502,22 @@ function escala_tela_funcoes(): void
               <tr>
                 <td><input name="funcoes[<?= $k ?>][nome]" value="<?= e($f['nome']) ?>" placeholder="Nova função" aria-label="Função"><input type="hidden" name="funcoes[<?= $k ?>][id]" value="<?= e($f['id']) ?>"></td>
                 <?php foreach (['diaria_semana' => 'Ter a Qui', 'diaria_fds' => 'Sex e Sáb', 'diaria_dom' => 'Domingo'] as $col => $rot): ?>
-                  <td><input name="funcoes[<?= $k ?>][<?= $col ?>]" inputmode="decimal" value="<?= $v($f[$col] ?? '') ?>" placeholder="0,00" aria-label="<?= e(($f['nome'] ?: 'Nova função') . ' · ' . $rot) ?>"></td>
+                  <td><input name="funcoes[<?= $k ?>][<?= $col ?>]" inputmode="decimal" value="<?= $v($f[$col] ?? '') ?>" placeholder="—" aria-label="<?= e(($f['nome'] ?: 'Nova função') . ' · ' . $rot) ?>"></td>
                 <?php endforeach; ?>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+        <p class="dica">Em branco = a função não trabalha nesse dia (sem diária).</p>
+        <h2>Ambientes</h2>
+        <p class="dica">Onde a pessoa trabalha (como na planilha). Na escala, escolha o ambiente; a diária é a da função ligada a ele.</p>
+        <table class="tabela-diarias tabela-ambientes">
+          <thead><tr><th>Ambiente</th><th>Função</th></tr></thead>
+          <tbody>
+            <?php foreach ($amb as $k => $f): $n = count($linhas) + $k; ?>
+              <tr>
+                <td><input name="funcoes[<?= $n ?>][nome]" value="<?= e($f['nome']) ?>" placeholder="Novo ambiente" aria-label="Ambiente"><input type="hidden" name="funcoes[<?= $n ?>][id]" value="<?= e($f['id']) ?>"></td>
+                <td><select name="funcoes[<?= $n ?>][de]" aria-label="Função do ambiente"><?php foreach ($funcoes as $fu): ?><option value="<?= e($fu['id']) ?>" <?= $fu['id'] === ($f['de'] ?: (array_column($funcoes, 'id', 'nome')['ATENDENTE'] ?? '')) ? 'selected' : '' ?>><?= e($fu['nome']) ?></option><?php endforeach; ?></select></td>
               </tr>
             <?php endforeach; ?>
           </tbody>
@@ -513,7 +543,7 @@ function escala_tela_freelancers(): void
     $linhas = dh_escala_a_receber($e, $segunda);
     $pagos = $e['pagamentos'][$segunda] ?? [];
     $total = array_sum(array_column($linhas, 'total'));
-    $semDiaria = array_filter($e['funcoes'], fn($f) => ($f['diaria_semana'] ?? '') === '' && ($f['diaria_fds'] ?? '') === '' && ($f['diaria_dom'] ?? '') === '');
+    $semDiaria = array_filter($e['funcoes'], fn($f) => empty($f['de']) && ($f['diaria_semana'] ?? '') === '' && ($f['diaria_fds'] ?? '') === '' && ($f['diaria_dom'] ?? '') === '');
     $paga = date('d/m', strtotime($segunda . ' +7 days'));
     financeiro_abas('freelancers');
     ?>

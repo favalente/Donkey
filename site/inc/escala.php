@@ -16,9 +16,11 @@ const DH_ESCALA_ENTRADA_FREELA = '17:00';
 // Apoio e Bar sup. 90/100/80, quem cobre Caixa, Barman ou Barback 120/120/100; Hostess (100) e Concierge (130)
 // só trabalham sexta e sábado.
 const DH_ESCALA_FUNCOES_PADRAO = [
-    'CAIXA' => [120, 120, 100], 'ROOFTOP' => [90, 120, 80], 'BAR SUP.' => [90, 100, 80], 'PISO SUP.' => [90, 120, 80], 'BARMAN' => [120, 120, 100],
-    'BARBACK' => [120, 120, 100], 'PISO INF.' => [90, 120, 80], 'CALÇADA' => [90, 120, 80], 'APOIO' => [90, 100, 80], 'HOSTESS' => [null, 100, null], 'CONCIERGE' => [null, 130, null],
+    'CAIXA' => [120, 120, 100], 'ATENDENTE' => [90, 120, 80], 'BAR SUP.' => [90, 100, 80], 'BARMAN' => [120, 120, 100],
+    'BARBACK' => [120, 120, 100], 'APOIO' => [90, 100, 80], 'HOSTESS' => [null, 100, null], 'CONCIERGE' => [null, 130, null],
 ];
+// Ambientes onde trabalha o Atendente: na escala aparecem no lugar da função (como na planilha) e pagam a diária dela
+const DH_ESCALA_AMBIENTES_PADRAO = ['ROOFTOP' => 'ATENDENTE', 'PISO SUP.' => 'ATENDENTE', 'PISO INF.' => 'ATENDENTE', 'CALÇADA' => 'ATENDENTE'];
 // Atraso (a partir da entrada marcada na escala): R$ 10 a menos a cada 15 min; passou de 30 min, volta para casa sem diária
 const DH_ESCALA_ATRASO_PADRAO = ['faixa' => 15, 'desconto' => '10', 'limite' => 30];
 
@@ -29,13 +31,39 @@ function dh_escala(): array
     $e['config'] += ['atraso' => DH_ESCALA_ATRASO_PADRAO];
     if (!$e['funcoes']) {
         $n = 0;
-        foreach (DH_ESCALA_FUNCOES_PADRAO as $f => $_) {
+        foreach (array_keys(DH_ESCALA_FUNCOES_PADRAO + DH_ESCALA_AMBIENTES_PADRAO) as $f) {
             $e['funcoes'][] = ['id' => 'f' . ++$n, 'nome' => $f];
         }
+    }
+    // Rooftop, Pisos e Calçada são ambientes do Atendente (uma vez só): cria a função ATENDENTE com a diária que
+    // esses ambientes tinham (ou a tabela) e liga cada ambiente a ela
+    if (empty($e['config']['ambientes_2026_11'])) {
+        $nomes = array_column($e['funcoes'], 'nome');
+        if (!in_array('ATENDENTE', $nomes, true)) {
+            $base = null;
+            foreach ($e['funcoes'] as $f) {
+                if (isset(DH_ESCALA_AMBIENTES_PADRAO[$f['nome']]) && ($f['diaria_semana'] ?? '') !== '') {
+                    $base = $f;
+                    break;
+                }
+            }
+            $e['funcoes'][] = ['id' => dh_id_novo('f'), 'nome' => 'ATENDENTE'] + ($base ? array_intersect_key($base, array_flip(['diaria_semana', 'diaria_fds', 'diaria_dom'])) : []);
+        }
+        $porNome = array_column($e['funcoes'], 'id', 'nome');
+        foreach ($e['funcoes'] as $i => $f) {
+            if (isset(DH_ESCALA_AMBIENTES_PADRAO[$f['nome']])) {
+                $e['funcoes'][$i]['de'] = $porNome[DH_ESCALA_AMBIENTES_PADRAO[$f['nome']]];
+                $e['funcoes'][$i]['diaria_semana'] = $e['funcoes'][$i]['diaria_fds'] = $e['funcoes'][$i]['diaria_dom'] = '';
+            }
+        }
+        $e['config']['ambientes_2026_11'] = true;
     }
     // Diária por dia da semana (Ter a Qui / Sex e Sáb / Domingo). Uma vez só: as funções da casa sem valor
     // recebem a tabela de nov/2026, e a diária única antiga vale para os três.
     foreach ($e['funcoes'] as $i => $f) {
+        if (!empty($f['de'])) {
+            continue; // ambiente: a diária é a da função
+        }
         $tab = empty($e['config']['diarias_2026_11']) ? (DH_ESCALA_FUNCOES_PADRAO[$f['nome']] ?? null) : null;
         foreach (['diaria_semana' => 0, 'diaria_fds' => 1, 'diaria_dom' => 2] as $k => $n) {
             if (($f[$k] ?? '') === '') {
@@ -157,7 +185,20 @@ function dh_escala_diaria(array $e, array $pos, string $dia): float
         return (float) $p['diaria'];
     }
     $f = dh_escala_funcao($e, $pos['funcao'] ?? '') ?? [];
+    if (!empty($f['de'])) {
+        $f = dh_escala_funcao($e, $f['de']) ?? [];
+    }
     return (float) ($f[dh_escala_coluna_diaria($dia)] ?? 0);
+}
+
+// "ATENDENTE · ROOFTOP" para ambiente, ou o nome da função
+function dh_escala_funcao_rotulo(array $e, string $id): string
+{
+    $f = dh_escala_funcao($e, $id);
+    if (!$f) {
+        return '?';
+    }
+    return !empty($f['de']) ? (dh_escala_funcao($e, $f['de'])['nome'] ?? '?') . ' · ' . $f['nome'] : $f['nome'];
 }
 
 // Atraso pela chegada anotada: [minutos, desconto em R$, voltou para casa]
@@ -199,7 +240,7 @@ function dh_escala_a_receber(array $e, string $segunda): array
             $caixa = (float) ($pos['pago_caixa'] ?? 0);
             $r[$p['id']] ??= ['pessoa' => $p, 'itens' => [], 'total' => 0.0, 'caixa' => 0.0];
             $semDiaria = !$falta && dh_escala_diaria($e, $pos, $dia) <= 0;
-            $r[$p['id']]['itens'][] = ['sem_diaria' => $semDiaria, 'dia' => $dia, 'funcao' => dh_escala_funcao($e, $pos['funcao'])['nome'] ?? '?', 'entrada' => $pos['entrada'], 'saida' => $pos['saida'],
+            $r[$p['id']]['itens'][] = ['sem_diaria' => $semDiaria, 'dia' => $dia, 'funcao' => dh_escala_funcao_rotulo($e, $pos['funcao']), 'entrada' => $pos['entrada'], 'saida' => $pos['saida'],
                 'diaria' => $diaria, 'falta' => $falta, 'ajuste' => $ajuste, 'motivo' => $pos['motivo'] ?? '', 'pago_caixa' => $caixa,
                 'chegada' => $pos['chegada'] ?? '', 'atraso' => $atrasoMin, 'desconto_atraso' => $descAtraso, 'dispensado' => $dispensado];
             // "total" é o que falta pagar na segunda: o que já saiu do caixa no dia (sangria) não entra
