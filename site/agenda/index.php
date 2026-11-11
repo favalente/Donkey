@@ -36,7 +36,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=29">
+  <link rel="stylesheet" href="../assets/css/style.css?v=30">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
   <script type="application/ld+json">
   <?= json_encode(array_map(fn($s) => [
@@ -93,7 +93,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
             <span class="cal-num"><?= date('j', $t) ?></span>
             <?php if ($doDia): ?>
               <?php foreach ($doDia as $sh): ?>
-                <button class="cal-abrir cal-show cal-u-<?= $sh['unidade'] ?>" data-show="<?= e($sh['id']) ?>" aria-label="<?= e($sh['banda'] . ', ' . dh_data_curta($dia) . ', ' . DH_UNIDADES[$sh['unidade']]) ?>"><?= e($sh['banda']) ?></button>
+                <button class="cal-abrir cal-show cal-u-<?= $sh['unidade'] ?>" data-show="<?= e($sh['id']) ?>" aria-label="<?= e($sh['banda'] . ', ' . dh_data_curta($dia) . ', ' . DH_UNIDADES[$sh['unidade']]) ?>"><?= e(dh_banda_nome_curto($sh['banda'])) ?></button>
                 <div class="cal-detalhe" id="show-<?= e($sh['id']) ?>" hidden><?= dh_cartao_show($sh, '../') ?></div>
               <?php endforeach; ?>
             <?php endif; ?>

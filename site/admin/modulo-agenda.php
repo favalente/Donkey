@@ -1067,7 +1067,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
                 <button type="button" class="cal-show u-<?= e($s['unidade']) ?> st-<?= e($s['status']) ?>" data-show="<?= e($s['id']) ?>"
                   data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? '', 'status' => $s['status'],
                     'banda_id' => $s['banda_id'], 'instagram' => $b['instagram'] ?? '', 'tributos_banda' => implode(' / ', $b['tributos'] ?? []), 'sem_pasta' => dh_banda_sem_pasta($b), 'fotos' => count($b['fotos'] ?? []), 'drive' => $b['drive'][0] ?? '']
-                    + (pode('valores') ? ['pix' => $b['pix'] ?? '', 'pix_nome' => $b['pix_nome'] ?? '', 'cache' => dh_moeda($s['cache'])] : []), JSON_UNESCAPED_UNICODE)) ?>"><?php if ($s['status'] === 'pago'): ?><span class="flag-pago" title="Pago">✓</span><?php endif; ?><?= e($b['nome'] ?? '—') ?></button>
+                    + (pode('valores') ? ['pix' => $b['pix'] ?? '', 'pix_nome' => $b['pix_nome'] ?? '', 'cache' => dh_moeda($s['cache'])] : []), JSON_UNESCAPED_UNICODE)) ?>"><?php if ($s['status'] === 'pago'): ?><span class="flag-pago" title="Pago">✓</span><?php endif; ?><?= e(dh_banda_nome_curto($b['nome'] ?? '—')) ?></button>
               <?php endforeach; ?>
             </div>
           <?php endfor; ?>

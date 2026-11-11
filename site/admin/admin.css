@@ -285,7 +285,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--amber); }
 .cal-admin, .calendario { max-width: 100%; min-width: 0; }
 .cal-show { overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
 .conteudo { overflow-x: clip; }
-.cal-show { word-break: normal; overflow-wrap: anywhere; hyphens: manual; }
+.cal-show { word-break: normal; overflow-wrap: break-word; hyphens: auto; }
 @media (max-width: 420px) {
   .cal-dia { padding: 2px; }
   .cal-show { font-size: .62rem; padding: 2px 3px; letter-spacing: -.01em; }

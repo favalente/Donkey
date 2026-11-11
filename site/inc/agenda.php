@@ -559,3 +559,10 @@ function dh_drive_sincronizar(array &$a, bool $forcar = false): array
     }
     return $r;
 }
+
+// Nome curto da banda para o quadradinho do calendário (sem o "Banda" do começo: sobra espaço para o nome)
+function dh_banda_nome_curto(string $nome): string
+{
+    $curto = trim((string) preg_replace('/^banda\s+/iu', '', $nome));
+    return $curto !== '' ? $curto : $nome;
+}
