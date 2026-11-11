@@ -744,3 +744,5 @@ h3 small { font-weight: 400; color: var(--muted); }
 .dup-topo small { display: block; color: var(--muted); font-size: .9rem; }
 .dup-fechar { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--line); color: var(--text); text-decoration: none; font-size: 1.6rem; line-height: 1; }
 .dup-modal .barra-salvar { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0 14px; margin: 0; }
+.dia-menu .dia-menu-novo { display: block; text-align: center; margin: 4px 0 18px; }
+.dia-menu { padding-bottom: 16px; }

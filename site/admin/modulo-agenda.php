@@ -1113,7 +1113,10 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
           var escolher = cal.dataset.escolher === '1', editar = cal.dataset.editar === '1';
           function dia(el) {
             if (!editar) return;
-            if (!escolher) { location.href = './?acao=show&data=' + el.dataset.dia; return; }
+            if (!escolher) {
+              if (!(window.dhAbrirDia && window.dhAbrirDia(el.dataset.dia, el.getAttribute('aria-label')))) location.href = './?acao=show&data=' + el.dataset.dia;
+              return;
+            }
             var campo = document.querySelector('#form-show [name=data]');
             campo.value = el.dataset.dia;
             campo.dispatchEvent(new Event('change'));
@@ -1208,20 +1211,42 @@ function agenda_tela_lista(): void
         <script>
         (function () {
           var shows = <?= json_encode($busca, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-          var campo = document.getElementById('busca-show'), lista = document.getElementById('busca-show-lista');
           var norm = function (t) { return (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
           var esc = function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
-          campo.addEventListener('input', function () {
-            var q = norm(campo.value.trim());
-            if (q.length < 2) { lista.hidden = true; lista.innerHTML = ''; return; }
-            var palavras = q.split(/\s+/);
-            var todos = shows.filter(function (s) { var t = norm(s.banda + ' ' + s.tributo + ' ' + s.data + ' ' + s.un); return palavras.every(function (p) { return t.indexOf(p) >= 0; }); });
-            var achados = todos.slice(0, 60);
-            lista.innerHTML = achados.length ? '<li class="dica">' + todos.length + ' show' + (todos.length > 1 ? 's' : '') + ' encontrado' + (todos.length > 1 ? 's' : '') + (todos.length > achados.length ? ' (mostrando os ' + achados.length + ' mais recentes; digite mais para filtrar)' : '') + '</li>' + achados.map(function (s) {
-              return '<li><a href="./?acao=show&amp;duplicar=' + encodeURIComponent(s.id) + '"><img src="' + esc(s.foto) + '" alt="" width="44" height="44" loading="lazy">'
-                + '<span><strong>' + esc(s.banda) + '</strong><small>' + esc(s.tributo || 'Sem tributo') + '</small><small>' + esc(s.data) + ' · ' + esc(s.un) + (s.st ? ' · <b>cancelado</b>' : '') + '</small></span><em>⧉ Duplicar</em></a></li>';
-            }).join('') : '<li class="dica">Nenhum show encontrado.</li>';
-            lista.hidden = false;
+          // Busca nos shows de todo o período; o link duplica (com a data já escolhida, se houver)
+          function ligar(campo, lista, data) {
+            campo.addEventListener('input', function () {
+              var q = norm(campo.value.trim());
+              if (q.length < 2) { lista.hidden = true; lista.innerHTML = ''; return; }
+              var palavras = q.split(/\s+/);
+              var todos = shows.filter(function (s) { var t = norm(s.banda + ' ' + s.tributo + ' ' + s.data + ' ' + s.un); return palavras.every(function (p) { return t.indexOf(p) >= 0; }); });
+              var achados = todos.slice(0, 60), extra = data() ? '&amp;data=' + data() : '';
+              lista.innerHTML = achados.length ? '<li class="dica">' + todos.length + ' show' + (todos.length > 1 ? 's' : '') + ' encontrado' + (todos.length > 1 ? 's' : '') + (todos.length > achados.length ? ' (mostrando os ' + achados.length + ' mais recentes; digite mais para filtrar)' : '') + '</li>' + achados.map(function (s) {
+                return '<li><a href="./?acao=show&amp;duplicar=' + encodeURIComponent(s.id) + extra + '"><img src="' + esc(s.foto) + '" alt="" width="44" height="44" loading="lazy">'
+                  + '<span><strong>' + esc(s.banda) + '</strong><small>' + esc(s.tributo || 'Sem tributo') + '</small><small>' + esc(s.data) + ' · ' + esc(s.un) + (s.st ? ' · <b>cancelado</b>' : '') + '</small></span><em>⧉ Duplicar</em></a></li>';
+              }).join('') : '<li class="dica">Nenhum show encontrado.</li>';
+              lista.hidden = false;
+            });
+          }
+          ligar(document.getElementById('busca-show'), document.getElementById('busca-show-lista'), function () { return ''; });
+          // Toque num dia do calendário: novo show ou duplicar um show já feito nesse dia
+          var diaAtual = '';
+          window.dhAbrirDia = function (dia, rotulo) {
+            var m = document.getElementById('dia-menu');
+            if (!m || !m.showModal) return false;
+            diaAtual = dia;
+            m.querySelector('.dia-menu-quando').textContent = rotulo || dia.split('-').reverse().join('/');
+            m.querySelector('.dia-menu-novo').href = './?acao=show&data=' + dia;
+            var c = m.querySelector('input'); c.value = ''; m.querySelector('ul').hidden = true;
+            m.showModal();
+            return true;
+          };
+          document.addEventListener('DOMContentLoaded', function () {
+            var m = document.getElementById('dia-menu');
+            if (!m) return;
+            ligar(m.querySelector('input'), m.querySelector('ul'), function () { return diaAtual; });
+            m.querySelector('.dia-menu-fechar').addEventListener('click', function () { m.close(); });
+            m.addEventListener('click', function (e) { if (e.target === m) m.close(); });
           });
         })();
         </script>
@@ -1233,6 +1258,19 @@ function agenda_tela_lista(): void
         <?php endforeach; ?>
       </div>
       <?php agenda_calendario($a, $mes, $un, false); ?>
+      <?php if (pode('agenda_editar')): ?>
+        <dialog class="dup-modal dia-menu" id="dia-menu">
+          <div class="dup-topo">
+            <div><strong>Marcar show</strong><small class="dia-menu-quando"></small></div>
+            <button type="button" class="dup-fechar dia-menu-fechar" aria-label="Fechar">×</button>
+          </div>
+          <a class="btn primario largo dia-menu-novo" href="#">+ Novo show neste dia</a>
+          <div class="busca-show">
+            <label>…ou duplicar um show já feito <input type="search" placeholder="Banda, tributo, data ou casa" autocomplete="off"></label>
+            <ul class="busca-show-lista" hidden></ul>
+          </div>
+        </dialog>
+      <?php endif; ?>
       <?php if (!$shows): ?><p class="dica">Nenhum show neste mês.</p><?php endif; ?>
       <ul class="lista shows">
         <?php foreach ($shows as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
@@ -1293,7 +1331,7 @@ function agenda_tela_show(): void
     foreach ($a['shows'] as $x) {
         if (!$s && $x['id'] === (string) ($_GET['duplicar'] ?? '')) {
             $origem = $x;
-            $s = ['id' => '', 'data' => '', 'status' => in_array($x['status'], ['pago', 'cancelado'], true) ? 'confirmado' : $x['status'], 'obs' => '']
+            $s = ['id' => '', 'data' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($_GET['data'] ?? '')) ? $_GET['data'] : '', 'status' => in_array($x['status'], ['pago', 'cancelado'], true) ? 'confirmado' : $x['status'], 'obs' => '']
                 + array_intersect_key($x, array_flip(['hora', 'unidade', 'banda_id', 'tributo', 'cache', 'consumacao']));
         }
     }
