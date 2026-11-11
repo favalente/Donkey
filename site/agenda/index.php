@@ -6,12 +6,21 @@ $a = dh_agenda();
 $mes = (string) ($_GET['mes'] ?? '');
 $mes = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mes) ? $mes : date('Y-m');
 $unidade = isset(DH_UNIDADES[$_GET['unidade'] ?? '']) ? $_GET['unidade'] : null;
+// A agenda é sempre de uma casa: lembra a última escolhida; na primeira visita, pergunta qual
+if ($unidade) {
+    setcookie('dh_sede', $unidade, ['expires' => time() + 365 * 86400, 'path' => '/', 'secure' => !empty($_SERVER['HTTPS']), 'samesite' => 'Lax']);
+} elseif (isset(DH_UNIDADES[$_COOKIE['dh_sede'] ?? ''])) {
+    $unidade = $_COOKIE['dh_sede'];
+}
+$escolher = !$unidade;
+$unidade = $unidade ?: array_key_first(DH_UNIDADES);
+const DH_SEDE_ENDERECO = ['aldeota' => 'R. Norvinda Píres, 42 · Aldeota', 'maraponga' => 'Av. Godofredo Maciel, 2127 · Maraponga'];
 $ini = $mes . '-01';
 $fim = date('Y-m-t', strtotime($ini));
 // No mês atual, mostra a partir de hoje
 $de = $mes === date('Y-m') ? date('Y-m-d') : $ini;
 // O calendário mostra o mês inteiro; a lista embaixo, só o que ainda vai acontecer
-$doMes = dh_shows_publicos($a, $ini, $fim, $unidade);
+$doMes = dh_shows_publicos($a, $ini, $fim, $escolher ? null : $unidade);
 $shows = array_values(array_filter($doMes, fn($s) => $s['data'] >= $de));
 $porDia = [];
 foreach ($doMes as $s) {
@@ -36,7 +45,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=30">
+  <link rel="stylesheet" href="../assets/css/style.css?v=31">
   <script src="../assets/js/arrastar-mes.js?v=2"></script>
   <script type="application/ld+json">
   <?= json_encode(array_map(fn($s) => [
@@ -69,17 +78,17 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
         <h1 class="titulo-pagina">Som ao vivo na Donkey Head Cervejaria</h1>
         <p>Programação de shows nas unidades Aldeota e Maraponga. Sujeita a alterações: confira também o nosso Instagram.</p>
       </div>
-      <div class="agenda-filtros">
-        <div class="filtros" role="group" aria-label="Unidade">
-          <a class="filtro<?= !$unidade ? ' ativo' : '' ?>" href="<?= e($link($mes, null)) ?>">Todas</a>
-          <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
-            <a class="filtro<?= $unidade === $u ? ' ativo' : '' ?>" href="<?= e($link($mes, $u)) ?>"><?= e($nomeU) ?></a>
-          <?php endforeach; ?>
-        </div>
-      </div>
-      <div class="cal-legenda">
-        <?php foreach (DH_UNIDADES as $u => $nomeU): if ($unidade && $unidade !== $u) continue; ?><span class="cal-u-<?= $u ?>"><?= e($nomeU) ?></span><?php endforeach; ?>
-      </div>
+      <?php if ($escolher): ?><h2 class="sede-pergunta">Qual casa você quer ver?</h2><?php endif; ?>
+      <nav class="sede-escolha<?= $escolher ? ' primeira' : '' ?>" aria-label="Escolha a casa">
+        <?php foreach (DH_UNIDADES as $u => $nomeU): $ativa = !$escolher && $unidade === $u; ?>
+          <a class="sede-opcao cal-u-<?= $u ?><?= $ativa ? ' ativa' : '' ?>" href="<?= e($link($mes, $u)) ?>"<?= $ativa ? ' aria-current="page"' : '' ?>>
+            <span class="sede-nome"><?= $ativa ? '✓ ' : '' ?><?= e($nomeU) ?></span>
+            <small><?= e(DH_SEDE_ENDERECO[$u] ?? '') ?></small>
+          </a>
+        <?php endforeach; ?>
+      </nav>
+      <?php if (!$escolher): ?>
+      <h2 class="sede-agenda-titulo cal-u-<?= $unidade ?>">Agenda da <?= e(DH_UNIDADES[$unidade]) ?></h2>
       <div class="agenda-mes cal-mes-perto">
         <a href="<?= e($link($anterior, $unidade)) ?>" aria-label="Mês anterior" id="mes-anterior">‹</a>
         <strong><?= e($nomeMes) ?></strong>
@@ -132,6 +141,7 @@ $link = fn($m, $u) => '?mes=' . $m . ($u ? '&unidade=' . $u : '');
         </div>
       <?php else: ?>
         <p class="agenda-vazia"><?= $doMes ? 'Os shows deste mês já aconteceram. Veja o próximo mês!' : 'A programação de ' . e($nomeMes) . ' ainda não foi divulgada. Volte em breve!' ?></p>
+      <?php endif; ?>
       <?php endif; ?>
       <p class="note">Quer a agenda no seu celular? <a href="ics.php">Adicione ao seu calendário</a>.</p>
     </div>

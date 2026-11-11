@@ -1047,7 +1047,7 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
     $nav = './?acao=' . ($escolher ? 'show' : 'agenda') . ($un ? '&unidade=' . $un : '') . $extra . '&mes=';
     ?>
       <div class="cal-admin" data-escolher="<?= $escolher ? '1' : '' ?>" data-editar="<?= $editar ? '1' : '' ?>">
-        <p class="cal-legenda"><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <span class="leg-cancelado">Cancelado</span> <b class="leg-pago"><span class="flag-pago">✓</span> Pago</b></p>
+        <p class="cal-legenda"><?php if (!$un): ?><span class="u-aldeota">Aldeota</span> <span class="u-maraponga">Maraponga</span> <?php endif; ?><span class="leg-cancelado">Cancelado</span> <b class="leg-pago"><span class="flag-pago">✓</span> Pago</b></p>
         <p class="dica cal-ajuda">👆 <?= !$editar ? 'Toque no nome da banda para ver o tributo, o Instagram e as fotos.' : ($escolher ? 'Toque no dia do show.' : 'Toque num dia para marcar um show.') . ' Toque no nome da banda para editar ou duplicar.' ?> Arraste o calendário para o lado para trocar de mês.</p>
         <?php if ($mes !== date('Y-m')): ?><p class="centro"><a class="btn secundario hoje-btn" data-manter-posicao href="<?= e($nav . date('Y-m')) ?>">Voltar para o mês atual</a></p><?php endif; ?>
         <?php $ant = dh_mes_somar($mes, -1); $prox = dh_mes_somar($mes, 1); ?>
@@ -1180,12 +1180,16 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
 
 function agenda_tela_lista(): void
 {
-    global $csrf;
+    global $csrf, $usuario;
     $a = dh_agenda();
     $bandas = dh_bandas_por_id($a);
     $mes = dh_mes_param();
-    $un = isset(DH_UNIDADES[$_GET['unidade'] ?? '']) ? $_GET['unidade'] : '';
-    $shows = array_values(array_filter($a['shows'], fn($s) => substr($s['data'], 0, 7) === $mes && (!$un || $s['unidade'] === $un)));
+    // A agenda mostra uma casa por vez: a escolhida (lembrada na sessão) ou a do usuário
+    if (isset(DH_UNIDADES[$_GET['unidade'] ?? ''])) {
+        $_SESSION['agenda_sede'] = $_GET['unidade'];
+    }
+    $un = $_SESSION['agenda_sede'] ?? (isset(DH_UNIDADES[$usuario['unidade'] ?? '']) ? $usuario['unidade'] : array_key_first(DH_UNIDADES));
+    $shows = array_values(array_filter($a['shows'], fn($s) => substr($s['data'], 0, 7) === $mes && $s['unidade'] === $un));
     $base = './?acao=agenda' . ($un ? '&unidade=' . $un : '');
     ?>
       <div class="titulo-acao">
@@ -1251,12 +1255,11 @@ function agenda_tela_lista(): void
         })();
         </script>
       <?php endif; ?>
-      <div class="abas">
-        <a href="./?acao=agenda&mes=<?= e($mes) ?>" class="<?= !$un ? 'ativo' : '' ?>">Todas</a>
+      <nav class="sede-escolha" aria-label="Agenda de qual casa">
         <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
-          <a href="./?acao=agenda&mes=<?= e($mes) ?>&unidade=<?= $u ?>" class="<?= $un === $u ? 'ativo' : '' ?>"><?= e($nomeU) ?></a>
+          <a class="sede-opcao u-<?= $u ?><?= $un === $u ? ' ativa' : '' ?>" href="./?acao=agenda&amp;mes=<?= e($mes) ?>&amp;unidade=<?= $u ?>"><?= $un === $u ? '✓ ' : '' ?><?= e($nomeU) ?></a>
         <?php endforeach; ?>
-      </div>
+      </nav>
       <?php agenda_calendario($a, $mes, $un, false); ?>
       <?php if (pode('agenda_editar')): ?>
         <dialog class="dup-modal dia-menu" id="dia-menu">
@@ -1335,7 +1338,7 @@ function agenda_tela_show(): void
                 + array_intersect_key($x, array_flip(['hora', 'unidade', 'banda_id', 'tributo', 'cache', 'consumacao']));
         }
     }
-    $s = $s ?? ['id' => '', 'data' => (string) ($_GET['data'] ?? ''), 'hora' => $a['config']['hora_padrao'], 'unidade' => $usuario['unidade'] ?? '' ?: 'aldeota', 'banda_id' => '',
+    $s = $s ?? ['id' => '', 'data' => (string) ($_GET['data'] ?? ''), 'hora' => $a['config']['hora_padrao'], 'unidade' => $_SESSION['agenda_sede'] ?? (($usuario['unidade'] ?? '') ?: 'aldeota'), 'banda_id' => '',
         'tributo' => '', 'cache' => '', 'consumacao' => '', 'status' => 'confirmado', 'obs' => ''];
     if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $s = array_merge($s, array_intersect_key($_POST, $s));
@@ -1352,7 +1355,8 @@ function agenda_tela_show(): void
       <?php
         $mesCal = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) ($_GET['mes'] ?? '')) ? $_GET['mes'] : (preg_match('/^\d{4}-\d{2}/', $s['data']) ? substr($s['data'], 0, 7) : ($origem ? substr($origem['data'], 0, 7) : date('Y-m')));
         $extra = $s['id'] ? '&id=' . rawurlencode($s['id']) : ($origem ? '&duplicar=' . rawurlencode($origem['id']) : '');
-        agenda_calendario($a, $mesCal, '', true, $s['data'], $extra);
+        echo '<p class="cal-de-qual">Agenda da <b>' . e(DH_UNIDADES[$s['unidade']] ?? '') . '</b></p>';
+        agenda_calendario($a, $mesCal, $s['unidade'], true, $s['data'], $extra);
       ?>
       <?php if ($origem): $bOrig = dh_bandas_por_id($a)[$origem['banda_id']] ?? null; ?>
       <dialog class="dup-modal" id="dup-modal">

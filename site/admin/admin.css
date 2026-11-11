@@ -746,3 +746,10 @@ h3 small { font-weight: 400; color: var(--muted); }
 .dup-modal .barra-salvar { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0 14px; margin: 0; }
 .dia-menu .dia-menu-novo { display: block; text-align: center; margin: 4px 0 18px; }
 .dia-menu { padding-bottom: 16px; }
+
+/* Agenda: escolha da casa bem à vista (uma casa por vez) */
+.sede-escolha { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 14px; }
+.sede-opcao { display: grid; place-items: center; min-height: 60px; padding: 10px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font-size: 1.25rem; font-weight: 800; }
+.sede-opcao:hover { border-color: var(--cor); }
+.sede-opcao.ativa { background: var(--cor); border-color: var(--cor); color: #1a120a; }
+.cal-de-qual { margin: 0 0 6px; color: var(--muted); }
