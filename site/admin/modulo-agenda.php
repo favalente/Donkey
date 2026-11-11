@@ -1310,18 +1310,26 @@ function agenda_tela_show(): void
     ?>
       <p><a class="voltar" href="./?acao=agenda<?= $s['data'] ? '&mes=' . e(substr($s['data'], 0, 7)) : '' ?>">‹ Voltar para a Agenda</a></p>
       <h1><?= $s['id'] ? 'Editar show' : ($origem ? 'Duplicar show' : 'Novo show') ?></h1>
-      <?php if ($origem): ?><p class="aviso">Cópia do show de <?= e(dh_data_curta($origem['data'])) ?>. Escolha o novo dia no calendário e salve.</p><?php endif; ?>
+      <?php if ($origem): ?><p class="aviso">Cópia do show de <?= e(dh_data_curta($origem['data'])) ?>.</p><?php endif; ?>
       <?php
         $mesCal = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) ($_GET['mes'] ?? '')) ? $_GET['mes'] : (preg_match('/^\d{4}-\d{2}/', $s['data']) ? substr($s['data'], 0, 7) : ($origem ? substr($origem['data'], 0, 7) : date('Y-m')));
         $extra = $s['id'] ? '&id=' . rawurlencode($s['id']) : ($origem ? '&duplicar=' . rawurlencode($origem['id']) : '');
         agenda_calendario($a, $mesCal, '', true, $s['data'], $extra);
       ?>
+      <?php if ($origem): $bOrig = dh_bandas_por_id($a)[$origem['banda_id']] ?? null; ?>
+      <dialog class="dup-modal" id="dup-modal">
+        <div class="dup-topo">
+          <div><strong>Duplicar show</strong><small><?= e($bOrig['nome'] ?? '') ?><?= $origem['tributo'] !== '' ? ' · ' . e($origem['tributo']) : '' ?> · cópia de <?= e(dh_data_curta($origem['data'])) ?></small></div>
+          <a class="dup-fechar" href="./?acao=agenda&amp;mes=<?= e(substr($origem['data'], 0, 7)) ?>" aria-label="Cancelar">×</a>
+        </div>
+        <p class="dica">Escolha a nova data e mude só o que for diferente. O resto já veio do show copiado.</p>
+      <?php endif; ?>
       <form method="post" action="./?acao=show-salvar" class="form-cerveja" id="form-show">
         <?= $csrf ?>
         <input type="hidden" name="id" value="<?= e($s['id']) ?>">
         <div class="duas">
           <label>Data <input type="date" name="data" value="<?= e($s['data']) ?>" required>
-            <span class="data-extenso" id="data-extenso"><?= $s['data'] ? e(dh_data_curta($s['data'])) . '/' . e(substr($s['data'], 0, 4)) : 'Toque no dia no calendário acima' ?></span></label>
+            <span class="data-extenso" id="data-extenso"><?= $s['data'] ? e(dh_data_curta($s['data'])) . '/' . e(substr($s['data'], 0, 4)) : ($origem ? 'Toque no campo para escolher o novo dia' : 'Toque no dia no calendário acima') ?></span></label>
           <label>Horário <input type="time" name="hora" value="<?= e($s['hora']) ?>" required></label>
         </div>
         <label>Unidade
@@ -1363,6 +1371,17 @@ function agenda_tela_show(): void
         <?php endif; ?>
         <div class="barra-salvar"><button class="btn primario">Salvar show</button></div>
       </form>
+      <?php if ($origem): ?>
+      </dialog>
+      <script>
+        (function () {
+          var d = document.getElementById('dup-modal');
+          if (d && d.showModal) { d.showModal(); d.scrollTop = 0; }
+          // Esc ou voltar do celular: volta para a agenda
+          if (d) d.addEventListener('cancel', function (e) { e.preventDefault(); location.href = d.querySelector('.dup-fechar').href; });
+        })();
+      </script>
+      <?php endif; ?>
       <?php if ($s['id']): ?>
         <form method="post" action="./?acao=show-excluir" class="excluir" onsubmit="return confirm('Excluir este show?');">
           <?= $csrf ?><input type="hidden" name="id" value="<?= e($s['id']) ?>">

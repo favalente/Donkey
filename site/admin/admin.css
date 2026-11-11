@@ -734,3 +734,13 @@ h3 small { font-weight: 400; color: var(--muted); }
 .busca-show-lista strong { display: block; }
 .busca-show-lista small { display: block; color: var(--muted); font-size: .88rem; }
 .busca-show-lista em { font-style: normal; font-weight: 700; color: var(--ambar-txt); white-space: nowrap; font-size: .9rem; }
+
+[hidden] { display: none !important; }
+/* Duplicar show: formulário em janela por cima do calendário */
+.dup-modal { width: min(560px, calc(100% - 20px)); max-height: calc(100dvh - 24px); padding: 0 16px 0; border: 0; border-radius: 18px; background: var(--bg); color: var(--text); box-shadow: 0 18px 60px rgba(0, 0, 0, .35); }
+.dup-modal::backdrop { background: rgba(20, 14, 8, .55); backdrop-filter: blur(2px); }
+.dup-topo { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; background: var(--bg); border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.dup-topo strong { display: block; font-size: 1.25rem; }
+.dup-topo small { display: block; color: var(--muted); font-size: .9rem; }
+.dup-fechar { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--line); color: var(--text); text-decoration: none; font-size: 1.6rem; line-height: 1; }
+.dup-modal .barra-salvar { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0 14px; margin: 0; }
