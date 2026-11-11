@@ -1387,7 +1387,7 @@ function agenda_tela_show(): void
             var atual = primeira ? trib.dataset.atual : '';
             if (atual && tribs.indexOf(atual) < 0) tribs.push(atual);
             trib.innerHTML = '<option value="">— sem tributo —</option>' + tribs.map(function (t) {
-              var o = document.createElement('option'); o.value = o.textContent = t; if (t === atual || (!atual && tribs.length === 1)) o.selected = true; return o.outerHTML;
+              var o = document.createElement('option'); o.value = o.textContent = t; if (t === atual || (!atual && tribs.length === 1)) o.defaultSelected = true; return o.outerHTML;
             }).join('') + '<option value="__outro">+ Outro tributo…</option>';
             // Banda nova ainda não tem tributo: já abre o campo para digitar
             if (nova.value && !b) trib.value = '__outro';
