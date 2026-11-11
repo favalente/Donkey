@@ -6,14 +6,9 @@ $a = dh_agenda();
 $mes = (string) ($_GET['mes'] ?? '');
 $mes = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mes) ? $mes : date('Y-m');
 $unidade = isset(DH_UNIDADES[$_GET['unidade'] ?? '']) ? $_GET['unidade'] : null;
-// A agenda é sempre de uma casa: lembra a última escolhida; na primeira visita, pergunta qual
-if ($unidade) {
-    setcookie('dh_sede', $unidade, ['expires' => time() + 365 * 86400, 'path' => '/', 'secure' => !empty($_SERVER['HTTPS']), 'samesite' => 'Lax']);
-} elseif (isset(DH_UNIDADES[$_COOKIE['dh_sede'] ?? ''])) {
-    $unidade = $_COOKIE['dh_sede'];
-}
-$escolher = !$unidade;
-$unidade = $unidade ?: array_key_first(DH_UNIDADES);
+// A agenda é sempre de uma casa: abre na Aldeota; o cliente troca nos botões
+$escolher = false;
+$unidade = $unidade ?: 'aldeota';
 const DH_SEDE_ENDERECO = ['aldeota' => 'R. Norvinda Píres, 42 · Aldeota', 'maraponga' => 'Av. Godofredo Maciel, 2127 · Maraponga'];
 $ini = $mes . '-01';
 $fim = date('Y-m-t', strtotime($ini));
