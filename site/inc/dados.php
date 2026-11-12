@@ -360,7 +360,8 @@ function dh_categoria(array $c): int
         return $cat;
     }
     $e = mb_strtolower(($c['estilo'] ?? '') . ' ' . ($c['nome'] ?? ''), 'UTF-8');
-    if (preg_match('/session/u', $e)) {
+    // Session IPA é lupulada; outras "session" (ex.: session stout) ficam nas equilibradas
+    if (preg_match('/session/u', $e) && !preg_match('/ipa|apa|pale ale/u', $e)) {
         return 2;
     }
     if (preg_match('/stout|porter|imperial|tripel|dubbel|quadrupel|strong|barley|wee heavy|doppelbock/u', $e)) {
