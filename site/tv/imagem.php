@@ -31,6 +31,12 @@ header('X-Robots-Tag: noindex');
     canvas { width: 100%; height: auto; border-radius: 10px; border: 1px solid #3d3128; display: block; }
     .baixar { display: block; width: 100%; margin-top: 10px; padding: 14px; border: 0; border-radius: 999px; background: #e9a23b; color: #1a120a; font: 700 1.05rem Inter, sans-serif; cursor: pointer; }
     .carregando { color: #bcab97; }
+    h1#story { margin-top: 32px; }
+    .stories { display: flex; flex-wrap: wrap; gap: 20px; }
+    .stories .pagina { width: min(360px, 100%); }
+    .botoes { display: flex; gap: 8px; }
+    .botoes .baixar { flex: 1; }
+    .baixar.sec { background: transparent; color: #e9a23b; border: 2px solid #e9a23b; }
   </style>
 </head>
 <body>
@@ -43,35 +49,57 @@ header('X-Robots-Tag: noindex');
       <?php endforeach; ?>
     </div>
     <div id="paginas"><p class="carregando">Gerando imagem…</p></div>
+
+    <h1 id="story">Story do Instagram</h1>
+    <p>Imagem 1080×1920 com o que está engatado hoje. No celular, toque em <b>Compartilhar</b> e escolha o Instagram → Story.</p>
+    <div id="stories" class="stories"><p class="carregando">Gerando imagem…</p></div>
   </main>
 
-  <script src="desenho.js?v=5"></script>
+  <script src="desenho.js?v=6"></script>
   <script>
     var DADOS = <?= json_encode($dadosTv, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     var UNIDADE = <?= json_encode($unidade) ?>;
 
-    DHTap.carregar(DADOS, '../assets/img/logo-donkey-head.png?v=2').then(function (imgs) {
-      var telas = DHTap.paginas(DADOS.taps || []);
-      var hoje = new Date().toISOString().slice(0, 10);
-      var alvo = document.getElementById('paginas');
+    var HOJE = new Date().toISOString().slice(0, 10);
+    function arquivo(cv, nome, fn) { cv.toBlob(function (blob) { fn(blob, nome); }, 'image/png'); }
+    function baixar(blob, nome) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = nome;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+    }
+    function botao(texto, classe, acao) {
+      var b = document.createElement('button'); b.className = 'baixar' + (classe ? ' ' + classe : ''); b.textContent = texto;
+      b.addEventListener('click', acao); return b;
+    }
+    // Lista de imagens (TV ou Story) com botão de baixar e, no celular, de compartilhar
+    function montar(alvo, telas, desenhar, prefixo, rotulo) {
       alvo.innerHTML = '';
       telas.forEach(function (tela, p) {
         var cv = document.createElement('canvas');
-        DHTap.desenhar(cv, DADOS, tela, p + 1, telas.length, imgs);
+        desenhar(cv, tela, p);
+        var nome = prefixo + '-' + UNIDADE + '-' + HOJE + (telas.length > 1 ? '-' + (p + 1) : '') + '.png';
         var bloco = document.createElement('div'); bloco.className = 'pagina';
-        var btn = document.createElement('button'); btn.className = 'baixar';
-        btn.textContent = telas.length > 1 ? 'Baixar imagem ' + (p + 1) + ' de ' + telas.length : 'Baixar imagem (PNG)';
-        var nome = 'taplist-' + UNIDADE + '-' + hoje + (telas.length > 1 ? '-' + (p + 1) : '') + '.png';
-        btn.addEventListener('click', function () {
-          cv.toBlob(function (blob) {
-            var a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = nome;
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
-          }, 'image/png');
-        });
-        bloco.appendChild(cv); bloco.appendChild(btn); alvo.appendChild(bloco);
+        var linha = document.createElement('div'); linha.className = 'botoes';
+        linha.appendChild(botao(telas.length > 1 ? rotulo + ' ' + (p + 1) + ' de ' + telas.length : rotulo, '', function () { arquivo(cv, nome, baixar); }));
+        if (navigator.canShare && navigator.share) {
+          // O arquivo fica pronto antes do toque: o celular só abre o compartilhar direto no toque
+          var pronto = null;
+          arquivo(cv, nome, function (blob) { pronto = new File([blob], nome, { type: 'image/png' }); });
+          linha.appendChild(botao('Compartilhar', 'sec', function () {
+            if (pronto && navigator.canShare({ files: [pronto] })) navigator.share({ files: [pronto] }).catch(function () {});
+            else arquivo(cv, nome, baixar);
+          }));
+        }
+        bloco.appendChild(cv); bloco.appendChild(linha); alvo.appendChild(bloco);
       });
+    }
+
+    DHTap.carregar(DADOS, '../assets/img/logo-donkey-head.png?v=2').then(function (imgs) {
+      var telas = DHTap.paginas(DADOS.taps || []);
+      montar(document.getElementById('paginas'), telas, function (cv, tela, p) { DHTap.desenhar(cv, DADOS, tela, p + 1, telas.length, imgs); }, 'taplist', 'Baixar imagem (PNG)');
+      var st = DHTap.paginasStory(DADOS.taps || []);
+      montar(document.getElementById('stories'), st, function (cv, tela, p) { DHTap.desenharStory(cv, DADOS, tela, p + 1, st.length, imgs); }, 'story', 'Baixar Story');
     });
   </script>
 </body>

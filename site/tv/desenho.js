@@ -172,5 +172,129 @@
     ctx.fillText('Beba com moderação · Venda proibida para menores de 18 anos', X1, 1070); ctx.textAlign = 'left';
   }
 
-  window.DHTap = { W: W, H: H, paginas: paginas, carregar: carregar, desenhar: desenhar };
+  // ---------------------------------------------------------------------------------------
+  // Story do Instagram (1080x1920): fundo escuro, uma coluna, no máximo POR_STORY cervejas.
+  // O topo e o rodapé ficam livres para a barra do Instagram (nome, respostas).
+  var SW = 1080, SH = 1920, POR_STORY = 9;
+  var ESC = { fundo: '#16110d', cartao: '#231b15', borda: '#3d3128', texto: '#f6eee3', suave: '#bcab97', ambar: '#e9a23b' };
+  var GRUPO_ESC = { 1: '#f0c23b', 2: '#ee7d3f', 3: '#7cc447', 4: '#a985e6' };
+  var DIAS = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+
+  function paginasStory(taps) {
+    var r = [];
+    for (var i = 0; i < taps.length; i += POR_STORY) r.push(taps.slice(i, i + POR_STORY));
+    return r.length ? r : [[]];
+  }
+
+  function desenharStory(cv, dados, tela, n, total, imgs) {
+    cv.width = SW; cv.height = SH;
+    var ctx = cv.getContext('2d');
+    // Fundo: escuro com um brilho âmbar no alto e outro discreto embaixo
+    ctx.fillStyle = ESC.fundo; ctx.fillRect(0, 0, SW, SH);
+    var g = ctx.createRadialGradient(SW / 2, 260, 40, SW / 2, 260, 900);
+    g.addColorStop(0, 'rgba(233,162,59,0.30)'); g.addColorStop(1, 'rgba(233,162,59,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, SW, SH);
+    var g2 = ctx.createRadialGradient(SW / 2, SH + 100, 40, SW / 2, SH + 100, 900);
+    g2.addColorStop(0, 'rgba(233,162,59,0.16)'); g2.addColorStop(1, 'rgba(233,162,59,0)');
+    ctx.fillStyle = g2; ctx.fillRect(0, 0, SW, SH);
+    ctx.textBaseline = 'alphabetic';
+
+    // Cabeçalho: logo, título e casa + dia
+    var cx = SW / 2;
+    if (imgs.logo) { var lh = 150, lw = imgs.logo.width * lh / imgs.logo.height; ctx.drawImage(imgs.logo, cx - lw / 2, 150, lw, lh); }
+    ctx.textAlign = 'center';
+    ctx.font = '400 128px ' + BEBAS; ctx.fillStyle = ESC.texto;
+    ctx.fillText('NA TORNEIRA', cx, 418);
+    ctx.font = '400 72px ' + BEBAS; ctx.fillStyle = ESC.ambar;
+    var hoje = new Date();
+    ctx.fillText('HOJE · ' + DIAS[hoje.getDay()] + ' ' + String(hoje.getDate()).padStart(2, '0') + '/' + String(hoje.getMonth() + 1).padStart(2, '0'), cx, 492);
+    ctx.font = '700 26px ' + INTER; ctx.fillStyle = ESC.suave;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '6px';
+    ctx.fillText('DONKEY HEAD CERVEJARIA · ' + dados.unidade.toUpperCase() + (total > 1 ? ' · ' + n + '/' + total : ''), cx, 546);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    ctx.textAlign = 'left';
+
+    if (!tela.length) {
+      ctx.font = '400 72px ' + BEBAS; ctx.fillStyle = ESC.suave; ctx.textAlign = 'center';
+      ctx.fillText('TAP LIST EM ATUALIZAÇÃO', cx, SH / 2); ctx.textAlign = 'left';
+      return;
+    }
+
+    // Cartões numa coluna, crescendo para ocupar o espaço
+    var X0 = 60, wCard = SW - 120, topo = 590, base = 1596, GAP = 16, FAIXA = 22;
+    var hCard = Math.min(200, Math.floor((base - topo - (tela.length - 1) * GAP) / tela.length));
+    var y0 = topo + Math.max(0, Math.floor((base - topo - (tela.length * (hCard + GAP) - GAP)) / 2));
+    tela.forEach(function (t, i) {
+      var cor = GRUPO_ESC[t.cat] || GRUPO_ESC[2], x = X0, yc = y0 + i * (hCard + GAP);
+      ctx.save(); retangulo(ctx, x, yc, wCard, hCard, 20); ctx.fillStyle = ESC.cartao; ctx.fill(); ctx.clip();
+      ctx.fillStyle = cor; ctx.fillRect(x, yc, FAIXA, hCard);
+      ctx.restore();
+      ctx.lineWidth = 2; ctx.strokeStyle = ESC.borda; retangulo(ctx, x, yc, wCard, hCard, 20); ctx.stroke();
+
+      var pad = Math.round(hCard * 0.1), lado = hCard - pad * 2, img = imgs[t.img], xi = x + FAIXA + 18;
+      if (img) {
+        ctx.save(); retangulo(ctx, xi, yc + pad, lado, lado, 14); ctx.clip();
+        var s = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, xi, yc + pad, lado, lado);
+        ctx.restore();
+      }
+
+      // Preço (300 ml) à direita
+      var xDir = x + wCard - 28, meio = yc + hCard / 2;
+      var tp = Math.round(Math.min(78, hCard * 0.42)), valor = (t.p300 || '').replace(/^R\$\s*/, '');
+      ctx.textAlign = 'right';
+      ctx.font = '400 ' + tp + 'px ' + BEBAS; ctx.fillStyle = ESC.texto;
+      ctx.fillText(valor, xDir, meio + tp * 0.5);
+      var wPreco = ctx.measureText(valor).width;
+      if (valor) {
+        ctx.font = '400 ' + Math.round(tp * 0.48) + 'px ' + BEBAS; ctx.fillStyle = ESC.suave;
+        ctx.fillText('R$', xDir - wPreco - 6, meio + tp * 0.5);
+        wPreco += 6 + ctx.measureText('R$').width;
+      }
+      ctx.font = '700 ' + Math.round(Math.max(16, tp * 0.26)) + 'px ' + INTER; ctx.fillStyle = cor;
+      ctx.fillText('300 ML', xDir, meio - tp * 0.42);
+      ctx.textAlign = 'left';
+
+      // Nome, estilo e números
+      var xt = xi + lado + 24, larg = xDir - wPreco - 28 - xt;
+      var nome = t.nome.toUpperCase(), estilo = (t.estilo || '').toUpperCase();
+      var numeros = [t.abv, t.ibuNum ? t.ibuNum + ' IBU' : ''].filter(Boolean).join('  ·  ');
+      var tn = caber(ctx, nome, '400', Math.round(Math.min(64, hCard * 0.34)), BEBAS, larg);
+      var te = caber(ctx, estilo, '400', Math.round(Math.min(40, hCard * 0.22)), BEBAS, larg);
+      var tm = caber(ctx, numeros, '400', Math.round(Math.min(38, hCard * 0.21)), BEBAS, larg);
+      var esp = Math.round(hCard * 0.05), alt = tn + te + tm + esp * 2, yb = meio - alt / 2;
+      ctx.font = '400 ' + tn + 'px ' + BEBAS; ctx.fillStyle = ESC.texto; ctx.fillText(nome, xt, yb + tn * 0.86);
+      yb += tn + esp;
+      ctx.font = '400 ' + te + 'px ' + BEBAS; ctx.fillStyle = cor; ctx.fillText(estilo, xt, yb + te * 0.86);
+      yb += te + esp;
+      ctx.font = '400 ' + tm + 'px ' + BEBAS; ctx.fillStyle = ESC.suave; ctx.fillText(numeros, xt, yb + tm * 0.86);
+    });
+
+    // Legenda das cores (centralizada, em até duas linhas)
+    var itens = Object.keys(dados.grupos).filter(function (k) { return tela.some(function (t) { return String(t.cat) === k; }); });
+    ctx.font = '400 34px ' + BEBAS;
+    var medidas = itens.map(function (k) { return 30 + 12 + ctx.measureText((dados.grupos[k] || '').toUpperCase()).width; });
+    var linhasL = [[]], larguras = [0];
+    itens.forEach(function (k, i) {
+      var w = medidas[i] + (linhasL[linhasL.length - 1].length ? 36 : 0);
+      if (larguras[larguras.length - 1] + w > SW - 120) { linhasL.push([]); larguras.push(0); w = medidas[i]; }
+      linhasL[linhasL.length - 1].push(i); larguras[larguras.length - 1] += w;
+    });
+    linhasL.forEach(function (lin, li) {
+      var xl = (SW - larguras[li]) / 2, yl = 1660 + li * 50;
+      lin.forEach(function (i, j) {
+        if (j) xl += 36;
+        var k = itens[i];
+        ctx.fillStyle = GRUPO_ESC[k] || GRUPO_ESC[2]; retangulo(ctx, xl, yl - 26, 28, 28, 6); ctx.fill();
+        ctx.fillStyle = ESC.texto; ctx.fillText((dados.grupos[k] || '').toUpperCase(), xl + 40, yl);
+        xl += medidas[i];
+      });
+    });
+    ctx.textAlign = 'center';
+    ctx.font = '500 22px ' + INTER; ctx.fillStyle = ESC.suave;
+    ctx.fillText('Beba com moderação · Venda proibida para menores de 18 anos', cx, 1770);
+    ctx.textAlign = 'left';
+  }
+
+  window.DHTap = { W: W, H: H, paginas: paginas, carregar: carregar, desenhar: desenhar, paginasStory: paginasStory, desenharStory: desenharStory };
 })();
