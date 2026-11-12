@@ -5,6 +5,8 @@
 // enviado por e-mail. Tudo fica em dados/contratos.json (bloqueado na web), com IP, aparelho e horário.
 
 const DH_ARQ_CONTRATOS = DH_RAIZ . '/dados/contratos.json';
+// Tamanhos de barril que a Donkey Head Cervejaria tem (o cliente escolhe um por linha do pedido)
+const DH_BARRIS_LITROS = [30, 50];
 const DH_CONTRATO_TIPOS = [
     'evento' => 'Evento corporativo no pub',
     'comodato' => 'Venda de chope com comodato de equipamentos',

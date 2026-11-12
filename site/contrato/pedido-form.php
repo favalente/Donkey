@@ -14,6 +14,14 @@ $opcoes = function (string $sel) use ($cervejas): string {
     return $h;
 };
 $itens = (array) ($_POST['itens'] ?? [['cerveja' => '', 'litros' => '']]);
+// Barris: só existem de 30 e 50 litros
+$barris = function (string $nome, string $atual): string {
+    $h = '<select name="' . e($nome) . '" class="sel-litros"><option value="">Barril</option>';
+    foreach (DH_BARRIS_LITROS as $l) {
+        $h .= '<option value="' . $l . '"' . ((int) $atual === $l ? ' selected' : '') . '>' . $l . ' L</option>';
+    }
+    return $h . '</select>';
+};
 $comodato = array_values(array_filter((array) ($_POST['comodato'] ?? []), fn($x) => ($x['cerveja'] ?? '') !== '' || ($x['litros'] ?? '') !== ''));
 // Cliente da base: os dados já vêm preenchidos (o painel escolheu o cliente ao criar o pedido)
 $cidadeBase = (string) ($f['cidade'] ?? '');
@@ -53,7 +61,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
     <?php foreach ($itens as $n => $it): ?>
       <div class="linha-chope">
         <label>Rótulo <select name="itens[<?= $n ?>][cerveja]"><?= $opcoes((string) ($it['cerveja'] ?? '')) ?></select></label>
-        <label>Litros <input name="itens[<?= $n ?>][litros]" inputmode="numeric" value="<?= e($it['litros'] ?? '') ?>" placeholder="Ex.: 50"></label>
+        <label>Litros <?= $barris('itens[' . $n . '][litros]', (string) ($it['litros'] ?? '')) ?></label>
         <button type="button" class="tirar-linha" aria-label="Remover este rótulo" title="Remover">×</button>
       </div>
     <?php endforeach; ?>
@@ -69,7 +77,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
         <?php foreach ($comodato ?: [['cerveja' => '', 'litros' => '']] as $n => $it): ?>
           <div class="linha-chope">
             <label>Rótulo <select name="comodato[<?= $n ?>][cerveja]"><?= $opcoes((string) ($it['cerveja'] ?? '')) ?></select></label>
-            <label>Litros <input name="comodato[<?= $n ?>][litros]" inputmode="numeric" value="<?= e($it['litros'] ?? '') ?>" placeholder="Ex.: 50"></label>
+            <label>Litros <?= $barris('comodato[' . $n . '][litros]', (string) ($it['litros'] ?? '')) ?></label>
             <button type="button" class="tirar-linha" aria-label="Remover este rótulo" title="Remover">×</button>
           </div>
         <?php endforeach; ?>
@@ -190,7 +198,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
       var s = 0;
       document.querySelectorAll('#linhas-chope .linha-chope').forEach(function (l) {
         var op = l.querySelector('select').selectedOptions[0];
-        s += (op && op.dataset.preco ? parseFloat(op.dataset.preco) : 0) * num(l.querySelector('input').value);
+        s += (op && op.dataset.preco ? parseFloat(op.dataset.preco) : 0) * num(l.querySelector('.sel-litros').value);
       });
       var local = (form.querySelector('[name=local]:checked') || {}).value;
       var frete = local === 'fortaleza' ? freteFortaleza : (local === 'outra' ? num(document.getElementById('frete-outra').value) : 0);
@@ -240,7 +248,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
         var caixa = document.getElementById(b.dataset.mais), modelo = caixa.querySelector('.linha-chope'), n = Date.now();
         var nova = modelo.cloneNode(true);
         nova.querySelector('select').name = b.dataset.nome + '[' + n + '][cerveja]'; nova.querySelector('select').value = '';
-        nova.querySelector('input').name = b.dataset.nome + '[' + n + '][litros]'; nova.querySelector('input').value = '';
+        nova.querySelector('.sel-litros').name = b.dataset.nome + '[' + n + '][litros]'; nova.querySelector('.sel-litros').value = '';
         caixa.appendChild(nova);
       });
     });

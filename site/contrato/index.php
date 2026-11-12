@@ -196,8 +196,8 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
                 if ($cid === '' && $litros === '') {
                     continue;
                 }
-                if (!isset($porId[$cid]) || $litros === '' || (float) $litros <= 0 || (float) $litros > 5000) {
-                    throw new RuntimeException('Escolha o rótulo e digite a litragem de cada linha' . ($emComodato ? ' do chope em comodato.' : ' do chope.'));
+                if (!isset($porId[$cid]) || !in_array((int) $litros, DH_BARRIS_LITROS, true) || (float) $litros != (int) $litros) {
+                    throw new RuntimeException('Escolha o rótulo e o barril (30 ou 50 litros) de cada linha' . ($emComodato ? ' do chope em comodato.' : ' do chope.'));
                 }
                 $f['itens'][] = ['descricao' => $porId[$cid]['nome'], 'cerveja' => $cid, 'litros' => $litros, 'valor_litro' => dh_valor($porId[$cid]['preco_evento']), 'comodato' => $emComodato];
             }
