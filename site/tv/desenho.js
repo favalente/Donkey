@@ -94,27 +94,16 @@
       return;
     }
 
-    // Blocos por grupo: título + cartões em 2 colunas
-    var blocos = [];
-    tela.forEach(function (t) {
-      var b = blocos[blocos.length - 1];
-      if (!b || b.cat !== t.cat) blocos.push(b = { cat: t.cat, taps: [] });
-      b.taps.push(t);
-    });
-    var linhas = blocos.reduce(function (s, b) { return s + Math.ceil(b.taps.length / 2); }, 0);
-    var TIT = 54, GAP = 18, topo = 152, base = 1032;
-    var hCard = Math.min(230, Math.floor((base - topo - blocos.length * TIT - (linhas - blocos.length) * GAP - (blocos.length - 1) * 14) / linhas));
+    // Cartões em sequência (da mais leve para a mais forte), 2 colunas, sem título de grupo:
+    // a cor da faixa lateral mostra o grupo e a legenda no rodapé explica as cores
+    var linhas = Math.ceil(tela.length / 2);
+    var GAP = 18, topo = 156, base = 992, FAIXA = 30;
+    var hCard = Math.min(230, Math.floor((base - topo - (linhas - 1) * GAP) / linhas));
     var gapX = 32, wCard = (X1 - X0 - gapX) / 2;
     var y = topo;
 
-    blocos.forEach(function (b) {
-      var cor = GRUPO[b.cat] || GRUPO[2];
-      // Título do grupo
-      ctx.fillStyle = cor; ctx.fillRect(X0, y + 12, 26, 26);
-      ctx.font = '400 42px ' + BEBAS; ctx.fillStyle = cor;
-      ctx.fillText((dados.grupos[b.cat] || '').toUpperCase(), X0 + 40, y + 40);
-      y += TIT;
-      b.taps.forEach(function (t, i) {
+    tela.forEach(function (t, i) {
+        var cor = GRUPO[t.cat] || GRUPO[2];
         var col = i % 2, x = X0 + col * (wCard + gapX), yc = y + Math.floor(i / 2) * (hCard + GAP);
         // Cartão
         ctx.save();
@@ -122,16 +111,16 @@
         retangulo(ctx, x, yc, wCard, hCard, 18); ctx.fillStyle = C.cartao; ctx.fill();
         ctx.restore();
         ctx.save(); retangulo(ctx, x, yc, wCard, hCard, 18); ctx.clip();
-        ctx.fillStyle = cor; ctx.fillRect(x, yc, 14, hCard);
+        ctx.fillStyle = cor; ctx.fillRect(x, yc, FAIXA, hCard);
         ctx.restore();
         ctx.lineWidth = 2; ctx.strokeStyle = C.borda; retangulo(ctx, x, yc, wCard, hCard, 18); ctx.stroke();
 
         // Rótulo
         var pad = 14, lado = Math.min(hCard - pad * 2, 176), img = imgs[t.img];
         if (img) {
-          ctx.save(); retangulo(ctx, x + 14 + pad, yc + (hCard - lado) / 2, lado, lado, 12); ctx.clip();
+          ctx.save(); retangulo(ctx, x + FAIXA + pad, yc + (hCard - lado) / 2, lado, lado, 12); ctx.clip();
           var s = Math.min(img.width, img.height);
-          ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, x + 14 + pad, yc + (hCard - lado) / 2, lado, lado);
+          ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, x + FAIXA + pad, yc + (hCard - lado) / 2, lado, lado);
           ctx.restore();
         }
 
@@ -153,7 +142,7 @@
         ctx.textAlign = 'left';
 
         // Nome, estilo e números em três linhas, centralizadas na altura do cartão
-        var xt = x + 14 + pad + lado + 26, larg = xDir - wPreco - 36 - xt;
+        var xt = x + FAIXA + pad + lado + 26, larg = xDir - wPreco - 36 - xt;
         var nome = t.nome.toUpperCase(), estilo = (t.estilo || '').toUpperCase();
         var numeros = [t.abv, t.ibuNum ? t.ibuNum + ' IBU' : ''].filter(Boolean).join('  ·  ');
         var tn = caber(ctx, nome, '400', Math.round(Math.min(78, hCard * 0.31)), BEBAS, larg);
@@ -166,12 +155,21 @@
         ctx.font = '400 ' + te + 'px ' + BEBAS; ctx.fillStyle = cor; ctx.fillText(estilo, xt, yb + te * 0.86);
         yb += te + esp;
         ctx.font = '400 ' + tm + 'px ' + BEBAS; ctx.fillStyle = '#3f3328'; ctx.fillText(numeros, xt, yb + tm * 0.86);
-      });
-      y += Math.ceil(b.taps.length / 2) * (hCard + GAP) - GAP + 14;
     });
 
-    ctx.font = '500 20px ' + INTER; ctx.fillStyle = C.suave; ctx.textAlign = 'right';
-    ctx.fillText('Beba com moderação · Venda proibida para menores de 18 anos', X1, 1064); ctx.textAlign = 'left';
+    // Legenda das cores (os grupos que aparecem nesta tela)
+    var xl = X0, yl = 1038;
+    Object.keys(dados.grupos).forEach(function (k) {
+      if (!tela.some(function (t) { return String(t.cat) === k; })) return;
+      ctx.fillStyle = GRUPO[k] || GRUPO[2]; retangulo(ctx, xl, yl - 26, 28, 28, 6); ctx.fill();
+      ctx.font = '400 36px ' + BEBAS; ctx.fillStyle = C.texto;
+      var rot = (dados.grupos[k] || '').toUpperCase();
+      ctx.fillText(rot, xl + 42, yl + 2);
+      xl += 42 + ctx.measureText(rot).width + 44;
+    });
+
+    ctx.font = '500 18px ' + INTER; ctx.fillStyle = C.suave; ctx.textAlign = 'right';
+    ctx.fillText('Beba com moderação · Venda proibida para menores de 18 anos', X1, 1070); ctx.textAlign = 'left';
   }
 
   window.DHTap = { W: W, H: H, paginas: paginas, carregar: carregar, desenhar: desenhar };
