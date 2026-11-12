@@ -93,11 +93,11 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
     </div>
   <?php endforeach; ?>
 
-  <div class="cupom">
-    <label for="cupom">Tem cupom de desconto?</label>
-    <div class="cupom-linha"><input id="cupom" name="cupom" autocapitalize="characters" autocomplete="off" maxlength="30" placeholder="Código do cupom" value="<?= $v('cupom') ?>"><button type="button" class="btn" id="bt-cupom">Aplicar</button></div>
+  <details class="cupom"<?= $v('cupom') !== '' ? ' open' : '' ?>>
+    <summary>Possui cupom de desconto?</summary>
+    <div class="cupom-linha"><input id="cupom" name="cupom" autocapitalize="characters" autocomplete="off" maxlength="30" placeholder="Código do cupom" aria-label="Código do cupom" value="<?= $v('cupom') ?>"><button type="button" class="btn" id="bt-cupom">Aplicar</button></div>
     <p class="cupom-msg" id="cupom-msg" aria-live="polite"></p>
-  </div>
+  </details>
 
   <table class="itens resumo"><tr><td>Chope</td><td id="t-chope">R$ 0,00</td></tr><tr id="l-desconto" hidden><td id="t-desconto-rot">Desconto</td><td id="t-desconto">R$ 0,00</td></tr><tr id="l-extras" hidden><td>Opcionais</td><td id="t-extras">R$ 0,00</td></tr><tr><td>Frete (instalação e retirada)</td><td id="t-frete">—</td></tr><tr class="total"><td>Valor total</td><td id="t-total">R$ 0,00</td></tr></table>
   <?php endif; ?>
@@ -230,6 +230,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
         .catch(function () { cupomMsg.textContent = 'Não foi possível conferir o cupom agora.'; cupomMsg.className = 'cupom-msg erro'; });
     }
     document.getElementById('bt-cupom').addEventListener('click', aplicarCupom);
+    document.querySelector('details.cupom').addEventListener('toggle', function () { if (this.open) cupomInput.focus(); });
     cupomInput.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); aplicarCupom(); } });
     cupomInput.addEventListener('input', function () { if (cupom) { cupom = null; cupomMsg.textContent = ''; total(); } });
     if (cupomInput.value.trim()) aplicarCupom();

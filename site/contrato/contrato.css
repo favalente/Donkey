@@ -110,4 +110,7 @@ p, li { font-size: .95rem; text-align: justify; }
 .busca-cadastro .cupom-linha .btn { flex: 1 1 auto; }
 .busca-cadastro label { margin-bottom: 4px; }
 
-.obs-vermelha { color: #c62828; font-weight: 700; font-size: .92rem; margin: 4px 0 6px; }
+.obs-vermelha { color: #c62828; font-weight: 700; font-size: .92rem; margin: 4px 0 6px; text-align: left; }
+.cupom summary { display: inline-block; cursor: pointer; color: #8a5200; font-size: .95rem; font-weight: 600; text-decoration: underline; list-style: none; }
+.cupom summary::-webkit-details-marker { display: none; }
+.cupom[open] summary { text-decoration: none; margin-bottom: 4px; }
