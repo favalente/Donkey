@@ -36,6 +36,7 @@ header('X-Robots-Tag: noindex');
     .stories .pagina { width: min(360px, 100%); }
     .botoes { display: flex; gap: 8px; }
     .botoes .baixar { flex: 1; }
+    .baixar.zap { background: #25d366; color: #0b2e17; }
     .baixar.sec { background: transparent; color: #e9a23b; border: 2px solid #e9a23b; }
   </style>
 </head>
@@ -51,7 +52,7 @@ header('X-Robots-Tag: noindex');
     <div id="paginas"><p class="carregando">Gerando imagem…</p></div>
 
     <h1 id="story">Story do Instagram</h1>
-    <p>Imagem 1080×1920 com o que está engatado hoje. No celular, toque em <b>Compartilhar</b> e escolha o Instagram → Story.</p>
+    <p>Imagem 1080×1920 com o que está engatado hoje. No celular, toque em <b>Compartilhar</b> e escolha o Instagram → Story, ou em <b>Enviar no WhatsApp</b> para mandar no grupo.</p>
     <div id="stories" class="stories"><p class="carregando">Gerando imagem…</p></div>
   </main>
 
@@ -91,7 +92,20 @@ header('X-Robots-Tag: noindex');
             else arquivo(cv, nome, baixar);
           }));
         }
-        bloco.appendChild(cv); bloco.appendChild(linha); alvo.appendChild(bloco);
+        // WhatsApp: no celular abre o compartilhar já com a imagem (escolha o grupo); no computador
+        // baixa a imagem e abre o WhatsApp Web para anexar
+        var arqZap = null;
+        arquivo(cv, nome, function (blob) { arqZap = new File([blob], nome, { type: 'image/png' }); });
+        var zap = botao('Enviar no WhatsApp', 'zap', function () {
+          var texto = 'Tap list de hoje · Donkey Head Cervejaria ' + DADOS.unidade;
+          if (arqZap && navigator.canShare && navigator.canShare({ files: [arqZap] })) {
+            navigator.share({ files: [arqZap], text: texto }).catch(function () {});
+          } else {
+            arquivo(cv, nome, baixar);
+            window.open('https://web.whatsapp.com/send?text=' + encodeURIComponent(texto + ' (imagem baixada: anexe no grupo)'), '_blank');
+          }
+        });
+        bloco.appendChild(cv); bloco.appendChild(linha); bloco.appendChild(zap); alvo.appendChild(bloco);
       });
     }
 
