@@ -638,6 +638,7 @@ function contratos_tela_lista(): void
       <?php if (empty($c['config']['representante_cpf'])): ?>
         <p class="aviso">Primeiro passo: <a href="./?acao=contratos-config">informe o nome e o CPF de quem assina pela Donkey</a>.</p>
       <?php endif; ?>
+      <?php contratos_calendario($c); ?>
       <div class="novo-contrato">
         <a class="btn primario largo" href="./?acao=contrato&tipo=pedido">+ Pedido de chope <small>(o cliente preenche)</small></a>
         <?php foreach (DH_CONTRATO_TIPOS as $t => $rot): ?>
@@ -649,6 +650,60 @@ function contratos_tela_lista(): void
         <?php foreach ($lista as $k): contratos_card($k); endforeach; ?>
       </div>
       <p class="botoes-link"><a class="voltar" href="./?acao=produtos">🧾 Produtos e preços</a> <a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a></p>
+    <?php
+}
+
+// Calendário do mês com os eventos e entregas de chope (contratos e pedidos não cancelados),
+// na cor da situação: tocar abre o contrato
+function contratos_calendario(array $c): void
+{
+    $mes = dh_mes_param();
+    $ini = $mes . '-01';
+    $fim = date('Y-m-t', strtotime($ini));
+    $hoje = date('Y-m-d');
+    $porDia = [];
+    foreach ($c['contratos'] as $k) {
+        $d = dh_contrato_data_evento($k);
+        if ($d === '' || $d < $ini || $d > $fim || $k['status'] === 'cancelado' || (($k['origem'] ?? '') === 'site' && $k['status'] === 'preenchimento')) {
+            continue;
+        }
+        $porDia[$d][] = $k;
+    }
+    $cor = fn($st) => $st === 'assinado' ? 'assinado' : (in_array($st, ['enviado', 'consulta'], true) ? 'aguardando' : 'preenchendo');
+    $nav = './?acao=contratos&mes=';
+    $ant = dh_mes_somar($mes, -1);
+    $prox = dh_mes_somar($mes, 1);
+    $mesAnt = DH_MESES[(int) substr($ant, 5, 2)];
+    $mesProx = DH_MESES[(int) substr($prox, 5, 2)];
+    ?>
+      <div class="cal-admin cal-contratos">
+        <p class="cal-legenda"><span class="ct-assinado">Assinado</span> <span class="ct-aguardando">Aguardando assinatura</span> <span class="ct-preenchendo">Em preenchimento</span> · 🎉 evento · 🍺 chope</p>
+        <?php if ($mes !== date('Y-m')): ?><p class="centro"><a class="btn secundario hoje-btn" data-manter-posicao href="<?= e($nav . date('Y-m')) ?>">Voltar para o mês atual</a></p><?php endif; ?>
+        <div class="mes-nav cal-nav">
+          <a class="btn mes-btn" data-mes="anterior" href="<?= e($nav . $ant) ?>" aria-label="<?= e($mesAnt) ?>">‹ <span class="mes-longo"><?= e($mesAnt) ?></span><span class="mes-curto"><?= e(mb_substr($mesAnt, 0, 3)) ?></span></a>
+          <strong><?= e(DH_MESES[(int) substr($mes, 5, 2)]) ?> <small><?= e(substr($mes, 0, 4)) ?></small></strong>
+          <a class="btn mes-btn" data-mes="proximo" href="<?= e($nav . $prox) ?>" aria-label="<?= e($mesProx) ?>"><span class="mes-longo"><?= e($mesProx) ?></span><span class="mes-curto"><?= e(mb_substr($mesProx, 0, 3)) ?></span> ›</a>
+        </div>
+        <div class="calendario">
+          <?php foreach (['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as $d): ?><div class="cal-semana"><?= $d ?></div><?php endforeach; ?>
+          <?php for ($i = 0; $i < (int) date('w', strtotime($ini)); $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
+          <?php for ($t = strtotime($ini); $t <= strtotime($fim); $t = strtotime('+1 day', $t)): $dia = date('Y-m-d', $t); ?>
+            <div class="cal-dia so-ver<?= $dia < $hoje ? ' passado' : '' ?><?= $dia === $hoje ? ' hoje' : '' ?>">
+              <span class="cal-num"><?= date('j', $t) ?></span>
+              <?php foreach ($porDia[$dia] ?? [] as $k): $nome = ($k['campos']['contratante_nome'] ?? '') ?: (($k['referencia'] ?? '') ?: 'Sem nome'); ?>
+                <a class="cal-show ct-<?= $cor($k['status']) ?>" href="./?acao=contrato&amp;id=<?= e(rawurlencode($k['id'])) ?>" title="<?= e($nome . ' · ' . (DH_CONTRATO_TIPOS[$k['tipo']] ?? '') . ' · ' . (DH_CONTRATO_STATUS[$k['status']] ?? '')) ?>"><?= $k['tipo'] === 'evento' ? '🎉' : '🍺' ?> <?= e(explode(' ', trim($nome))[0]) ?></a>
+              <?php endforeach; ?>
+            </div>
+          <?php endfor; ?>
+          <?php for ($i = (int) date('w', strtotime($fim)); $i < 6; $i++): ?><div class="cal-vazio"></div><?php endfor; ?>
+        </div>
+      </div>
+      <script>
+        (function () {
+          var cal = document.querySelector('.cal-contratos');
+          if (cal && window.dhArrastarMes) dhArrastarMes(cal.querySelector('.calendario'), cal.querySelector('[data-mes=anterior]'), cal.querySelector('[data-mes=proximo]'));
+        })();
+      </script>
     <?php
 }
 

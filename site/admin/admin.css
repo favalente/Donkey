@@ -774,3 +774,13 @@ h3 small { font-weight: 400; color: var(--muted); }
 .push-pedir h2 { margin: 8px 0; }
 .push-pedir-texto { color: var(--muted); margin: 0 0 16px; }
 .push-pedir-botoes { display: grid; gap: 10px; justify-items: center; }
+
+/* Contratos: calendário dos eventos e entregas */
+.cal-contratos { margin: 0 0 18px; }
+.cal-contratos .cal-dia { cursor: default; }
+.cal-contratos .cal-dia:hover { background: var(--bg); }
+.cal-contratos a.cal-show { text-decoration: none; }
+.ct-assinado { --cor: #5fb38a; }
+.ct-aguardando { --cor: var(--amber); }
+.ct-preenchendo { --cor: #c9bba8; }
+.cal-contratos .cal-legenda span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; background: var(--cor); }
