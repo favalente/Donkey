@@ -320,6 +320,17 @@ function brassagem_acao(string $acao): bool
             ir('./?acao=' . ($st === 'finalizado' ? 'brassagem' : 'brassagem-lote&id=' . $l['id']),
                 $st === 'finalizado' ? 'Lote ' . $l['lote'] . ' finalizado. ' . ($tanque['nome'] ?? 'O tanque') . ' está livre.' : 'Lote ' . $l['lote'] . ': ' . mb_strtolower(DH_LOTE_STATUS[$st]) . '.');
 
+        case 'brassagem-lembrete-config':
+            // Lembrete diário para a equipe da cervejaria (só o administrador muda)
+            exigir_post();
+            exigir('usuarios');
+            $telaErro = 'brassagem-tanques';
+            $b = dh_brassagem();
+            $hora = (int) ($_POST['hora'] ?? 9);
+            $b['config']['lembrete'] = ['ativo' => !empty($_POST['ativo']), 'hora' => max(6, min(22, $hora)), 'emails' => dh_emails_lista((string) ($_POST['emails'] ?? ''))];
+            dh_brassagem_salvar($b);
+            ir('./?acao=brassagem-tanques', $b['config']['lembrete']['ativo'] ? 'Lembrete diário às ' . $b['config']['lembrete']['hora'] . 'h salvo.' : 'Lembrete diário desligado.');
+
         case 'brassagem-alertas-config':
             // Quem recebe os e-mails de caderno atualizado (só o administrador muda)
             exigir_post();
@@ -800,6 +811,17 @@ function brassagem_tela_config(): void
         <form method="post" action="./?acao=brassagem-alertas-config" class="form-cerveja">
           <?= $csrf ?>
           <label>E-mails que recebem os alertas <small>(um por linha)</small><textarea name="alerta_emails" rows="2"><?= e(implode("\n", $b['config']['alerta_emails'] ?? [])) ?></textarea></label>
+          <button class="btn primario">Salvar</button>
+        </form>
+      <?php endif; ?>
+      <?php if (pode('usuarios')): $lc = dh_brassagem_lembrete_config($b); $quem = dh_brassagem_lembrete_logins(); ?>
+        <h2>Lembrete diário dos cadernos</h2>
+        <p class="dica">Todo dia, a partir da hora escolhida, a equipe da cervejaria recebe um lembrete para atualizar os cadernos, com os tanques que têm cerveja e a última anotação de cada um (em vermelho os que estão sem anotação hoje). No 🔔 e no celular: <?= $quem ? '<b>' . e(implode(', ', $quem)) . '</b>' : '<b>nenhum usuário</b> (crie um usuário com a função Cervejaria)' ?>. Por e-mail: os endereços abaixo. Sem tanque com cerveja, não sai lembrete.</p>
+        <form method="post" action="./?acao=brassagem-lembrete-config" class="form-cerveja">
+          <?= $csrf ?>
+          <label class="check"><input type="checkbox" name="ativo" value="1" <?= !empty($lc['ativo']) ? 'checked' : '' ?>> Enviar o lembrete todos os dias</label>
+          <label>A partir de que horas <select name="hora"><?php for ($h = 6; $h <= 22; $h++): ?><option value="<?= $h ?>" <?= (int) $lc['hora'] === $h ? 'selected' : '' ?>><?= $h ?>h</option><?php endfor; ?></select></label>
+          <label>E-mails da equipe da cervejaria <small>(um por linha)</small><textarea name="emails" rows="2"><?= e(implode("\n", $lc['emails'])) ?></textarea></label>
           <button class="btn primario">Salvar</button>
         </form>
       <?php endif; ?>

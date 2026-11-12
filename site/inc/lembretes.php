@@ -96,6 +96,18 @@ function dh_lembretes_rodar(): array
         dh_lembretes_salvar($l);
         $feitos[] = $assunto;
     }
+    // Lembrete diário dos cadernos de brassagem
+    try {
+        $chave = dh_brassagem_lembrete_rodar(dh_lembretes()['enviados']);
+        if ($chave) {
+            $l = dh_lembretes();
+            $l['enviados'][$chave] = date('Y-m-d');
+            dh_lembretes_salvar($l);
+            $feitos[] = 'Lembrete da brassagem';
+        }
+    } catch (Throwable $e) {
+        error_log('Lembrete da brassagem: ' . $e->getMessage());
+    }
     flock($trava, LOCK_UN);
     fclose($trava);
     return $feitos;
