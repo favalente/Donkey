@@ -155,7 +155,7 @@ function notificacoes_tela_config(): void
     global $csrf, $usuario;
     $n = dh_notificacoes();
     $chaves = dh_push_chaves();
-    $tipos = array_filter(DH_NOTIF_TIPOS, fn($t, $k) => pode($t[0]) && !($k === 'brassagem_lembrete' && $usuario['papel'] === 'admin'), ARRAY_FILTER_USE_BOTH);
+    $tipos = array_filter(DH_NOTIF_TIPOS, fn($t, $k) => pode($t[0]) && dh_notif_tipo_para($k, $usuario), ARRAY_FILTER_USE_BOTH);
     ?>
       <h1>🔔 Notificações</h1>
       <?php notificacoes_abas('notificacoes-config'); ?>
@@ -183,7 +183,7 @@ function notificacoes_tela_config(): void
       <?php else: ?>
         <form method="post" action="./?acao=notificacoes-config-salvar" class="notif-prefs" id="notif-prefs">
           <?= $csrf ?>
-          <?php foreach ($tipos as $k => [$perm, $ic, $nome, $desc]): ?>
+          <?php foreach ($tipos as $k => [$perm, $ic, $nome, $desc, $quem]): ?>
             <label class="interruptor">
               <span class="int-ic"><?= $ic ?></span>
               <span class="int-txt"><strong><?= e($nome) ?></strong><small><?= e($desc) ?></small></span>

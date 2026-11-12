@@ -6,15 +6,25 @@ declare(strict_types=1);
 
 const DH_ARQ_NOTIFICACOES = DH_RAIZ . '/dados/notificacoes.json';
 const DH_NOTIFICACOES_MAX = 300;
-// Tipos de notificação: permissão que precisa ter, ícone, nome e explicação (Notificações → ⚙ Configurar)
+// Tipos de notificação: permissão que precisa ter, ícone, nome, explicação e quem recebe
+// ('admin' = só administradores, 'equipe' = só quem não é administrador, 'todos')
 const DH_NOTIF_TIPOS = [
-    'contrato_assinado' => ['contratos', '✅', 'Contrato assinado', 'Quando o contrato fica assinado pelas duas partes'],
-    'cliente_assinou' => ['contratos', '✍️', 'Cliente assinou', 'Quando o cliente assina e falta a assinatura da Donkey'],
-    'pedido_chope' => ['contratos', '🍺', 'Pedido de chope preenchido', 'Quando o cliente preenche o pedido de chope'],
-    'orcamento_aprovado' => ['orcamentos', '👍', 'Orçamento aprovado', 'Quando o cliente aprova um orçamento'],
-    'brassagem_caderno' => ['brassagem', '🧪', 'Caderno de brassagem atualizado', 'Lote novo, anotação ou mudança de situação feita por outra pessoa'],
-    'brassagem_lembrete' => ['brassagem', '📓', 'Lembrete diário dos cadernos', 'Todo dia, para atualizar os cadernos (só para quem não é administrador)'],
+    'contrato_assinado' => ['contratos', '✅', 'Contrato assinado', 'Quando o contrato fica assinado pelas duas partes', 'admin'],
+    'cliente_assinou' => ['contratos', '✍️', 'Cliente assinou', 'Quando o cliente assina e falta a assinatura da Donkey', 'admin'],
+    'pedido_chope' => ['contratos', '🍺', 'Pedido de chope preenchido', 'Quando o cliente preenche o pedido de chope', 'admin'],
+    'donkey_assinou' => ['contratos', '🖊️', 'Contrato assinado pela Donkey', 'Quando a Donkey Head Cervejaria assina um contrato ou pedido', 'equipe'],
+    'orcamento_aprovado' => ['orcamentos', '👍', 'Orçamento aprovado', 'Quando o cliente aprova um orçamento', 'todos'],
+    'brassagem_caderno' => ['brassagem', '🧪', 'Caderno de brassagem atualizado', 'Lote novo, anotação ou mudança de situação feita por outra pessoa', 'todos'],
+    'brassagem_lembrete' => ['brassagem', '📓', 'Lembrete diário dos cadernos', 'Todo dia, para atualizar os cadernos', 'equipe'],
 ];
+
+// O tipo vale para esse usuário? (pela função: administrador ou equipe)
+function dh_notif_tipo_para(string $tipo, array $usuario): bool
+{
+    $quem = DH_NOTIF_TIPOS[$tipo][4] ?? 'todos';
+    $admin = ($usuario['papel'] ?? '') === 'admin';
+    return $quem === 'todos' || ($quem === 'admin') === $admin;
+}
 
 // O usuário quer esse tipo? (padrão: sim)
 function dh_notif_quer(array $n, string $login, string $tipo): bool
@@ -67,6 +77,22 @@ function dh_notificar(string $perm, string $icone, string $titulo, string $texto
             flock($fp, LOCK_EX);
         }
         $n = dh_notificacoes();
+        // Tipo só para administradores ou só para a equipe: a notificação já sai endereçada a eles
+        if (!$para && $tipo !== '' && (DH_NOTIF_TIPOS[$tipo][4] ?? 'todos') !== 'todos') {
+            $usuarios = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
+            foreach (is_array($usuarios) ? $usuarios : [] as $l => $x) {
+                if ((string) $l !== $login && dh_usuario_pode($x, $perm) && dh_notif_tipo_para($tipo, $x)) {
+                    $para[] = (string) $l;
+                }
+            }
+            if (!$para) {
+                if ($fp) {
+                    flock($fp, LOCK_UN);
+                    fclose($fp);
+                }
+                return;
+            }
+        }
         $n['itens'][] = ['id' => dh_id_novo('n'), 'em' => date('Y-m-d H:i:s'), 'perm' => $perm, 'icone' => $icone,
             'titulo' => mb_substr($titulo, 0, 160), 'texto' => mb_substr($texto, 0, 300), 'link' => $link, 'login' => $login, 'tipo' => $tipo] + ($para ? ['para' => array_values($para)] : []);
         $n['itens'] = array_slice($n['itens'], -DH_NOTIFICACOES_MAX);

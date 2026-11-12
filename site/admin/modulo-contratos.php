@@ -391,6 +391,12 @@ function contratos_acao(string $acao): bool
                 'Senha do painel administrativo (usuário "' . $usuario['login'] . '", ' . $usuario['nome'] . ') · representante da CONTRATADA', (string) ($_POST['geo'] ?? ''));
             $fechou = dh_contrato_concluir($c['contratos'][$i]);
             dh_contratos_salvar($c);
+            // A equipe (não administradores) é avisada quando a Donkey assina
+            $ka = $c['contratos'][$i];
+            $quandoA = dh_contrato_data_evento($ka);
+            dh_notificar('contratos', '🖊️', 'Contrato nº ' . $ka['numero'] . ' assinado pela Donkey',
+                (($ka['campos']['contratante_nome'] ?? '') ?: 'Cliente') . ' · ' . (DH_CONTRATO_TIPOS[$ka['tipo']] ?? '') . ($quandoA ? ' · ' . dh_data_br($quandoA) : '') . ($fechou ? '. Assinado pelas duas partes.' : '. Falta o cliente assinar.'),
+                './?acao=contrato&id=' . $ka['id'], $usuario['login'], [], 'donkey_assinou');
             ir('./?acao=contrato&id=' . $c['contratos'][$i]['id'], $fechou ? 'Contrato assinado pelas duas partes. As cópias foram enviadas por e-mail.' : 'Assinado pela Donkey. Agora falta o cliente.');
 
         case 'contrato-convite':
