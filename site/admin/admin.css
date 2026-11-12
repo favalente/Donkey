@@ -767,3 +767,10 @@ h3 small { font-weight: 400; color: var(--muted); }
 .interruptor input:checked ~ .int-chave { background: var(--ok); border-color: var(--ok); }
 .interruptor input:checked ~ .int-chave::after { transform: translateX(22px); }
 .interruptor input:focus-visible ~ .int-chave { outline: 3px solid var(--amber); }
+
+/* Pergunta das notificações ao abrir o painel */
+.push-pedir { text-align: center; padding: 22px 20px 18px; }
+.push-pedir-ic { font-size: 3rem; line-height: 1; }
+.push-pedir h2 { margin: 8px 0; }
+.push-pedir-texto { color: var(--muted); margin: 0 0 16px; }
+.push-pedir-botoes { display: grid; gap: 10px; justify-items: center; }

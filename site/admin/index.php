@@ -302,6 +302,7 @@ if (!$usuarios) {
             dh_usuarios_salvar([$login => $novo]);
             session_regenerate_id(true);
             $_SESSION['login'] = $login;
+            $_SESSION['push_pedir'] = 1; // logo depois de entrar, pergunta das notificações
             lembrar_criar($novo);
             ir('./', 'Usuário criado! Bem-vindo ao painel.');
         }
@@ -317,6 +318,7 @@ if (!$usuarios) {
             registrar_falha(true);
             session_regenerate_id(true);
             $_SESSION['login'] = $login;
+            $_SESSION['push_pedir'] = 1; // logo depois de entrar, pergunta das notificações
             if (!empty($_POST['lembrar'])) {
                 lembrar_criar($usuarios[$login]);
             }
@@ -525,7 +527,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=72">
+  <link rel="stylesheet" href="admin.css?v=73">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#e9a23b">
   <link rel="apple-touch-icon" href="../assets/img/icone-192.png">
@@ -861,6 +863,80 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       s.addEventListener('change', function () { s.parentNode.classList.toggle('cheia', !!s.value); });
     });
   </script>
+  <?php $chavesPush = dh_push_chaves(); if ($chavesPush && $tela !== 'notificacoes-config' && empty($_GET['abrir'])): ?>
+    <!-- A cada acesso ao painel, pergunta se quer receber as notificações neste aparelho (até ativar) -->
+    <dialog class="dup-modal push-pedir" id="push-pedir" data-chave="<?= e($chavesPush['publica']) ?>" data-csrf="<?= e($_SESSION['csrf']) ?>" data-novo="<?= !empty($_SESSION['push_pedir']) ? '1' : '' ?>">
+      <div class="push-pedir-ic">🔔</div>
+      <h2>Ativar as notificações?</h2>
+      <p class="push-pedir-texto">Receba na barra do celular os avisos do painel: contratos assinados, pedidos de chope, orçamentos aprovados e cadernos da brassagem. Você escolhe quais em Notificações → ⚙ Configurar.</p>
+      <div class="push-pedir-botoes">
+        <button type="button" class="btn primario largo" data-op="ativar">Ativar notificações</button>
+        <button type="button" class="link" data-op="depois">Agora não</button>
+      </div>
+    </dialog>
+    <script>
+    (function () {
+      var d = document.getElementById('push-pedir');
+      if (!d || !d.showModal) return;
+      var CH = 'dh-push-perguntado';
+      var jaPerguntou = false;
+      try { jaPerguntou = sessionStorage.getItem(CH) === '1'; if (d.dataset.novo) jaPerguntou = false; } catch (e) {}
+      function marcar() { try { sessionStorage.setItem(CH, '1'); } catch (e) {} }
+      function texto(t, botao) {
+        d.querySelector('.push-pedir-texto').innerHTML = t;
+        var b = d.querySelector('[data-op=ativar]');
+        if (botao === false) b.hidden = true; else if (botao) b.textContent = botao;
+      }
+      function enviar(acao, endpoint) {
+        var f = new FormData(); f.append('csrf', d.dataset.csrf); f.append('endpoint', endpoint);
+        return fetch('./?acao=' + acao, { method: 'POST', body: f, credentials: 'same-origin' });
+      }
+      function chave(b64) {
+        var s = atob((b64 + '==='.slice((b64.length + 3) % 4)).replace(/-/g, '+').replace(/_/g, '/')), a = new Uint8Array(s.length);
+        for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+        return a;
+      }
+      d.querySelector('[data-op=depois]').addEventListener('click', function () { marcar(); d.close(); });
+      d.addEventListener('cancel', marcar);
+      var ios = /iPhone|iPad/.test(navigator.userAgent) && !window.navigator.standalone;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        // iPhone fora da tela de início: explica como ativar
+        if (ios && !jaPerguntou) {
+          d.querySelector('h2').textContent = 'Notificações no iPhone';
+          texto('No iPhone, as notificações funcionam com o painel na tela de início: toque em <b>Compartilhar → Adicionar à Tela de Início</b> e abra o painel pelo ícone.', false);
+          d.showModal();
+        }
+        return;
+      }
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (s) {
+          if (s) { enviar('push-inscrever', s.endpoint); return; } // já ativo: mantém ligado a este usuário
+          if (jaPerguntou) return;
+          if (Notification.permission === 'denied') {
+            d.querySelector('h2').textContent = 'Notificações bloqueadas';
+            texto('As notificações estão <b>bloqueadas</b> para este site neste aparelho. Para liberar: toque no cadeado (ou ⓘ) ao lado do endereço → <b>Notificações → Permitir</b>, e recarregue a página.', false);
+            d.showModal();
+            return;
+          }
+          d.showModal();
+          d.querySelector('[data-op=ativar]').onclick = function () {
+            var b = this; b.disabled = true;
+            Notification.requestPermission().then(function (p) {
+              if (p !== 'granted') { marcar(); d.close(); return; }
+              return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave(d.dataset.chave) }).then(function (s) {
+                return enviar('push-inscrever', s.endpoint).then(function () {
+                  marcar();
+                  texto('✓ Pronto! As notificações vão chegar na barra deste aparelho.', false);
+                  d.querySelector('[data-op=depois]').textContent = 'Fechar';
+                });
+              });
+            }).catch(function (e) { texto('Não deu para ativar: ' + e.message, false); }).then(function () { b.disabled = false; });
+          };
+        });
+      });
+    })();
+    </script>
+  <?php unset($_SESSION['push_pedir']); endif; ?>
 <?php endif; ?>
 </body>
 </html>
