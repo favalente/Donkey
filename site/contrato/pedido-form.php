@@ -16,9 +16,9 @@ $opcoes = function (string $sel) use ($cervejas): string {
 $itens = (array) ($_POST['itens'] ?? [['cerveja' => '', 'litros' => '']]);
 // Barris: só existem de 30 e 50 litros
 $barris = function (string $nome, string $atual): string {
-    $h = '<select name="' . e($nome) . '" class="sel-litros"><option value="">Barril</option>';
+    $h = '<select name="' . e($nome) . '" class="sel-litros"><option value="">Escolha</option>';
     foreach (DH_BARRIS_LITROS as $l) {
-        $h .= '<option value="' . $l . '"' . ((int) $atual === $l ? ' selected' : '') . '>' . $l . ' L</option>';
+        $h .= '<option value="' . $l . '"' . ((int) $atual === $l ? ' selected' : '') . '>' . $l . ' litros</option>';
     }
     return $h . '</select>';
 };
@@ -61,7 +61,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
     <?php foreach ($itens as $n => $it): ?>
       <div class="linha-chope">
         <label>Rótulo <select name="itens[<?= $n ?>][cerveja]"><?= $opcoes((string) ($it['cerveja'] ?? '')) ?></select></label>
-        <label>Litros <?= $barris('itens[' . $n . '][litros]', (string) ($it['litros'] ?? '')) ?></label>
+        <label>Tamanho do barril <?= $barris('itens[' . $n . '][litros]', (string) ($it['litros'] ?? '')) ?></label>
         <button type="button" class="tirar-linha" aria-label="Remover este rótulo" title="Remover">×</button>
       </div>
     <?php endforeach; ?>
@@ -77,7 +77,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
         <?php foreach ($comodato ?: [['cerveja' => '', 'litros' => '']] as $n => $it): ?>
           <div class="linha-chope">
             <label>Rótulo <select name="comodato[<?= $n ?>][cerveja]"><?= $opcoes((string) ($it['cerveja'] ?? '')) ?></select></label>
-            <label>Litros <?= $barris('comodato[' . $n . '][litros]', (string) ($it['litros'] ?? '')) ?></label>
+            <label>Tamanho do barril <?= $barris('comodato[' . $n . '][litros]', (string) ($it['litros'] ?? '')) ?></label>
             <button type="button" class="tirar-linha" aria-label="Remover este rótulo" title="Remover">×</button>
           </div>
         <?php endforeach; ?>
