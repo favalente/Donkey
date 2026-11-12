@@ -109,3 +109,5 @@ p, li { font-size: .95rem; text-align: justify; }
 .busca-cadastro .cupom-linha input { flex: 1 1 200px; min-width: 0; }
 .busca-cadastro .cupom-linha .btn { flex: 1 1 auto; }
 .busca-cadastro label { margin-bottom: 4px; }
+
+.obs-vermelha { color: #c62828; font-weight: 700; font-size: .92rem; margin: 4px 0 6px; }

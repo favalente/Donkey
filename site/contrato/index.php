@@ -378,7 +378,7 @@ $f = $k['campos'] ?? [];
   <meta name="referrer" content="no-referrer">
   <title><?= $preencher ? 'Pedido de chope · ' : ($k && $k['numero'] !== '' ? 'Contrato nº ' . e($k['numero']) . ' · ' : '') ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="contrato.css?v=10">
+  <link rel="stylesheet" href="contrato.css?v=11">
 </head>
 <body>
   <div class="barra no-print">

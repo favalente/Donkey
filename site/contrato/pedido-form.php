@@ -62,6 +62,7 @@ $baseTravada = $travado ? dh_comodato_chope($f) - min(dh_comodato_chope($f), (fl
 
   <div class="caixa-comodato">
     <label class="check"><input type="checkbox" id="quer-comodato" <?= $comodato ? 'checked' : '' ?>> <strong>Chope em comodato?</strong></label>
+    <p class="obs-vermelha">Observação: somente acima de 4 barris.</p>
     <p class="legal">Barris extras entregues junto com o pedido, sem custo inicial. Os que forem abertos são cobrados pelo valor do litro; os lacrados voltam na coleta, sem cobrança.</p>
     <div id="area-comodato" <?= $comodato ? '' : 'hidden' ?>>
       <div id="linhas-comodato">
