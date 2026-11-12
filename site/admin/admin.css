@@ -784,3 +784,11 @@ h3 small { font-weight: 400; color: var(--muted); }
 .ct-aguardando { --cor: var(--amber); }
 .ct-preenchendo { --cor: #c9bba8; }
 .cal-contratos .cal-legenda span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; background: var(--cor); }
+
+/* Notificações: quem recebe cada tipo (funções) */
+.tabela-rolar { overflow-x: auto; margin-bottom: 12px; }
+.tabela-papeis { border-collapse: collapse; width: 100%; font-size: .9rem; }
+.tabela-papeis th, .tabela-papeis td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: center; }
+.tabela-papeis tbody th { text-align: left; font-weight: 600; min-width: 150px; }
+.tabela-papeis thead th { font-size: .78rem; color: var(--muted); }
+.tabela-papeis input { width: 24px; height: 24px; accent-color: var(--amber); }

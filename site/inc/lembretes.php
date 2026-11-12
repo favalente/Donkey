@@ -91,6 +91,10 @@ function dh_lembretes_rodar(): array
         foreach (dh_emails_equipe() as $email) {
             dh_email($email, $assunto, $html);
         }
+        // Também no 🔔 e no celular, para as funções escolhidas (Notificações → ⚙ Configurar)
+        $partes = explode(' · ', preg_replace('/ · Donkey Head Cervejaria$/u', '', $assunto), 2);
+        dh_notificar('contratos', '📅', $partes[0], ($partes[1] ?? '') . ($k['numero'] !== '' ? ' · contrato nº ' . $k['numero'] : ''),
+            './?acao=contrato&id=' . rawurlencode($k['id']), '', [], 'evento_lembrete');
         $l = dh_lembretes();
         $l['enviados'][$chave] = $hoje;
         dh_lembretes_salvar($l);

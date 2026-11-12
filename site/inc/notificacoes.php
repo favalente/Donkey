@@ -16,14 +16,61 @@ const DH_NOTIF_TIPOS = [
     'orcamento_aprovado' => ['orcamentos', '👍', 'Orçamento aprovado', 'Quando o cliente aprova um orçamento', 'todos'],
     'brassagem_caderno' => ['brassagem', '🧪', 'Caderno de brassagem atualizado', 'Lote novo, anotação ou mudança de situação feita por outra pessoa', 'todos'],
     'brassagem_lembrete' => ['brassagem', '📓', 'Lembrete diário dos cadernos', 'Todo dia, para atualizar os cadernos', 'equipe'],
+    'evento_lembrete' => ['contratos', '📅', 'Lembrete de evento', 'Na véspera e no dia de cada evento ou entrega de chope', 'todos'],
 ];
+// Funções que recebem o lembrete de evento além das que veem Contratos
+const DH_NOTIF_PAPEIS_EXTRA = ['evento_lembrete' => ['cervejaria']];
 
-// O tipo vale para esse usuário? (pela função: administrador ou equipe)
-function dh_notif_tipo_para(string $tipo, array $usuario): bool
+// Funções (Administrador, Financeiro, Cervejaria…) que recebem cada tipo: o que o administrador
+// escolheu em Notificações → ⚙ Configurar ou, sem escolha, as funções que veem a aba daquele tipo
+function dh_notif_papeis(string $tipo, ?array $n = null): array
 {
-    $quem = DH_NOTIF_TIPOS[$tipo][4] ?? 'todos';
-    $admin = ($usuario['papel'] ?? '') === 'admin';
-    return $quem === 'todos' || ($quem === 'admin') === $admin;
+    $n ??= dh_notificacoes();
+    if (isset($n['papeis'][$tipo]) && is_array($n['papeis'][$tipo])) {
+        return $n['papeis'][$tipo];
+    }
+    [$perm, , , , $quem] = DH_NOTIF_TIPOS[$tipo] + [4 => 'todos'];
+    $r = array_merge(DH_PERMISSOES[$perm] ?? [], DH_NOTIF_PAPEIS_EXTRA[$tipo] ?? []);
+    if ($quem !== 'todos') {
+        $r = array_filter($r, fn($p) => ($quem === 'admin') === ($p === 'admin'));
+    }
+    return array_values(array_unique($r));
+}
+
+// O tipo vale para esse usuário? (pela função dele)
+function dh_notif_tipo_para(string $tipo, array $usuario, ?array $n = null): bool
+{
+    return in_array($usuario['papel'] ?? '', dh_notif_papeis($tipo, $n), true);
+}
+
+// Logins que recebem o tipo (menos quem fez a ação)
+function dh_notif_destinatarios_tipo(string $tipo, string $exceto = '', ?array $n = null): array
+{
+    $u = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
+    $r = [];
+    foreach (is_array($u) ? $u : [] as $l => $x) {
+        if ((string) $l !== $exceto && dh_notif_tipo_para($tipo, $x, $n)) {
+            $r[] = (string) $l;
+        }
+    }
+    return $r;
+}
+
+function dh_notif_papeis_salvar(array $papeis): void
+{
+    $fp = @fopen(DH_ARQ_NOTIFICACOES . '.lock', 'c');
+    if ($fp) {
+        flock($fp, LOCK_EX);
+    }
+    $n = dh_notificacoes();
+    foreach (DH_NOTIF_TIPOS as $tipo => $_) {
+        $n['papeis'][$tipo] = array_values(array_intersect(array_keys(DH_PAPEIS), (array) ($papeis[$tipo] ?? [])));
+    }
+    dh_notificacoes_salvar($n);
+    if ($fp) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
 }
 
 // O usuário quer esse tipo? (padrão: sim)
@@ -52,7 +99,7 @@ function dh_notif_prefs_salvar(string $login, array $ligados): void
 function dh_notificacoes(): array
 {
     $n = json_decode((string) @file_get_contents(DH_ARQ_NOTIFICACOES), true);
-    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => [], 'prefs' => []];
+    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => [], 'prefs' => [], 'papeis' => []];
 }
 
 function dh_notificacoes_salvar(array $n): void
@@ -77,14 +124,9 @@ function dh_notificar(string $perm, string $icone, string $titulo, string $texto
             flock($fp, LOCK_EX);
         }
         $n = dh_notificacoes();
-        // Tipo só para administradores ou só para a equipe: a notificação já sai endereçada a eles
-        if (!$para && $tipo !== '' && (DH_NOTIF_TIPOS[$tipo][4] ?? 'todos') !== 'todos') {
-            $usuarios = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
-            foreach (is_array($usuarios) ? $usuarios : [] as $l => $x) {
-                if ((string) $l !== $login && dh_usuario_pode($x, $perm) && dh_notif_tipo_para($tipo, $x)) {
-                    $para[] = (string) $l;
-                }
-            }
+        // Notificação de um tipo: vai para as funções escolhidas para ele (Notificações → ⚙ Configurar)
+        if (!$para && $tipo !== '' && isset(DH_NOTIF_TIPOS[$tipo])) {
+            $para = dh_notif_destinatarios_tipo($tipo, $login, $n);
             if (!$para) {
                 if ($fp) {
                     flock($fp, LOCK_UN);

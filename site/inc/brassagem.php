@@ -153,17 +153,10 @@ function dh_brassagem_lembrete_config(array $b): array
     return ($b['config']['lembrete'] ?? []) + DH_BRASSAGEM_LEMBRETE_PADRAO;
 }
 
-// Usuários que recebem o lembrete no 🔔: têm a Brassagem e não são administradores
+// Usuários que recebem o lembrete no 🔔: as funções escolhidas para ele (padrão: Cervejaria)
 function dh_brassagem_lembrete_logins(): array
 {
-    $u = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
-    $r = [];
-    foreach (is_array($u) ? $u : [] as $login => $x) {
-        if (($x['papel'] ?? '') !== 'admin' && dh_usuario_pode($x, 'brassagem')) {
-            $r[] = (string) $login;
-        }
-    }
-    return $r;
+    return dh_notif_destinatarios_tipo('brassagem_lembrete');
 }
 
 // Texto do lembrete: cada lote no tanque, com o dia de produção e a última anotação
@@ -205,7 +198,7 @@ function dh_brassagem_lembrete_rodar(array $enviados): ?string
         . ($atrasados ? ' · ' . count($atrasados) . ' sem anotação hoje' : '');
     $logins = dh_brassagem_lembrete_logins();
     if ($logins) {
-        dh_notificar('brassagem', '📓', 'Lembrete: atualize os cadernos de brassagem', $resumo . '.', './?acao=brassagem', '', $logins, 'brassagem_lembrete');
+        dh_notificar('brassagem', '📓', 'Lembrete: atualize os cadernos de brassagem', $resumo . '.', './?acao=brassagem', '', [], 'brassagem_lembrete');
     }
     $emails = $cfg['emails'] ?? [];
     if ($emails) {

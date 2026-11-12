@@ -30,7 +30,7 @@ function notificacoes_acao(string $acao): bool
             foreach (notificacoes_minhas() as $x) {
                 if ($x['id'] === $id) {
                     dh_notificacoes_marcar($usuario['login'], [$id]);
-                    $link = str_starts_with($x['link'], './?') ? $x['link'] : $link;
+                    $link = str_starts_with($x['link'], './?') && ($x['perm'] === '' || pode($x['perm'])) ? $x['link'] : $link;
                 }
             }
             ir($link);
@@ -63,6 +63,12 @@ function notificacoes_acao(string $acao): bool
             exigir_post();
             dh_notif_prefs_salvar($usuario['login'], array_map('strval', (array) ($_POST['tipos'] ?? [])));
             ir('./?acao=notificacoes-config', 'Preferências salvas.');
+
+        case 'notificacoes-papeis-salvar':
+            exigir_post();
+            exigir('usuarios');
+            dh_notif_papeis_salvar((array) ($_POST['papeis'] ?? []));
+            ir('./?acao=notificacoes-config#quem-recebe', 'Quem recebe cada notificação: salvo.');
 
         case 'push-inscrever':
             exigir_post();
@@ -155,7 +161,7 @@ function notificacoes_tela_config(): void
     global $csrf, $usuario;
     $n = dh_notificacoes();
     $chaves = dh_push_chaves();
-    $tipos = array_filter(DH_NOTIF_TIPOS, fn($t, $k) => pode($t[0]) && dh_notif_tipo_para($k, $usuario), ARRAY_FILTER_USE_BOTH);
+    $tipos = array_filter(DH_NOTIF_TIPOS, fn($t, $k) => dh_notif_tipo_para($k, $usuario, $n), ARRAY_FILTER_USE_BOTH);
     ?>
       <h1>🔔 Notificações</h1>
       <?php notificacoes_abas('notificacoes-config'); ?>
@@ -199,6 +205,25 @@ function notificacoes_tela_config(): void
             c.addEventListener('change', function () { document.getElementById('notif-prefs').submit(); });
           });
         </script>
+      <?php endif; ?>
+
+      <?php if (pode('usuarios')): ?>
+        <h2 id="quem-recebe">Quem recebe cada notificação</h2>
+        <p class="dica">Marque as funções que recebem cada tipo (no 🔔 e no celular). Cada pessoa ainda pode desligar as suas nos interruptores acima. Quem não tem acesso à aba vê o aviso, mas não abre o contrato.</p>
+        <form method="post" action="./?acao=notificacoes-papeis-salvar" class="form-cerveja">
+          <?= $csrf ?>
+          <div class="tabela-rolar">
+            <table class="tabela-papeis">
+              <thead><tr><th></th><?php foreach (DH_PAPEIS as $p => $rot): ?><th><?= e($rot) ?></th><?php endforeach; ?></tr></thead>
+              <tbody>
+                <?php foreach (DH_NOTIF_TIPOS as $k => [$perm, $ic, $nome]): $marcados = dh_notif_papeis($k, $n); ?>
+                  <tr><th><?= $ic ?> <?= e($nome) ?></th><?php foreach (DH_PAPEIS as $p => $rot): ?><td><input type="checkbox" name="papeis[<?= e($k) ?>][]" value="<?= e($p) ?>" aria-label="<?= e($nome . ' · ' . $rot) ?>" <?= in_array($p, $marcados, true) ? 'checked' : '' ?>></td><?php endforeach; ?></tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+          <button class="btn primario">Salvar quem recebe</button>
+        </form>
       <?php endif; ?>
 
       <script>
