@@ -639,6 +639,15 @@ function contratos_tela_lista(): void
     $c = dh_contratos();
     // Pedidos abertos pelo site e ainda não preenchidos não aparecem (podem nunca virar pedido)
     $lista = array_reverse(array_values(array_filter($c['contratos'], fn($k) => !(($k['origem'] ?? '') === 'site' && $k['status'] === 'preenchimento'))));
+    // Em andamento: evento/entrega de hoje em diante (ou ainda sem data). Encerrados: data já passou ou cancelado.
+    $hoje = date('Y-m-d');
+    $encerrado = fn($k) => $k['status'] === 'cancelado' || (($d = dh_contrato_data_evento($k)) !== '' && $d < $hoje);
+    $ver = ($_GET['ver'] ?? '') === 'encerrados' ? 'encerrados' : 'andamento';
+    $andamento = array_values(array_filter($lista, fn($k) => !$encerrado($k)));
+    $encerrados = array_values(array_filter($lista, $encerrado));
+    // Em andamento: o próximo evento primeiro (sem data no fim); encerrados: o mais recente primeiro
+    usort($andamento, fn($a, $b) => [dh_contrato_data_evento($a) ?: '9999', $b['criado_em'] ?? ''] <=> [dh_contrato_data_evento($b) ?: '9999', $a['criado_em'] ?? '']);
+    usort($encerrados, fn($a, $b) => (dh_contrato_data_evento($b) ?: '') <=> (dh_contrato_data_evento($a) ?: ''));
     ?>
       <div class="titulo-acao"><h1>Contratos</h1></div>
       <?php if (empty($c['config']['representante_cpf'])): ?>
@@ -651,9 +660,15 @@ function contratos_tela_lista(): void
           <a class="btn secundario largo" href="./?acao=contrato&tipo=<?= $t ?>">+ <?= e($rot) ?> <small>(eu preencho)</small></a>
         <?php endforeach; ?>
       </div>
-      <?php if (!$lista): ?><p class="dica">Nenhum contrato ainda.</p><?php endif; ?>
+      <div class="abas abas-contratos">
+        <a href="./?acao=contratos" class="<?= $ver === 'andamento' ? 'ativo' : '' ?>">Em andamento <small><?= count($andamento) ?></small></a>
+        <a href="./?acao=contratos&amp;ver=encerrados" class="<?= $ver === 'encerrados' ? 'ativo' : '' ?>">Encerrados <small><?= count($encerrados) ?></small></a>
+      </div>
+      <?php $mostrar = $ver === 'encerrados' ? $encerrados : $andamento; ?>
+      <?php if (!$mostrar): ?><p class="dica"><?= $ver === 'encerrados' ? 'Nenhum contrato encerrado ainda.' : 'Nenhum contrato em andamento.' ?></p><?php endif; ?>
+      <?php if ($ver === 'encerrados' && $mostrar): ?><p class="dica">Eventos e entregas que já passaram, e os cancelados.</p><?php endif; ?>
       <div class="cards-contrato">
-        <?php foreach ($lista as $k): contratos_card($k); endforeach; ?>
+        <?php foreach ($mostrar as $k): contratos_card($k); endforeach; ?>
       </div>
       <p class="botoes-link"><a class="voltar" href="./?acao=produtos">🧾 Produtos e preços</a> <a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a></p>
     <?php
