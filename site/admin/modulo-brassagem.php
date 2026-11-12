@@ -30,8 +30,9 @@ function brassagem_alertar(?array $l, string $oQue): void
     dh_brassagem_salvar($b);
     dh_notificar('brassagem', '🧪', $titulo, mb_strimwidth($oQue, 0, 200, '…'),
         './?acao=' . ($l ? 'brassagem-lote&id=' . rawurlencode($l['id']) : 'brassagem'), $usuario['login'], [], 'brassagem_caderno');
-    // O que o administrador muda não vira e-mail (ele já sabe); continua no 🔔 de quem não fez
-    if ($usuario['papel'] === 'admin') {
+    // O aviso vai pelo 🔔 e pelo celular; e-mail só se estiver ligado em ⚙ Tanques (desligado por padrão).
+    // O que o administrador muda não vira e-mail (ele já sabe).
+    if ($usuario['papel'] === 'admin' || empty($b['config']['alerta_email_ligado'])) {
         return;
     }
     $link = dh_url_site() . 'admin/?acao=' . ($l && dh_brassagem_indice($b['lotes'], $l['id']) !== null ? 'brassagem-lote&id=' . rawurlencode($l['id']) : 'brassagem');
@@ -340,8 +341,10 @@ function brassagem_acao(string $acao): bool
             $telaErro = 'brassagem-tanques';
             $b = dh_brassagem();
             $b['config']['alerta_emails'] = dh_emails_lista((string) ($_POST['alerta_emails'] ?? ''));
+            $b['config']['alerta_email_ligado'] = !empty($_POST['alerta_email_ligado']);
             dh_brassagem_salvar($b);
-            ir('./?acao=brassagem-tanques', $b['config']['alerta_emails'] ? 'Os alertas vão para ' . implode(', ', $b['config']['alerta_emails']) . '.' : 'Os alertas vão para o e-mail da Donkey Head Cervejaria.');
+            ir('./?acao=brassagem-tanques', !$b['config']['alerta_email_ligado'] ? 'Alertas de caderno só pelo 🔔 e celular (sem e-mail).'
+                : ($b['config']['alerta_emails'] ? 'Os alertas também vão por e-mail para ' . implode(', ', $b['config']['alerta_emails']) . '.' : 'Os alertas também vão por e-mail para a Donkey Head Cervejaria.'));
 
         case 'brassagem-exportar':
             // Cópia dos cadernos e tanques (backup), no mesmo formato da importação
@@ -809,9 +812,10 @@ function brassagem_tela_config(): void
       <?php $form(['id' => '', 'nome' => 'Tanque ' . (count($b['tanques']) + 1), 'capacidade' => '', 'litros_cm' => '', 'ativo' => true]); ?>
       <?php if (pode('usuarios')): ?>
         <h2>Alertas de caderno atualizado</h2>
-        <p class="dica">A cada lote novo, anotação, mudança de situação ou caderno alterado, vai um e-mail para estes endereços e aparece o 🔔 no menu da Brassagem. Alterações feitas por administradores não geram e-mail. Sem nenhum endereço, o e-mail vai para <?= e(DH_EMPRESA['email']) ?>.</p>
+        <p class="dica">A cada lote novo, anotação, mudança de situação ou caderno alterado, chega o aviso no 🔔 e no celular (Notificações → ⚙ Configurar). O e-mail é opcional: alterações feitas por administradores não geram e-mail; sem nenhum endereço, vai para <?= e(DH_EMPRESA['email']) ?>.</p>
         <form method="post" action="./?acao=brassagem-alertas-config" class="form-cerveja">
           <?= $csrf ?>
+          <label class="check"><input type="checkbox" name="alerta_email_ligado" value="1" <?= !empty($b['config']['alerta_email_ligado']) ? 'checked' : '' ?>> Também mandar cada alteração por e-mail</label>
           <label>E-mails que recebem os alertas <small>(um por linha)</small><textarea name="alerta_emails" rows="2"><?= e(implode("\n", $b['config']['alerta_emails'] ?? [])) ?></textarea></label>
           <button class="btn primario">Salvar</button>
         </form>
