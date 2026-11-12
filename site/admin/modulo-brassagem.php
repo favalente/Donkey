@@ -28,6 +28,8 @@ function brassagem_alertar(?array $l, string $oQue): void
     $b['alertas'] = array_slice(array_merge($b['alertas'] ?? [], [['id' => dh_id_novo('a'), 'em' => date('Y-m-d H:i:s'), 'por' => $usuario['nome'], 'login' => $usuario['login'],
         'titulo' => $titulo, 'texto' => $oQue, 'lote_id' => $l['id'] ?? '']]), -300);
     dh_brassagem_salvar($b);
+    dh_notificar('brassagem', '🧪', $titulo, mb_strimwidth($oQue, 0, 200, '…'),
+        './?acao=' . ($l ? 'brassagem-lote&id=' . rawurlencode($l['id']) : 'brassagem'), $usuario['login'], [], 'brassagem_caderno');
     // O que o administrador muda não vira e-mail (ele já sabe); continua no 🔔 de quem não fez
     if ($usuario['papel'] === 'admin') {
         return;

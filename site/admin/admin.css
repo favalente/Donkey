@@ -753,3 +753,17 @@ h3 small { font-weight: 400; color: var(--muted); }
 .sede-opcao:hover { border-color: var(--cor); }
 .sede-opcao.ativa { background: var(--cor); border-color: var(--cor); color: #1a120a; }
 .cal-de-qual { margin: 0 0 6px; color: var(--muted); }
+
+/* Notificações → Configurar: interruptores */
+.notif-prefs { display: grid; gap: 8px; }
+.interruptor { display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+.interruptor input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.int-ic { font-size: 1.5rem; }
+.int-txt { flex: 1; min-width: 0; }
+.int-txt strong { display: block; }
+.int-txt small { display: block; color: var(--muted); font-weight: 400; font-size: .9rem; }
+.int-chave { flex: none; position: relative; width: 54px; height: 32px; border-radius: 999px; background: var(--cinza-bg); border: 2px solid var(--line); transition: background .2s; }
+.int-chave::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+.interruptor input:checked ~ .int-chave { background: var(--ok); border-color: var(--ok); }
+.interruptor input:checked ~ .int-chave::after { transform: translateX(22px); }
+.interruptor input:focus-visible ~ .int-chave { outline: 3px solid var(--amber); }

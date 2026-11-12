@@ -6,11 +6,43 @@ declare(strict_types=1);
 
 const DH_ARQ_NOTIFICACOES = DH_RAIZ . '/dados/notificacoes.json';
 const DH_NOTIFICACOES_MAX = 300;
+// Tipos de notificação: permissão que precisa ter, ícone, nome e explicação (Notificações → ⚙ Configurar)
+const DH_NOTIF_TIPOS = [
+    'contrato_assinado' => ['contratos', '✅', 'Contrato assinado', 'Quando o contrato fica assinado pelas duas partes'],
+    'cliente_assinou' => ['contratos', '✍️', 'Cliente assinou', 'Quando o cliente assina e falta a assinatura da Donkey'],
+    'pedido_chope' => ['contratos', '🍺', 'Pedido de chope preenchido', 'Quando o cliente preenche o pedido de chope'],
+    'orcamento_aprovado' => ['orcamentos', '👍', 'Orçamento aprovado', 'Quando o cliente aprova um orçamento'],
+    'brassagem_caderno' => ['brassagem', '🧪', 'Caderno de brassagem atualizado', 'Lote novo, anotação ou mudança de situação feita por outra pessoa'],
+    'brassagem_lembrete' => ['brassagem', '📓', 'Lembrete diário dos cadernos', 'Todo dia, para atualizar os cadernos (só para quem não é administrador)'],
+];
+
+// O usuário quer esse tipo? (padrão: sim)
+function dh_notif_quer(array $n, string $login, string $tipo): bool
+{
+    return $tipo === '' || ($n['prefs'][$login][$tipo] ?? true) !== false;
+}
+
+function dh_notif_prefs_salvar(string $login, array $ligados): void
+{
+    $fp = @fopen(DH_ARQ_NOTIFICACOES . '.lock', 'c');
+    if ($fp) {
+        flock($fp, LOCK_EX);
+    }
+    $n = dh_notificacoes();
+    foreach (DH_NOTIF_TIPOS as $tipo => $_) {
+        $n['prefs'][$login][$tipo] = in_array($tipo, $ligados, true);
+    }
+    dh_notificacoes_salvar($n);
+    if ($fp) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
+}
 
 function dh_notificacoes(): array
 {
     $n = json_decode((string) @file_get_contents(DH_ARQ_NOTIFICACOES), true);
-    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => []];
+    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => [], 'prefs' => []];
 }
 
 function dh_notificacoes_salvar(array $n): void
@@ -27,7 +59,7 @@ function dh_notificacoes_salvar(array $n): void
 
 // Cria uma notificação para quem tem a permissão $perm (ex.: 'contratos'). $link é relativo ao painel (./?acao=...).
 // $login = quem fez a ação (não recebe a própria notificação). Nunca interrompe quem chamou.
-function dh_notificar(string $perm, string $icone, string $titulo, string $texto = '', string $link = '', string $login = '', array $para = []): void
+function dh_notificar(string $perm, string $icone, string $titulo, string $texto = '', string $link = '', string $login = '', array $para = [], string $tipo = ''): void
 {
     try {
         $fp = @fopen(DH_ARQ_NOTIFICACOES . '.lock', 'c');
@@ -36,7 +68,7 @@ function dh_notificar(string $perm, string $icone, string $titulo, string $texto
         }
         $n = dh_notificacoes();
         $n['itens'][] = ['id' => dh_id_novo('n'), 'em' => date('Y-m-d H:i:s'), 'perm' => $perm, 'icone' => $icone,
-            'titulo' => mb_substr($titulo, 0, 160), 'texto' => mb_substr($texto, 0, 300), 'link' => $link, 'login' => $login] + ($para ? ['para' => array_values($para)] : []);
+            'titulo' => mb_substr($titulo, 0, 160), 'texto' => mb_substr($texto, 0, 300), 'link' => $link, 'login' => $login, 'tipo' => $tipo] + ($para ? ['para' => array_values($para)] : []);
         $n['itens'] = array_slice($n['itens'], -DH_NOTIFICACOES_MAX);
         $ids = array_flip(array_column($n['itens'], 'id'));
         foreach ($n['lidos'] as $l => $lidos) {
@@ -48,7 +80,7 @@ function dh_notificar(string $perm, string $icone, string $titulo, string $texto
             fclose($fp);
         }
         // Celulares: depois que a página já foi entregue a quem fez a ação (não deixa a assinatura esperando)
-        $destino = $para ?: dh_notificacao_destinatarios($perm, $login);
+        $destino = array_values(array_filter($para ?: dh_notificacao_destinatarios($perm, $login), fn($l) => dh_notif_quer($n, $l, $tipo)));
         if ($destino && dh_push_inscricoes()) {
             register_shutdown_function(function () use ($destino) {
                 if (session_status() === PHP_SESSION_ACTIVE) {
@@ -77,7 +109,8 @@ function dh_notificacoes_do_usuario(string $login, callable $pode, ?array $n = n
     $lidos = array_flip($n['lidos'][$login] ?? []);
     $r = [];
     foreach (array_reverse($n['itens']) as $it) {
-        $visivel = isset($it['para']) ? in_array($login, $it['para'], true) : (($it['login'] ?? '') !== $login && $pode($it['perm']));
+        $visivel = (isset($it['para']) ? in_array($login, $it['para'], true) : (($it['login'] ?? '') !== $login && $pode($it['perm'])))
+            && dh_notif_quer($n, $login, (string) ($it['tipo'] ?? ''));
         if (!$visivel) {
             continue;
         }

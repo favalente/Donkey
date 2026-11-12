@@ -525,7 +525,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=71">
+  <link rel="stylesheet" href="admin.css?v=72">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#e9a23b">
   <link rel="apple-touch-icon" href="../assets/img/icone-192.png">
@@ -560,7 +560,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <header class="topo">
     <a class="marca" href="./"><img src="../assets/img/logo-donkey-head-mini.png" alt="" width="28"> Painel</a>
     <?php $nNotif = notificacoes_nao_lidas(); ?>
-    <a class="sino<?= $tela === 'notificacoes' ? ' ativo' : '' ?>" href="./?acao=notificacoes" aria-label="Notificações<?= $nNotif ? ': ' . $nNotif . ' novas' : '' ?>">🔔<?php if ($nNotif): ?><em><?= $nNotif > 99 ? '99+' : $nNotif ?></em><?php endif; ?></a>
+    <a class="sino<?= in_array($tela, ['notificacoes', 'notificacoes-config'], true) ? ' ativo' : '' ?>" href="./?acao=notificacoes" aria-label="Notificações<?= $nNotif ? ': ' . $nNotif . ' novas' : '' ?>">🔔<?php if ($nNotif): ?><em><?= $nNotif > 99 ? '99+' : $nNotif ?></em><?php endif; ?></a>
     <nav>
       <?php if (pode('taplist')): ?><a href="./?acao=taplist" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🍺</span>Tap List</a><?php endif; ?>
       <?php if (pode('cervejas')): ?><a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🏷️</span>Cervejas</a><?php endif; ?>
@@ -575,6 +575,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (pode('receitas')): ?><a href="./?acao=receitas" class="<?= in_array($tela, ['receitas', 'receita'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📖</span>Receitas</a><?php endif; ?>
       <?php if (pode('galeria')): ?><a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🖼️</span>Galeria</a><?php endif; ?>
       <?php if (pode('usuarios')): ?><a href="./?acao=usuarios" class="<?= in_array($tela, ['usuarios', 'importar', 'permissoes'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👥</span>Usuários</a><?php endif; ?>
+      <a href="./?acao=notificacoes" class="<?= in_array($tela, ['notificacoes', 'notificacoes-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🔔</span>Notificações</a>
       <a href="../" target="_blank"><span class="ic" aria-hidden="true">🌐</span>Ver site</a>
     </nav>
   </header>

@@ -274,7 +274,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
         dh_contrato_congelar($k, $c['config']);
         $c['contratos'][$i] = $k;
         dh_contratos_salvar($c);
-        dh_notificar('contratos', '🍺', 'Pedido de chope preenchido nº ' . $k['numero'], $f['contratante_nome'] . ' · entrega ' . dh_data_br($f['entrega_data']) . ' · ' . dh_moeda(dh_comodato_total($f)) . '. Confira o comprovante.', './?acao=contrato&id=' . $k['id']);
+        dh_notificar('contratos', '🍺', 'Pedido de chope preenchido nº ' . $k['numero'], $f['contratante_nome'] . ' · entrega ' . dh_data_br($f['entrega_data']) . ' · ' . dh_moeda(dh_comodato_total($f)) . '. Confira o comprovante.', './?acao=contrato&id=' . $k['id'], '', [], 'pedido_chope');
         dh_email_equipe('Pedido de chope preenchido nº ' . $k['numero'],
             '<p>' . e($f['contratante_nome']) . ' preencheu o pedido de chope nº <b>' . e($k['numero']) . '</b> (entrega em ' . e($f['cidade']) . ', ' . e(dh_data_br($f['entrega_data'])) . ', total ' . e(dh_moeda(dh_comodato_total($f)))
             . ($f['extras'] ? ', ' . implode(', ', array_map(fn($x) => $x['qtd'] . ' × ' . $x['descricao'], $f['extras'])) : '')
@@ -353,7 +353,7 @@ if ($podeAssinar && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $fechou = dh_contrato_concluir($c['contratos'][$i]);
             dh_contratos_salvar($c);
             if (!$fechou) {
-                dh_notificar('contratos', '✍️', 'Cliente assinou o contrato nº ' . $k['numero'], $pend['nome'] . ' assinou. Falta a assinatura da Donkey Head Cervejaria.', './?acao=contrato&id=' . $k['id']);
+                dh_notificar('contratos', '✍️', 'Cliente assinou o contrato nº ' . $k['numero'], $pend['nome'] . ' assinou. Falta a assinatura da Donkey Head Cervejaria.', './?acao=contrato&id=' . $k['id'], '', [], 'cliente_assinou');
                 dh_email_equipe('Cliente assinou o contrato nº ' . $k['numero'],
                     '<p>' . e($pend['nome']) . ' assinou o contrato nº <b>' . e($k['numero']) . '</b>. Falta a assinatura da Donkey Head Cervejaria no painel.</p>');
             }

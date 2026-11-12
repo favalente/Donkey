@@ -205,7 +205,7 @@ function dh_brassagem_lembrete_rodar(array $enviados): ?string
         . ($atrasados ? ' · ' . count($atrasados) . ' sem anotação hoje' : '');
     $logins = dh_brassagem_lembrete_logins();
     if ($logins) {
-        dh_notificar('brassagem', '📓', 'Lembrete: atualize os cadernos de brassagem', $resumo . '.', './?acao=brassagem', '', $logins);
+        dh_notificar('brassagem', '📓', 'Lembrete: atualize os cadernos de brassagem', $resumo . '.', './?acao=brassagem', '', $logins, 'brassagem_lembrete');
     }
     $emails = $cfg['emails'] ?? [];
     if ($emails) {
