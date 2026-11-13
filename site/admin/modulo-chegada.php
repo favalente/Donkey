@@ -55,7 +55,8 @@ function chegada_tela(string $tela): bool
     $linhas = [];
     foreach ($posicoes as $k => $p) {
         $pe = dh_escala_pessoa($e, $p['pessoa'] ?? '');
-        if ($pe) {
+        // Fixo bate ponto: no caderno só os freelancers
+        if ($pe && ($pe['tipo'] ?? 'freelancer') === 'freelancer') {
             $linhas[] = [$k, $p, $pe];
         }
     }
@@ -66,7 +67,7 @@ function chegada_tela(string $tela): bool
       <div class="caderno">
         <h1 class="caderno-dia">📒 <?= e(mb_strtoupper(DH_DIAS_SEMANA[(int) date('w', strtotime($dia))])) ?><small><?= e(date('d/m', strtotime($dia))) ?></small></h1>
         <?php if (!$linhas): ?>
-          <p class="caderno-vazio">Hoje não tem ninguém na escala.</p>
+          <p class="caderno-vazio">Hoje não tem freelancer na escala.</p>
         <?php else: ?>
           <p class="caderno-faltam"><?= $faltam ? '⏳ Faltam chegar: <b>' . $faltam . '</b>' : '✅ Todos chegaram' ?></p>
         <?php endif; ?>

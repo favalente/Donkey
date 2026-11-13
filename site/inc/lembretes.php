@@ -117,10 +117,12 @@ function dh_lembretes_rodar(): array
     // Caderno de chegada: às 16h50 (a equipe entra às 17h), nos dias com escala; segunda a casa não abre
     try {
         $chave = 'chegada|' . date('Y-m-d');
-        $hojeEsc = dh_escala()['dias'][date('Y-m-d')]['posicoes'] ?? [];
+        $esc = dh_escala();
+        // Só freelancers (fixo bate ponto)
+        $hojeEsc = array_filter($esc['dias'][date('Y-m-d')]['posicoes'] ?? [], fn($p) => (dh_escala_pessoa($esc, $p['pessoa'] ?? '')['tipo'] ?? '') === 'freelancer');
         if ((int) date('N') !== 1 && date('H:i') >= '16:50' && date('H:i') < '22:00' && !isset(dh_lembretes()['enviados'][$chave]) && array_filter($hojeEsc, fn($p) => ($p['pessoa'] ?? '') !== '')) {
             $n = count(array_filter($hojeEsc, fn($p) => ($p['pessoa'] ?? '') !== ''));
-            dh_notificar('chegada', '📒', 'Hora do caderno de chegada', 'A equipe entra às 17h: ' . $n . ' pessoa' . ($n > 1 ? 's' : '') . ' na escala de hoje. Anote quem chegar.', './?acao=chegada', '', [], 'chegada_lembrete');
+            dh_notificar('chegada', '📒', 'Hora do caderno de chegada', 'A equipe entra às 17h: ' . $n . ' freelancer' . ($n > 1 ? 's' : '') . ' na escala de hoje. Anote quem chegar.', './?acao=chegada', '', [], 'chegada_lembrete');
             $l = dh_lembretes();
             $l['enviados'][$chave] = date('Y-m-d');
             dh_lembretes_salvar($l);
