@@ -41,10 +41,14 @@ function dh_notif_papeis(string $tipo, ?array $n = null): array
 // do tipo foi liberada para ele em Usuários → Permissões (respeitando se o tipo é só da equipe ou só de administradores)
 function dh_notif_tipo_para(string $tipo, array $usuario, ?array $n = null): bool
 {
-    if (in_array($usuario['papel'] ?? '', dh_notif_papeis($tipo, $n), true)) {
+    [$perm, , , , $quem] = (DH_NOTIF_TIPOS[$tipo] ?? ['']) + [4 => 'todos'];
+    $papel = $usuario['papel'] ?? '';
+    // Aba que a função teria, mas foi tirada dessa pessoa em Permissões: não recebe pela função
+    $tirada = $papel !== 'admin' && isset($usuario['permissoes']) && !in_array($perm, (array) $usuario['permissoes'], true)
+        && in_array($papel, DH_PERMISSOES[$perm] ?? [], true);
+    if (!$tirada && in_array($papel, dh_notif_papeis($tipo, $n), true)) {
         return true;
     }
-    [$perm, , , , $quem] = (DH_NOTIF_TIPOS[$tipo] ?? ['']) + [4 => 'todos'];
     $admin = ($usuario['papel'] ?? '') === 'admin';
     return isset($usuario['permissoes']) && in_array($perm, (array) $usuario['permissoes'], true)
         && ($quem === 'todos' || ($quem === 'admin') === $admin);
