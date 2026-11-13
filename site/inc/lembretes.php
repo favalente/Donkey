@@ -100,6 +100,12 @@ function dh_lembretes_rodar(): array
         dh_lembretes_salvar($l);
         $feitos[] = $assunto;
     }
+    // Reservas do Google Agenda: importa sozinho, sem ninguém precisar abrir a aba (no máximo a cada 10 min)
+    try {
+        dh_reservas_sincronizar();
+    } catch (Throwable $e) {
+        error_log('Reservas: ' . $e->getMessage());
+    }
     // Lembrete diário dos cadernos de brassagem
     try {
         $chave = dh_brassagem_lembrete_rodar(dh_lembretes()['enviados']);
