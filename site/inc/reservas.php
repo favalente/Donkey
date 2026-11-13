@@ -39,8 +39,8 @@ function dh_reserva_de_evento(array $ev, string $unidadePadrao): array
             $unidade = $u;
         }
     }
-    return ['uid' => $ev['uid'], 'data' => $ev['data'], 'hora' => $ev['hora'], 'titulo' => mb_substr($ev['titulo'], 0, 160),
-        'descricao' => mb_substr($ev['descricao'], 0, 1500), 'local' => mb_substr($ev['local'], 0, 200), 'pessoas' => $pessoas, 'unidade' => $unidade];
+    return ['uid' => $ev['uid'], 'data' => $ev['data'], 'hora' => $ev['hora'], 'titulo' => mb_substr($ev['titulo'], 0, 2000),
+        'descricao' => mb_substr($ev['descricao'], 0, 4000), 'local' => mb_substr($ev['local'], 0, 200), 'pessoas' => $pessoas, 'unidade' => $unidade];
 }
 
 // Parece reserva? (para agenda que mistura shows e reservas)

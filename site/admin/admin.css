@@ -844,3 +844,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .caderno-corrigir summary { color: var(--muted); cursor: pointer; font-size: 1rem; }
 .caderno-corrigir form { margin-top: 8px; }
 .caderno-apagar { border: 0; background: none; color: var(--erro); text-decoration: underline; font: inherit; cursor: pointer; padding: 6px 0; }
+.reserva-detalhe { max-height: calc(100dvh - 40px); overflow-y: auto; }
