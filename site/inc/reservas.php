@@ -104,11 +104,45 @@ function dh_reservas_por_dia(array $r, string $mes, string $unidade): array
     return $por;
 }
 
-// "Fulano · 12 pessoas" (nome curto para o quadradinho do calendário)
+// Campos que vêm escritos no texto da reserva ("Nome: Juliana Souza Número de pessoas: 25 Ambiente: Rooftop Data: …")
+const DH_RESERVA_ROTULOS = 'nome|n[uú]mero de pessoas|quantidade de pessoas|pessoas|ambiente|local|data|dia|hor[aá]rio|hora|telefone|tel|whats(?:app)?|contato|obs(?:erva[cç][aã]o)?|anivers[aá]rio|evento';
+
+function dh_reserva_campo(string $texto, string $rotulo): string
+{
+    $proximo = '(?=\s*(?:\*|•|\||(?:' . DH_RESERVA_ROTULOS . ')\s*:)|\s*$)';
+    return preg_match('/(?:^|[\s\*•|])(?:' . $rotulo . ')\s*:\s*(.+?)' . $proximo . '/isu', $texto, $m) ? trim($m[1], " \t\n-–,.;") : '';
+}
+
+// Nome, pessoas e ambiente (piso) da reserva, para o quadradinho do calendário
+function dh_reserva_campos(array $x): array
+{
+    $texto = $x['titulo'] . "\n" . $x['descricao'];
+    $nome = dh_reserva_campo($texto, 'nome');
+    $amb = dh_reserva_campo($texto, 'ambiente|local');
+    $pes = preg_match('/(?:n[uú]mero|quantidade)\s+de\s+pessoas\s*:?\s*(\d{1,3})/iu', $texto, $m) ? (int) $m[1] : $x['pessoas'];
+    if ($nome === '') {
+        // Sem "Nome:": o título, sem "Reserva" e sem o número de pessoas, encurtado
+        $t = trim(preg_replace('/^\s*reserva(do|da)?\s*[:\-–]?\s*/iu', '', preg_replace('/^[^\p{L}\d]+/u', '', $x['titulo'])));
+        $t = trim(preg_replace('/[\s\-–,·]*\(?\d{1,3}\s*(pessoas|pessoa|pax|lugares|convidados)\)?/iu', '', $t), " -–,·");
+        $nome = mb_strimwidth($t, 0, 40, '…');
+    }
+    return ['nome' => $nome !== '' ? mb_strimwidth($nome, 0, 40, '…') : 'Reserva', 'pessoas' => $pes, 'ambiente' => mb_strimwidth($amb, 0, 25, '…')];
+}
+
+// "Juliana Souza · 25p · Rooftop" (quadradinho do calendário)
 function dh_reserva_rotulo(array $x): string
 {
-    $t = trim(preg_replace('/^\s*reserva(do|da)?\s*[:\-–]?\s*/iu', '', $x['titulo']));
-    // O número de pessoas já vai no fim ("· 12p"): tira do nome
-    $t = trim(preg_replace('/[\s\-–,·]*\(?\d{1,3}\s*(pessoas|pessoa|pax|lugares|convidados)\)?/iu', '', $t), " -–,·");
-    return ($t !== '' ? $t : 'Reserva') . ($x['pessoas'] ? ' · ' . $x['pessoas'] . 'p' : '');
+    $c = dh_reserva_campos($x);
+    return $c['nome'] . ($c['pessoas'] ? ' · ' . $c['pessoas'] . 'p' : '') . ($c['ambiente'] !== '' ? ' · ' . $c['ambiente'] : '');
+}
+
+// Tudo o que veio do Google, com uma linha para cada informação, para a janela de detalhes
+function dh_reserva_info(array $x): array
+{
+    $c = dh_reserva_campos($x);
+    $quebrar = fn($t) => trim(preg_replace('/\s*(\*(?=\p{L})|(?:' . DH_RESERVA_ROTULOS . ')\s*:)/iu', "\n$1", preg_replace('/^[^\p{L}\d\*]+/u', '', $t)));
+    $texto = $quebrar($x['titulo']) . ($x['descricao'] !== '' ? "\n\n" . $x['descricao'] : '') . ($x['local'] !== '' ? "\n" . $x['local'] : '');
+    return ['titulo' => $c['nome'], 'quando' => DH_DIAS_SEMANA[(int) date('w', strtotime($x['data']))] . ', ' . date('d/m', strtotime($x['data'])) . ($x['hora'] !== '' ? ' · ' . $x['hora'] : ''),
+        'pessoas' => trim(($c['pessoas'] ? $c['pessoas'] . ' pessoas' : '') . ($c['ambiente'] !== '' ? ' · ' . $c['ambiente'] : ''), ' ·'),
+        'casa' => DH_UNIDADES[$x['unidade']] ?? '', 'texto' => preg_replace("/\n{3,}/", "\n\n", $texto)];
 }

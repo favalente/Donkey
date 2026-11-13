@@ -139,8 +139,7 @@ function reservas_tela(string $tela): bool
 
 function reserva_info(array $x): array
 {
-    return ['titulo' => $x['titulo'] !== '' ? $x['titulo'] : 'Reserva', 'quando' => DH_DIAS_SEMANA[(int) date('w', strtotime($x['data']))] . ', ' . date('d/m', strtotime($x['data'])) . ($x['hora'] !== '' ? ' · ' . $x['hora'] : ''),
-        'pessoas' => $x['pessoas'] ? $x['pessoas'] . ' pessoas' : '', 'casa' => DH_UNIDADES[$x['unidade']] ?? '', 'descricao' => $x['descricao'], 'local' => $x['local']];
+    return dh_reserva_info($x);
 }
 
 // Calendário do mês (mesmo padrão da Agenda e dos Contratos): tocar na reserva mostra os detalhes
@@ -205,7 +204,7 @@ function reservas_dialogo(): void
               d.querySelector('.cal-menu-quando').textContent = i.quando + (i.casa ? ' · ' + i.casa : '');
               d.querySelector('.rd-titulo').textContent = i.titulo;
               d.querySelector('.rd-pessoas').textContent = i.pessoas;
-              d.querySelector('.rd-texto').textContent = [i.descricao, i.local].filter(Boolean).join('\n');
+              d.querySelector('.rd-texto').textContent = i.texto;
               d.showModal();
             });
           });

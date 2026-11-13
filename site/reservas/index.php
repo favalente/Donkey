@@ -27,8 +27,7 @@ $proximo = date('Y-m', strtotime($ini . ' +1 month'));
 $nomeMes = DH_MESES[(int) substr($mes, 5, 2)] . ' ' . substr($mes, 0, 4);
 $proximas = array_values(array_filter($r['reservas'], fn($x) => $x['unidade'] === $unidade && $x['data'] >= $hoje && $x['data'] <= date('Y-m-d', strtotime('+7 days'))));
 usort($proximas, fn($a, $b) => strcmp($a['data'] . $a['hora'], $b['data'] . $b['hora']));
-$info = fn($x) => ['titulo' => $x['titulo'] !== '' ? $x['titulo'] : 'Reserva', 'quando' => DH_DIAS_SEMANA[(int) date('w', strtotime($x['data']))] . ', ' . date('d/m', strtotime($x['data'])) . ($x['hora'] !== '' ? ' · ' . $x['hora'] : ''),
-    'pessoas' => $x['pessoas'] ? $x['pessoas'] . ' pessoas' : '', 'texto' => trim($x['descricao'] . "\n" . $x['local'])];
+$info = fn($x) => dh_reserva_info($x);
 ?>
 <!doctype html>
 <html lang="pt-BR">
@@ -119,7 +118,7 @@ $info = fn($x) => ['titulo' => $x['titulo'] !== '' ? $x['titulo'] : 'Reserva', '
       document.querySelectorAll('[data-info]').forEach(function (b) {
         b.addEventListener('click', function () {
           var i = JSON.parse(b.dataset.info);
-          d.querySelector('.rd-quando').textContent = i.quando;
+          d.querySelector('.rd-quando').textContent = i.quando + (i.casa ? ' · ' + i.casa : '');
           d.querySelector('.rd-titulo').textContent = i.titulo;
           d.querySelector('.rd-pessoas').textContent = i.pessoas;
           d.querySelector('.rd-texto').textContent = i.texto;
