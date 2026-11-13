@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 const DH_ARQ_USUARIOS = DH_RAIZ . '/dados/usuarios.json';
-const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejaria' => 'Cervejaria'];
+const DH_PAPEIS = ['admin' => 'Administrador', 'financeiro' => 'Financeiro', 'designer' => 'Designer', 'barman' => 'Barman', 'cervejaria' => 'Cervejaria', 'chegada' => 'Caderno de chegada'];
 // O que cada função pode fazer no painel
 const DH_PERMISSOES = [
     'taplist' => ['admin', 'barman'],
@@ -26,6 +26,7 @@ const DH_PERMISSOES = [
     'escala' => ['admin', 'financeiro'],
     'reservas' => ['admin', 'financeiro'],
     'entregas' => ['admin', 'cervejaria'],
+    'chegada' => ['admin', 'chegada'],
     'freelancers' => ['admin', 'financeiro'],
     'usuarios' => ['admin'],
     'importar' => ['admin'],
@@ -48,6 +49,7 @@ const DH_ABAS = [
     'clientes' => ['Clientes', 'base de clientes'],
     'escala' => ['Escala', 'escala da equipe e cadastro dos freelancers'],
     'reservas' => ['Reservas', 'calendário das reservas (do Google Agenda)'],
+    'chegada' => ['Caderno de chegada', 'tela simples para anotar a hora que cada pessoa da escala chega'],
     'entregas' => ['Chope Delivery', 'pedidos de chope a entregar: só nome, data, endereço, o que levar e contato'],
     'brassagem' => ['Brassagem', 'tanques e cadernos'],
     'receitas' => ['Receitas', ''],

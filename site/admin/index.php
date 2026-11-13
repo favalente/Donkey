@@ -11,6 +11,7 @@ require __DIR__ . '/modulo-receitas.php';
 require __DIR__ . '/modulo-escala.php';
 require __DIR__ . '/modulo-notificacoes.php';
 require __DIR__ . '/modulo-reservas.php';
+require __DIR__ . '/modulo-chegada.php';
 
 const DH_ARQ_ADMIN = DH_RAIZ . '/dados/admin.json';
 const DH_ARQ_FALHAS = DH_RAIZ . '/dados/login-falhas.json';
@@ -276,7 +277,10 @@ $erro = null;
 $inicio = 'login';
 if ($usuario) {
     $inicio = 'galeria';
-    foreach (['taplist' => 'taplist', 'agenda' => 'agenda', 'contratos' => 'contratos', 'orcamentos' => 'orcamentos', 'brassagem' => 'brassagem', 'escala' => 'escala', 'cervejas' => 'cervejas',
+    // Quem só anota a chegada da equipe abre direto no caderno do dia
+    if (pode('chegada') && !pode('escala')) {
+        $inicio = 'chegada';
+    } else foreach (['taplist' => 'taplist', 'agenda' => 'agenda', 'contratos' => 'contratos', 'orcamentos' => 'orcamentos', 'brassagem' => 'brassagem', 'escala' => 'escala', 'cervejas' => 'cervejas',
         'bandas' => 'bandas', 'clientes' => 'clientes', 'freelancers' => 'freelancers', 'relatorio' => 'relatorio', 'vendas' => 'relatorios', 'receitas' => 'receitas', 'galeria' => 'galeria', 'usuarios' => 'usuarios'] as $perm => $t) {
         if (pode($perm)) {
             $inicio = $t;
@@ -505,7 +509,7 @@ if (!$usuarios) {
 
             default:
                 // Agenda, bandas, relatório, importação e usuários ficam em arquivos próprios
-                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao) && !brassagem_acao($acao) && !receitas_acao($acao) && !escala_acao($acao) && !notificacoes_acao($acao) && !reservas_acao($acao)) {
+                if (!agenda_acao($acao) && !usuarios_acao($acao) && !contratos_acao($acao) && !relatorios_acao($acao) && !orcamentos_acao($acao) && !brassagem_acao($acao) && !receitas_acao($acao) && !escala_acao($acao) && !notificacoes_acao($acao) && !reservas_acao($acao) && !chegada_acao($acao)) {
                     $tela = $inicio;
                 }
         }
@@ -528,7 +532,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=80">
+  <link rel="stylesheet" href="admin.css?v=81">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#e9a23b">
   <link rel="apple-touch-icon" href="../assets/img/icone-192.png">
@@ -562,8 +566,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
 <?php else: ?>
   <header class="topo">
     <a class="marca" href="./"><img src="../assets/img/logo-donkey-head-mini.png" alt="" width="28"> Painel</a>
-    <?php $nNotif = notificacoes_nao_lidas(); ?>
-    <a class="sino<?= in_array($tela, ['notificacoes', 'notificacoes-config'], true) ? ' ativo' : '' ?>" href="./?acao=notificacoes" aria-label="Notificações<?= $nNotif ? ': ' . $nNotif . ' novas' : '' ?>">🔔<?php if ($nNotif): ?><em><?= $nNotif > 99 ? '99+' : $nNotif ?></em><?php endif; ?></a>
+    <?php $nNotif = notificacoes_nao_lidas(); $recebeAlguma = (bool) array_filter(array_keys(DH_NOTIF_TIPOS), fn($t) => dh_notif_tipo_para($t, $usuario)); ?>
+    <?php if ($recebeAlguma || $nNotif): ?><a class="sino<?= in_array($tela, ['notificacoes', 'notificacoes-config'], true) ? ' ativo' : '' ?>" href="./?acao=notificacoes" aria-label="Notificações<?= $nNotif ? ': ' . $nNotif . ' novas' : '' ?>">🔔<?php if ($nNotif): ?><em><?= $nNotif > 99 ? '99+' : $nNotif ?></em><?php endif; ?></a><?php endif; ?>
     <nav>
       <?php if (pode('taplist')): ?><a href="./?acao=taplist" class="<?= $tela === 'taplist' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🍺</span>Tap List</a><?php endif; ?>
       <?php if (pode('cervejas')): ?><a href="./?acao=cervejas" class="<?= in_array($tela, ['cervejas', 'editar'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🏷️</span>Cervejas</a><?php endif; ?>
@@ -573,6 +577,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (pode('relatorio') || pode('freelancers') || pode('vendas')): ?><a href="./?acao=<?= pode('freelancers') ? 'freelancers' : (pode('relatorio') ? 'relatorio' : 'relatorios') ?>" class="<?= in_array($tela, ['relatorio', 'freelancers', 'relatorios'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">💰</span>Financeiro</a><?php endif; ?>
       <?php if (pode('orcamentos')): ?><a href="./?acao=orcamentos" class="<?= in_array($tela, ['orcamentos', 'orcamento', 'orcamentos-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📄</span>Orçamentos</a><?php endif; ?>
       <?php if (pode('contratos')): ?><a href="./?acao=contratos" class="<?= in_array($tela, ['contratos', 'contrato', 'contratos-config', 'contratos-cupons', 'produtos'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📝</span>Contratos</a><?php endif; ?>
+      <?php if (pode('chegada')): ?><a href="./?acao=chegada" class="<?= $tela === 'chegada' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📒</span>Chegada</a><?php endif; ?>
       <?php if (pode('entregas')): ?><a href="./?acao=entregas" class="<?= in_array($tela, ['entregas', 'entrega'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🚚</span>Chope Delivery</a><?php endif; ?>
       <?php if (pode('reservas')): ?><a href="./?acao=reservas" class="<?= $tela === 'reservas' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🍽️</span>Reservas</a><?php endif; ?>
       <?php if (pode('clientes')): ?><a href="./?acao=clientes" class="<?= $tela === 'clientes' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👤</span>Clientes</a><?php endif; ?>
@@ -580,7 +585,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       <?php if (pode('receitas')): ?><a href="./?acao=receitas" class="<?= in_array($tela, ['receitas', 'receita'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">📖</span>Receitas</a><?php endif; ?>
       <?php if (pode('galeria')): ?><a href="./?acao=galeria" class="<?= $tela === 'galeria' ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🖼️</span>Galeria</a><?php endif; ?>
       <?php if (pode('usuarios')): ?><a href="./?acao=usuarios" class="<?= in_array($tela, ['usuarios', 'importar', 'permissoes'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">👥</span>Usuários</a><?php endif; ?>
-      <a href="./?acao=notificacoes" class="<?= in_array($tela, ['notificacoes', 'notificacoes-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🔔</span>Notificações</a>
+      <?php if ($recebeAlguma): ?><a href="./?acao=notificacoes" class="<?= in_array($tela, ['notificacoes', 'notificacoes-config'], true) ? 'ativo' : '' ?>"><span class="ic" aria-hidden="true">🔔</span>Notificações</a><?php endif; ?>
       <a href="../" target="_blank"><span class="ic" aria-hidden="true">🌐</span>Ver site</a>
     </nav>
   </header>
@@ -781,7 +786,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
         <label>Repita a nova senha <input type="password" name="senha2" required autocomplete="new-password"></label>
         <button class="btn primario">Trocar senha</button>
       </form>
-    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela) || brassagem_tela($tela) || receitas_tela($tela) || escala_tela($tela) || notificacoes_tela($tela) || reservas_tela($tela); endif; ?>
+    <?php else: agenda_tela($tela) || usuarios_tela($tela) || contratos_tela($tela) || relatorios_tela($tela) || orcamentos_tela($tela) || brassagem_tela($tela) || receitas_tela($tela) || escala_tela($tela) || notificacoes_tela($tela) || reservas_tela($tela) || chegada_tela($tela); endif; ?>
 
     <footer class="rodape">
       <span><?= e($usuario['nome']) ?> (<?= e(DH_PAPEIS[$usuario['papel']]) ?>) · <a href="./?acao=trocar-senha">Trocar senha</a> · <button type="button" class="botao-tema" id="botao-tema"></button></span>
@@ -866,7 +871,8 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
       s.addEventListener('change', function () { s.parentNode.classList.toggle('cheia', !!s.value); });
     });
   </script>
-  <?php $chavesPush = dh_push_chaves(); if ($chavesPush && $tela !== 'notificacoes-config' && empty($_GET['abrir'])): ?>
+  <?php $chavesPush = dh_push_chaves();
+  if ($chavesPush && $recebeAlguma && $tela !== 'notificacoes-config' && empty($_GET['abrir'])): ?>
     <!-- A cada acesso ao painel, pergunta se quer receber as notificações neste aparelho (até ativar) -->
     <dialog class="dup-modal push-pedir" id="push-pedir" data-chave="<?= e($chavesPush['publica']) ?>" data-csrf="<?= e($_SESSION['csrf']) ?>" data-novo="<?= !empty($_SESSION['push_pedir']) ? '1' : '' ?>">
       <div class="push-pedir-ic">🔔</div>
