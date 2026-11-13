@@ -924,6 +924,12 @@ function contratos_tela_contrato(): void
             <div><small>Nome</small><strong><?= e($f['contratante_nome']) ?></strong></div>
             <div><small><?= $evento ? 'Data do evento' : 'Data da entrega' ?></small><strong><?= $dataR !== '' ? e(DH_DIAS_SEMANA[(int) date('w', strtotime($dataR))] . ', ' . dh_data_br($dataR)) : '—' ?></strong></div>
             <div><small><?= $evento ? 'Horário' : 'Horário da entrega' ?></small><strong><?= $horaR !== '' ? e($horaR) : '—' ?></strong></div>
+            <?php $end = $evento ? trim((string) ($f['espaco'] ?? '')) : trim(trim((string) ($f['entrega_endereco'] ?? '')) . (trim((string) ($f['cidade'] ?? '')) !== '' ? ' – ' . trim((string) $f['cidade']) : ''), ' –'); ?>
+            <?php if ($end !== ''): ?>
+              <div class="resumo-endereco"><small><?= $evento ? 'Espaço' : 'Endereço da entrega' ?></small><strong><?= e($end) ?></strong>
+                <?php if (!$evento): ?><span class="resumo-contato"><a class="btn-acao" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&amp;query=<?= e(rawurlencode($end . (trim((string) ($f['cidade'] ?? '')) === '' ? ' Fortaleza CE' : ''))) ?>">📍 Abrir no mapa</a></span><?php endif; ?>
+              </div>
+            <?php endif; ?>
             <?php
               // O que levar: barris agrupados (rótulo + tamanho; os em comodato à parte) e os opcionais (copos…)
               $levar = [];

@@ -820,3 +820,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .resumo-levar ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 1.05rem; }
 .resumo-levar li small { display: inline; text-transform: none; letter-spacing: 0; }
 .tag-comodato { font-style: normal; font-size: .75rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--azul-bg); color: var(--azul-txt); }
+.resumo-endereco { grid-column: 1 / -1; }
