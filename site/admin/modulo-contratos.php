@@ -78,6 +78,10 @@ function contratos_acao(string $acao): bool
         case 'produtos':
             exigir('contratos');
             return true;
+        case 'entregas':
+        case 'entrega':
+            exigir('entregas');
+            return true;
         case 'clientes':
             exigir('clientes');
             return true;
@@ -552,6 +556,12 @@ function contratos_tela(string $tela): bool
         case 'contrato':
             contratos_tela_contrato();
             return true;
+        case 'entregas':
+            contratos_tela_entregas();
+            return true;
+        case 'entrega':
+            contratos_tela_entrega();
+            return true;
         case 'contratos-config':
             contratos_tela_config();
             return true;
@@ -670,7 +680,7 @@ function contratos_tela_lista(): void
       <div class="cards-contrato">
         <?php foreach ($mostrar as $k): contratos_card($k); endforeach; ?>
       </div>
-      <p class="botoes-link"><a class="voltar" href="./?acao=produtos">🧾 Produtos e preços</a> <a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a></p>
+      <p class="botoes-link"><a class="voltar" href="./?acao=produtos">🧾 Produtos e preços</a> <a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a> <a class="voltar" href="./?acao=entregas">🚚 Entregas (o que a cervejaria vê)</a></p>
     <?php
 }
 
@@ -876,43 +886,10 @@ function contratos_email_teste(): void
     <?php
 }
 
-function contratos_tela_contrato(): void
+// Card da entrega: só o que o entregador precisa (nome, data, horário, endereço, o que levar e contato),
+// sem CPF, valores nem o contrato. Usado no topo do contrato e na aba Entregas.
+function contrato_card_entrega(array $k, bool $titulo = false): void
 {
-    global $csrf, $erro, $usuario;
-    $c = dh_contratos();
-    $i = dh_contrato_indice($c, (string) ($_GET['id'] ?? $_POST['id'] ?? ''));
-    if ($i === null && ($_GET['tipo'] ?? '') === 'pedido') {
-        contratos_form_pedido();
-        return;
-    }
-    if ($i === null) {
-        $tipo = isset(DH_CONTRATO_TIPOS[$_GET['tipo'] ?? $_POST['tipo'] ?? '']) ? ($_GET['tipo'] ?? $_POST['tipo']) : 'evento';
-        $k = ['id' => '', 'tipo' => $tipo, 'status' => 'rascunho', 'numero' => '', 'campos' => dh_contrato_campos_padrao($tipo), 'assinaturas' => []];
-    } else {
-        $k = $c['contratos'][$i];
-    }
-    if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') !== '' && $k['status'] === 'rascunho') {
-        $k['campos'] = dh_contrato_ler_form($k['tipo'], $_POST);
-    }
-    ?>
-      <p><a class="voltar" href="./?acao=contratos">‹ Voltar para Contratos</a></p>
-      <h1><?= e(DH_CONTRATO_TIPOS[$k['tipo']]) ?></h1>
-      <p><?= $k['numero'] ? 'Contrato nº <strong>' . e($k['numero']) . '</strong> · ' : '' ?><?= dh_contrato_tag($k) ?></p>
-    <?php
-    if ($k['status'] === 'rascunho') {
-        if ($k['numero'] !== '') {
-            ?><p class="aviso">✏️ Você está editando o contrato nº <?= e($k['numero']) ?>. Enquanto isso, o link do cliente mostra que o contrato está em ajuste. Ao tocar em <strong>Gerar para assinatura</strong>, o mesmo link volta a funcionar com o texto novo<?= !empty($k['versoes']) && !empty(end($k['versoes'])['assinaturas']['contratada']) ? ' e você assina de novo pela Donkey' : '' ?>.</p><?php
-        }
-        contratos_form($k);
-        if ($k['id']) {
-            $editando = $k['numero'] !== '';
-            ?>
-              <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('<?= $editando ? 'Cancelar o contrato nº ' . e($k['numero']) . '? O link do cliente deixa de funcionar.' : 'Excluir este rascunho?' ?>');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo"><?= $editando ? 'Cancelar contrato' : 'Excluir rascunho' ?></button></form>
-            <?php
-        }
-        return;
-    }
-    // Resumo para a entrega (o entregador vê de cara, sem abrir o contrato)
     $f = $k['campos'];
     if ($k['status'] !== 'preenchimento' && trim($f['contratante_nome'] ?? '') !== '') {
         $evento = $k['tipo'] === 'evento';
@@ -921,6 +898,7 @@ function contratos_tela_contrato(): void
         $tel = trim($f['contratante_telefone'] ?? '');
         ?>
           <div class="resumo-entrega">
+            <?php if ($titulo): ?><div class="resumo-num"><?= $k['tipo'] === 'evento' ? '🎉 Evento' : '🍺 Entrega de chope' ?><?= $k['numero'] !== '' ? ' · nº ' . e($k['numero']) : '' ?><?= $k['status'] !== 'assinado' ? ' · <em class="tag ct-enviado">' . e(DH_CONTRATO_STATUS[$k['status']] ?? '') . '</em>' : '' ?></div><?php endif; ?>
             <div><small>Nome</small><strong><?= e($f['contratante_nome']) ?></strong></div>
             <div><small><?= $evento ? 'Data do evento' : 'Data da entrega' ?></small><strong><?= $dataR !== '' ? e(DH_DIAS_SEMANA[(int) date('w', strtotime($dataR))] . ', ' . dh_data_br($dataR)) : '—' ?></strong></div>
             <div><small><?= $evento ? 'Horário' : 'Horário da entrega' ?></small><strong><?= $horaR !== '' ? e($horaR) : '—' ?></strong></div>
@@ -960,6 +938,90 @@ function contratos_tela_contrato(): void
           </div>
         <?php
     }
+}
+
+// Pedidos de chope a entregar (para a cervejaria): só os cards da entrega, sem dados de cadastro nem valores
+function contratos_entregas_lista(bool $passadas): array
+{
+    $hoje = date('Y-m-d');
+    $l = array_values(array_filter(dh_contratos()['contratos'], function ($k) use ($hoje, $passadas) {
+        $d = dh_contrato_data_evento($k);
+        return $k['tipo'] === 'comodato' && in_array($k['status'], ['assinado', 'enviado'], true) && $d !== ''
+            && ($passadas ? $d < $hoje : $d >= $hoje);
+    }));
+    usort($l, fn($a, $b) => $passadas ? strcmp(dh_contrato_data_evento($b), dh_contrato_data_evento($a)) : strcmp(dh_contrato_data_evento($a) . ($a['campos']['entrega_hora'] ?? ''), dh_contrato_data_evento($b) . ($b['campos']['entrega_hora'] ?? '')));
+    return $l;
+}
+
+function contratos_tela_entregas(): void
+{
+    $passadas = ($_GET['ver'] ?? '') === 'passadas';
+    $lista = contratos_entregas_lista($passadas);
+    ?>
+      <h1>Entregas de chope</h1>
+      <div class="abas">
+        <a href="./?acao=entregas" class="<?= !$passadas ? 'ativo' : '' ?>">Próximas <small><?= count(contratos_entregas_lista(false)) ?></small></a>
+        <a href="./?acao=entregas&amp;ver=passadas" class="<?= $passadas ? 'ativo' : '' ?>">Já entregues</a>
+      </div>
+      <?php if (!$lista): ?><p class="dica"><?= $passadas ? 'Nenhuma entrega passada.' : 'Nenhuma entrega marcada.' ?></p><?php endif; ?>
+      <?php $dia = ''; foreach (array_slice($lista, 0, $passadas ? 30 : 100) as $k): $d = dh_contrato_data_evento($k); ?>
+        <?php if ($d !== $dia): $dia = $d; ?><h2 class="entrega-dia"><?= $d === date('Y-m-d') ? 'Hoje · ' : ($d === date('Y-m-d', strtotime('+1 day')) ? 'Amanhã · ' : '') ?><?= e(DH_DIAS_SEMANA[(int) date('w', strtotime($d))] . ', ' . dh_data_br($d)) ?></h2><?php endif; ?>
+        <?php contrato_card_entrega($k, true); ?>
+      <?php endforeach; ?>
+    <?php
+}
+
+function contratos_tela_entrega(): void
+{
+    $c = dh_contratos();
+    $i = dh_contrato_indice($c, (string) ($_GET['id'] ?? ''));
+    ?>
+      <p><a class="voltar" href="./?acao=entregas">‹ Entregas</a></p>
+    <?php
+    if ($i === null || $c['contratos'][$i]['status'] === 'cancelado') {
+        echo '<p class="dica">Entrega não encontrada (pode ter sido cancelada).</p>';
+        return;
+    }
+    contrato_card_entrega($c['contratos'][$i], true);
+}
+
+function contratos_tela_contrato(): void
+{
+    global $csrf, $erro, $usuario;
+    $c = dh_contratos();
+    $i = dh_contrato_indice($c, (string) ($_GET['id'] ?? $_POST['id'] ?? ''));
+    if ($i === null && ($_GET['tipo'] ?? '') === 'pedido') {
+        contratos_form_pedido();
+        return;
+    }
+    if ($i === null) {
+        $tipo = isset(DH_CONTRATO_TIPOS[$_GET['tipo'] ?? $_POST['tipo'] ?? '']) ? ($_GET['tipo'] ?? $_POST['tipo']) : 'evento';
+        $k = ['id' => '', 'tipo' => $tipo, 'status' => 'rascunho', 'numero' => '', 'campos' => dh_contrato_campos_padrao($tipo), 'assinaturas' => []];
+    } else {
+        $k = $c['contratos'][$i];
+    }
+    if ($erro && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') !== '' && $k['status'] === 'rascunho') {
+        $k['campos'] = dh_contrato_ler_form($k['tipo'], $_POST);
+    }
+    ?>
+      <p><a class="voltar" href="./?acao=contratos">‹ Voltar para Contratos</a></p>
+      <h1><?= e(DH_CONTRATO_TIPOS[$k['tipo']]) ?></h1>
+      <p><?= $k['numero'] ? 'Contrato nº <strong>' . e($k['numero']) . '</strong> · ' : '' ?><?= dh_contrato_tag($k) ?></p>
+    <?php
+    if ($k['status'] === 'rascunho') {
+        if ($k['numero'] !== '') {
+            ?><p class="aviso">✏️ Você está editando o contrato nº <?= e($k['numero']) ?>. Enquanto isso, o link do cliente mostra que o contrato está em ajuste. Ao tocar em <strong>Gerar para assinatura</strong>, o mesmo link volta a funcionar com o texto novo<?= !empty($k['versoes']) && !empty(end($k['versoes'])['assinaturas']['contratada']) ? ' e você assina de novo pela Donkey' : '' ?>.</p><?php
+        }
+        contratos_form($k);
+        if ($k['id']) {
+            $editando = $k['numero'] !== '';
+            ?>
+              <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('<?= $editando ? 'Cancelar o contrato nº ' . e($k['numero']) . '? O link do cliente deixa de funcionar.' : 'Excluir este rascunho?' ?>');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo"><?= $editando ? 'Cancelar contrato' : 'Excluir rascunho' ?></button></form>
+            <?php
+        }
+        return;
+    }
+    contrato_card_entrega($k);
     $link = dh_url_site() . 'contrato/?t=' . $k['token'];
     if ($k['status'] === 'preenchimento') {
         ?>

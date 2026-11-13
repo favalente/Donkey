@@ -821,3 +821,6 @@ h3 small { font-weight: 400; color: var(--muted); }
 .resumo-levar li small { display: inline; text-transform: none; letter-spacing: 0; }
 .tag-comodato { font-style: normal; font-size: .75rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--azul-bg); color: var(--azul-txt); }
 .resumo-endereco { grid-column: 1 / -1; }
+.resumo-num { grid-column: 1 / -1; font-weight: 700; color: var(--ambar-txt); }
+.entrega-dia { margin: 22px 0 10px; font-size: 1.2rem; }
+.resumo-num + div { grid-column: 1 / -1; }

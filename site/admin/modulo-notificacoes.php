@@ -30,7 +30,11 @@ function notificacoes_acao(string $acao): bool
             foreach (notificacoes_minhas() as $x) {
                 if ($x['id'] === $id) {
                     dh_notificacoes_marcar($usuario['login'], [$id]);
-                    $link = str_starts_with($x['link'], './?') && ($x['perm'] === '' || pode($x['perm'])) ? $x['link'] : $link;
+                    if (str_starts_with($x['link'], './?') && ($x['perm'] === '' || pode($x['perm']))) {
+                        $link = $x['link'];
+                    } elseif (preg_match('/^\.\/\?acao=contrato&id=([\w-]+)$/', $x['link'], $m) && pode('entregas')) {
+                        $link = './?acao=entrega&id=' . $m[1]; // sem acesso ao contrato: abre só o card da entrega
+                    }
                 }
             }
             ir($link);
