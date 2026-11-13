@@ -680,7 +680,7 @@ function contratos_tela_lista(): void
       <div class="cards-contrato">
         <?php foreach ($mostrar as $k): contratos_card($k); endforeach; ?>
       </div>
-      <p class="botoes-link"><a class="voltar" href="./?acao=produtos">🧾 Produtos e preços</a> <a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a> <a class="voltar" href="./?acao=entregas">🚚 Entregas (o que a cervejaria vê)</a></p>
+      <p class="botoes-link"><a class="voltar" href="./?acao=produtos">🧾 Produtos e preços</a> <a class="voltar" href="./?acao=contratos-cupons">🏷 Cupons de desconto</a> <a class="voltar" href="./?acao=contratos-config">⚙ Configurações dos contratos</a> <a class="voltar" href="./?acao=entregas">🚚 Chope Delivery (o que a cervejaria vê)</a></p>
     <?php
 }
 
@@ -898,7 +898,7 @@ function contrato_card_entrega(array $k, bool $titulo = false): void
         $tel = trim($f['contratante_telefone'] ?? '');
         ?>
           <div class="resumo-entrega">
-            <?php if ($titulo): ?><div class="resumo-num"><?= $k['tipo'] === 'evento' ? '🎉 Evento' : '🍺 Entrega de chope' ?><?= $k['numero'] !== '' ? ' · nº ' . e($k['numero']) : '' ?><?= $k['status'] !== 'assinado' ? ' · <em class="tag ct-enviado">' . e(DH_CONTRATO_STATUS[$k['status']] ?? '') . '</em>' : '' ?></div><?php endif; ?>
+            <?php if ($titulo): ?><div class="resumo-num"><?= $k['tipo'] === 'evento' ? '🎉 Evento' : '🍺 Chope Delivery' ?><?= $k['numero'] !== '' ? ' · nº ' . e($k['numero']) : '' ?><?= $k['status'] !== 'assinado' ? ' · <em class="tag ct-enviado">' . e(DH_CONTRATO_STATUS[$k['status']] ?? '') . '</em>' : '' ?></div><?php endif; ?>
             <div><small>Nome</small><strong><?= e($f['contratante_nome']) ?></strong></div>
             <div><small><?= $evento ? 'Data do evento' : 'Data da entrega' ?></small><strong><?= $dataR !== '' ? e(DH_DIAS_SEMANA[(int) date('w', strtotime($dataR))] . ', ' . dh_data_br($dataR)) : '—' ?></strong></div>
             <div><small><?= $evento ? 'Horário' : 'Horário da entrega' ?></small><strong><?= $horaR !== '' ? e($horaR) : '—' ?></strong></div>
@@ -958,12 +958,12 @@ function contratos_tela_entregas(): void
     $passadas = ($_GET['ver'] ?? '') === 'passadas';
     $lista = contratos_entregas_lista($passadas);
     ?>
-      <h1>Entregas de chope</h1>
+      <h1>Chope Delivery</h1>
       <div class="abas">
         <a href="./?acao=entregas" class="<?= !$passadas ? 'ativo' : '' ?>">Próximas <small><?= count(contratos_entregas_lista(false)) ?></small></a>
         <a href="./?acao=entregas&amp;ver=passadas" class="<?= $passadas ? 'ativo' : '' ?>">Já entregues</a>
       </div>
-      <?php if (!$lista): ?><p class="dica"><?= $passadas ? 'Nenhuma entrega passada.' : 'Nenhuma entrega marcada.' ?></p><?php endif; ?>
+      <?php if (!$lista): ?><p class="dica"><?= $passadas ? 'Nenhum chope delivery passado.' : 'Nenhum chope delivery marcado.' ?></p><?php endif; ?>
       <?php $dia = ''; foreach (array_slice($lista, 0, $passadas ? 30 : 100) as $k): $d = dh_contrato_data_evento($k); ?>
         <?php if ($d !== $dia): $dia = $d; ?><h2 class="entrega-dia"><?= $d === date('Y-m-d') ? 'Hoje · ' : ($d === date('Y-m-d', strtotime('+1 day')) ? 'Amanhã · ' : '') ?><?= e(DH_DIAS_SEMANA[(int) date('w', strtotime($d))] . ', ' . dh_data_br($d)) ?></h2><?php endif; ?>
         <?php contrato_card_entrega($k, true); ?>
@@ -976,10 +976,10 @@ function contratos_tela_entrega(): void
     $c = dh_contratos();
     $i = dh_contrato_indice($c, (string) ($_GET['id'] ?? ''));
     ?>
-      <p><a class="voltar" href="./?acao=entregas">‹ Entregas</a></p>
+      <p><a class="voltar" href="./?acao=entregas">‹ Chope Delivery</a></p>
     <?php
     if ($i === null || $c['contratos'][$i]['status'] === 'cancelado') {
-        echo '<p class="dica">Entrega não encontrada (pode ter sido cancelada).</p>';
+        echo '<p class="dica">Chope delivery não encontrado (pode ter sido cancelado).</p>';
         return;
     }
     contrato_card_entrega($c['contratos'][$i], true);
