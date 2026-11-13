@@ -16,6 +16,7 @@ const DH_NOTIF_TIPOS = [
     'orcamento_aprovado' => ['orcamentos', '👍', 'Orçamento aprovado', 'Quando o cliente aprova um orçamento', 'todos'],
     'brassagem_caderno' => ['brassagem', '🧪', 'Caderno de brassagem atualizado', 'Lote novo, anotação ou mudança de situação feita por outra pessoa', 'todos'],
     'brassagem_lembrete' => ['brassagem', '📓', 'Lembrete diário dos cadernos', 'Todo dia, para atualizar os cadernos', 'equipe'],
+    'delivery_assinado' => ['entregas', '🚚', 'Novo Chope Delivery', 'Quando um pedido de chope fica assinado pelas duas partes (abre o card da entrega)', 'equipe'],
     'evento_lembrete' => ['contratos', '📅', 'Lembrete de evento', 'Na véspera e no dia de cada evento ou entrega de chope', 'todos'],
 ];
 // Funções que recebem o lembrete de evento além das que veem Contratos

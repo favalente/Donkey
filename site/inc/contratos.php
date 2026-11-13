@@ -739,6 +739,13 @@ function dh_contrato_concluir(array &$k): bool
     dh_contrato_enviar_copia($k, array_merge([$k['assinaturas']['contratante']['email']], dh_emails_equipe()));
     dh_notificar('contratos', '✅', 'Contrato nº ' . $k['numero'] . ' assinado', ($k['campos']['contratante_nome'] ?? '') . ' · ' . (DH_CONTRATO_TIPOS[$k['tipo']] ?? '') . '. Assinado pelas duas partes.',
         './?acao=contrato&id=' . $k['id'], (string) ($GLOBALS['usuario']['login'] ?? ''), [], 'contrato_assinado');
+    // Chope Delivery: quem leva o chope recebe o card da entrega (nome, data, endereço, o que levar e contato)
+    if ($k['tipo'] === 'comodato') {
+        $de = $k['campos']['entrega_data'] ?? '';
+        dh_notificar('entregas', '🚚', 'Novo Chope Delivery: ' . (($k['campos']['contratante_nome'] ?? '') ?: 'cliente'),
+            ($de !== '' ? 'Entrega ' . dh_data_br($de) . (($k['campos']['entrega_hora'] ?? '') !== '' ? ' às ' . $k['campos']['entrega_hora'] : '') : 'Entrega sem data') . (trim($k['campos']['entrega_endereco'] ?? '') !== '' ? ' · ' . trim($k['campos']['entrega_endereco']) : ''),
+            './?acao=entrega&id=' . $k['id'], (string) ($GLOBALS['usuario']['login'] ?? ''), [], 'delivery_assinado');
+    }
     return true;
 }
 
