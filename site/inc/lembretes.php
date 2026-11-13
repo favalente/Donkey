@@ -93,8 +93,16 @@ function dh_lembretes_rodar(): array
         }
         // Também no 🔔 e no celular, para as funções escolhidas (Notificações → ⚙ Configurar)
         $partes = explode(' · ', preg_replace('/ · Donkey Head Cervejaria$/u', '', $assunto), 2);
-        dh_notificar('contratos', '📅', $partes[0], ($partes[1] ?? '') . ($k['numero'] !== '' ? ' · contrato nº ' . $k['numero'] : ''),
-            './?acao=contrato&id=' . rawurlencode($k['id']), '', [], 'evento_lembrete');
+        // Contrato ainda sem as duas assinaturas: só para quem vê Contratos (a cervejaria só recebe o que já está assinado)
+        $para = [];
+        if ($k['status'] !== 'assinado') {
+            $usu = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
+            $para = array_values(array_filter(dh_notif_destinatarios_tipo('evento_lembrete'), fn($lg) => dh_usuario_pode($usu[$lg] ?? [], 'contratos')));
+        }
+        if ($k['status'] === 'assinado' || $para) {
+            dh_notificar('contratos', '📅', $partes[0], ($partes[1] ?? '') . ($k['numero'] !== '' ? ' · contrato nº ' . $k['numero'] : '') . ($k['status'] !== 'assinado' ? ' · aguardando assinatura' : ''),
+                './?acao=contrato&id=' . rawurlencode($k['id']), '', $para, 'evento_lembrete');
+        }
         $l = dh_lembretes();
         $l['enviados'][$chave] = $hoje;
         dh_lembretes_salvar($l);
