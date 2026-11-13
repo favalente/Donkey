@@ -924,6 +924,30 @@ function contratos_tela_contrato(): void
             <div><small>Nome</small><strong><?= e($f['contratante_nome']) ?></strong></div>
             <div><small><?= $evento ? 'Data do evento' : 'Data da entrega' ?></small><strong><?= $dataR !== '' ? e(DH_DIAS_SEMANA[(int) date('w', strtotime($dataR))] . ', ' . dh_data_br($dataR)) : '—' ?></strong></div>
             <div><small><?= $evento ? 'Horário' : 'Horário da entrega' ?></small><strong><?= $horaR !== '' ? e($horaR) : '—' ?></strong></div>
+            <?php
+              // O que levar: barris agrupados (rótulo + tamanho; os em comodato à parte) e os opcionais (copos…)
+              $levar = [];
+              foreach ($evento ? [] : ($f['itens'] ?? []) as $it) {
+                  if (trim($it['descricao'] ?? '') === '') {
+                      continue;
+                  }
+                  $ch = $it['descricao'] . '|' . dh_litros($it['litros']) . '|' . (!empty($it['comodato']) ? 1 : 0);
+                  $levar[$ch] = ($levar[$ch] ?? 0) + 1;
+              }
+              $extrasR = $evento ? [] : dh_comodato_extras($f);
+            ?>
+            <?php if ($levar || $extrasR): ?>
+              <div class="resumo-levar"><small>Levar</small>
+                <ul>
+                  <?php foreach ($levar as $ch => $q): [$desc, $lit, $com] = explode('|', $ch); ?>
+                    <li><?= in_array((int) $lit, DH_BARRIS_LITROS, true) ? '<b>' . $q . ' ×</b> barril de ' . e($lit) . ' L' : '<b>' . e(dh_litros((float) str_replace(',', '.', $lit) * $q)) . ' L</b>' ?> · <?= e($desc) ?><?= $com ? ' <em class="tag-comodato">comodato</em>' : '' ?></li>
+                  <?php endforeach; ?>
+                  <?php foreach ($extrasR as $x): ?>
+                    <li><b><?= (int) $x['qtd'] ?> ×</b> <?= e($x['descricao']) ?><?= ($x['detalhe'] ?? '') !== '' ? ' <small>(' . e($x['detalhe']) . ')</small>' : '' ?></li>
+                  <?php endforeach; ?>
+                </ul>
+              </div>
+            <?php endif; ?>
             <div><small>Contato</small><strong><?= $tel !== '' ? e($tel) : '—' ?></strong>
               <?php if ($tel !== ''): ?><span class="resumo-contato"><a class="btn-acao" href="tel:<?= e(preg_replace('/\D/', '', $tel)) ?>">📞 Ligar</a><a class="btn-acao" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($tel)) ?>">💬 WhatsApp</a></span><?php endif; ?>
             </div>
