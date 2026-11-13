@@ -792,3 +792,18 @@ h3 small { font-weight: 400; color: var(--muted); }
 .tabela-papeis tbody th { text-align: left; font-weight: 600; min-width: 150px; }
 .tabela-papeis thead th { font-size: .78rem; color: var(--muted); }
 .tabela-papeis input { width: 24px; height: 24px; accent-color: var(--amber); }
+
+/* Reservas */
+.cal-reservas .cal-dia { cursor: default; }
+.cal-reservas .cal-dia:hover { background: var(--bg); }
+.lista-reservas { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 8px; }
+.lista-reservas button { width: 100%; display: flex; gap: 14px; align-items: center; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.lr-data { flex: none; width: 46px; text-align: center; font-size: .72rem; text-transform: uppercase; color: var(--muted); line-height: 1.1; }
+.lr-data strong { display: block; font-size: 1.5rem; color: var(--text); }
+.lr-info strong { display: block; }
+.lr-info small { color: var(--muted); }
+.link-equipe { display: block; padding: 10px 12px; border-radius: 10px; background: var(--caixa); word-break: break-all; font-size: .85rem; }
+.config-reservas { margin: 24px 0; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; background: var(--surface); }
+.config-reservas summary { cursor: pointer; font-weight: 700; }
+.rd-texto { white-space: pre-line; color: var(--muted); }
+.rd-pessoas { font-weight: 700; }
