@@ -946,7 +946,7 @@ function contratos_entregas_lista(bool $passadas): array
     $hoje = date('Y-m-d');
     $l = array_values(array_filter(dh_contratos()['contratos'], function ($k) use ($hoje, $passadas) {
         $d = dh_contrato_data_evento($k);
-        return $k['tipo'] === 'comodato' && in_array($k['status'], ['assinado', 'enviado'], true) && $d !== ''
+        return $k['tipo'] === 'comodato' && $k['status'] === 'assinado' && $d !== ''
             && ($passadas ? $d < $hoje : $d >= $hoje);
     }));
     usort($l, fn($a, $b) => $passadas ? strcmp(dh_contrato_data_evento($b), dh_contrato_data_evento($a)) : strcmp(dh_contrato_data_evento($a) . ($a['campos']['entrega_hora'] ?? ''), dh_contrato_data_evento($b) . ($b['campos']['entrega_hora'] ?? '')));
@@ -978,8 +978,8 @@ function contratos_tela_entrega(): void
     ?>
       <p><a class="voltar" href="./?acao=entregas">‹ Chope Delivery</a></p>
     <?php
-    if ($i === null || $c['contratos'][$i]['status'] === 'cancelado') {
-        echo '<p class="dica">Chope delivery não encontrado (pode ter sido cancelado).</p>';
+    if ($i === null || $c['contratos'][$i]['status'] !== 'assinado') {
+        echo '<p class="dica">Chope delivery não encontrado: o contrato ainda não foi assinado pelas duas partes ou foi cancelado.</p>';
         return;
     }
     contrato_card_entrega($c['contratos'][$i], true);
