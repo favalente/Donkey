@@ -37,10 +37,17 @@ function dh_notif_papeis(string $tipo, ?array $n = null): array
     return array_values(array_unique($r));
 }
 
-// O tipo vale para esse usuário? (pela função dele)
+// O tipo vale para esse usuário? Pela função dele (tabela "Quem recebe") ou, automaticamente, porque a aba
+// do tipo foi liberada para ele em Usuários → Permissões (respeitando se o tipo é só da equipe ou só de administradores)
 function dh_notif_tipo_para(string $tipo, array $usuario, ?array $n = null): bool
 {
-    return in_array($usuario['papel'] ?? '', dh_notif_papeis($tipo, $n), true);
+    if (in_array($usuario['papel'] ?? '', dh_notif_papeis($tipo, $n), true)) {
+        return true;
+    }
+    [$perm, , , , $quem] = (DH_NOTIF_TIPOS[$tipo] ?? ['']) + [4 => 'todos'];
+    $admin = ($usuario['papel'] ?? '') === 'admin';
+    return isset($usuario['permissoes']) && in_array($perm, (array) $usuario['permissoes'], true)
+        && ($quem === 'todos' || ($quem === 'admin') === $admin);
 }
 
 // Logins que recebem o tipo (menos quem fez a ação)

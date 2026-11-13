@@ -209,7 +209,7 @@ function notificacoes_tela_config(): void
 
       <?php if (pode('usuarios')): ?>
         <h2 id="quem-recebe">Quem recebe cada notificação</h2>
-        <p class="dica">Marque as funções que recebem cada tipo (no 🔔 e no celular). Cada pessoa ainda pode desligar as suas nos interruptores acima. Quem não tem acesso à aba vê o aviso, mas não abre o contrato.</p>
+        <p class="dica">Quem tem a aba liberada em Usuários → 🔐 Permissões já recebe as notificações dela, sozinho. Aqui você marca as <b>funções</b> que recebem cada tipo (no 🔔 e no celular), inclusive quem não tem a aba (ex.: lembrete de evento para a Cervejaria; o aviso aparece, mas o contrato não abre). Cada pessoa ainda pode desligar as suas nos interruptores acima.</p>
         <form method="post" action="./?acao=notificacoes-papeis-salvar" class="form-cerveja">
           <?= $csrf ?>
           <div class="tabela-rolar">
