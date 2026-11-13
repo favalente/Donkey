@@ -528,7 +528,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
   <meta name="robots" content="noindex, nofollow">
   <title>Painel · Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
-  <link rel="stylesheet" href="admin.css?v=76">
+  <link rel="stylesheet" href="admin.css?v=77">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#e9a23b">
   <link rel="apple-touch-icon" href="../assets/img/icone-192.png">

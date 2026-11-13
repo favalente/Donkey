@@ -807,3 +807,12 @@ h3 small { font-weight: 400; color: var(--muted); }
 .config-reservas summary { cursor: pointer; font-weight: 700; }
 .rd-texto { white-space: pre-line; color: var(--muted); }
 .rd-pessoas { font-weight: 700; }
+
+/* Contrato: resumo para a entrega no topo */
+.resumo-entrega { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; padding: 16px; margin: 0 0 18px; border-radius: 16px; border: 2px solid var(--amber); background: var(--caixa); }
+.resumo-entrega small { display: block; color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+.resumo-entrega strong { display: block; font-size: 1.15rem; }
+.resumo-entrega > div:first-child { grid-column: 1 / -1; }
+.resumo-entrega > div:last-child { grid-column: 1 / -1; }
+.resumo-contato { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.resumo-contato .btn-acao { text-decoration: none; }

@@ -912,6 +912,24 @@ function contratos_tela_contrato(): void
         }
         return;
     }
+    // Resumo para a entrega (o entregador vê de cara, sem abrir o contrato)
+    $f = $k['campos'];
+    if ($k['status'] !== 'preenchimento' && trim($f['contratante_nome'] ?? '') !== '') {
+        $evento = $k['tipo'] === 'evento';
+        $dataR = $evento ? ($f['data'] ?? '') : ($f['entrega_data'] ?? '');
+        $horaR = $evento ? ($f['hora_inicio'] ?? '') : (($f['entrega_hora'] ?? '') . (!empty($f['entrega_hora_estimada']) && ($f['entrega_hora'] ?? '') !== '' ? ' (estimado)' : ''));
+        $tel = trim($f['contratante_telefone'] ?? '');
+        ?>
+          <div class="resumo-entrega">
+            <div><small>Nome</small><strong><?= e($f['contratante_nome']) ?></strong></div>
+            <div><small><?= $evento ? 'Data do evento' : 'Data da entrega' ?></small><strong><?= $dataR !== '' ? e(DH_DIAS_SEMANA[(int) date('w', strtotime($dataR))] . ', ' . dh_data_br($dataR)) : '—' ?></strong></div>
+            <div><small><?= $evento ? 'Horário' : 'Horário da entrega' ?></small><strong><?= $horaR !== '' ? e($horaR) : '—' ?></strong></div>
+            <div><small>Contato</small><strong><?= $tel !== '' ? e($tel) : '—' ?></strong>
+              <?php if ($tel !== ''): ?><span class="resumo-contato"><a class="btn-acao" href="tel:<?= e(preg_replace('/\D/', '', $tel)) ?>">📞 Ligar</a><a class="btn-acao" target="_blank" rel="noopener" href="https://wa.me/<?= e(dh_whatsapp_numero($tel)) ?>">💬 WhatsApp</a></span><?php endif; ?>
+            </div>
+          </div>
+        <?php
+    }
     $link = dh_url_site() . 'contrato/?t=' . $k['token'];
     if ($k['status'] === 'preenchimento') {
         ?>
