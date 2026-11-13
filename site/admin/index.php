@@ -877,7 +877,7 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
     <dialog class="dup-modal push-pedir" id="push-pedir" data-chave="<?= e($chavesPush['publica']) ?>" data-csrf="<?= e($_SESSION['csrf']) ?>" data-novo="<?= !empty($_SESSION['push_pedir']) ? '1' : '' ?>">
       <div class="push-pedir-ic">🔔</div>
       <h2>Ativar as notificações?</h2>
-      <p class="push-pedir-texto">Receba na barra do celular os avisos do painel: contratos assinados, pedidos de chope, orçamentos aprovados e cadernos da brassagem. Você escolhe quais em Notificações → ⚙ Configurar.</p>
+      <p class="push-pedir-texto">Receba na barra do celular os avisos e lembretes do painel. Você escolhe quais em Notificações → ⚙ Configurar.</p>
       <div class="push-pedir-botoes">
         <button type="button" class="btn primario largo" data-op="ativar">Ativar notificações</button>
         <button type="button" class="link" data-op="depois">Agora não</button>
@@ -946,6 +946,40 @@ $csrf = '<input type="hidden" name="csrf" value="' . e($_SESSION['csrf']) . '">'
     })();
     </script>
   <?php unset($_SESSION['push_pedir']); endif; ?>
+  <!-- Instalar o painel como aplicativo (Android/Chrome): pergunta uma vez em cada aparelho -->
+  <dialog class="dup-modal push-pedir" id="app-instalar">
+    <div class="push-pedir-ic">📲</div>
+    <h2>Instalar o aplicativo?</h2>
+    <p class="push-pedir-texto">O painel vira um ícone na tela do celular, como um aplicativo: é só tocar para abrir, sem procurar o site.</p>
+    <div class="push-pedir-botoes">
+      <button type="button" class="btn primario largo" data-op="instalar">Instalar</button>
+      <button type="button" class="link" data-op="depois">Agora não</button>
+    </div>
+  </dialog>
+  <script>
+  (function () {
+    var d = document.getElementById('app-instalar'), CH = 'dh-app-perguntado', evento = null;
+    if (!d || !d.showModal || window.matchMedia('(display-mode: standalone)').matches) return;
+    function perguntado() { try { return localStorage.getItem(CH) === '1'; } catch (e) { return false; } }
+    function marcar() { try { localStorage.setItem(CH, '1'); } catch (e) {} }
+    // Espera outra janela (ex.: a das notificações) fechar antes de abrir esta
+    function abrir() {
+      if (document.querySelector('dialog[open]')) { setTimeout(abrir, 700); return; }
+      d.showModal();
+    }
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      evento = e;
+      if (!perguntado()) abrir();
+    });
+    d.querySelector('[data-op=instalar]').addEventListener('click', function () {
+      marcar(); d.close();
+      if (evento) { evento.prompt(); evento = null; }
+    });
+    d.querySelector('[data-op=depois]').addEventListener('click', function () { marcar(); d.close(); });
+    d.addEventListener('cancel', marcar);
+  })();
+  </script>
 <?php endif; ?>
 </body>
 </html>
