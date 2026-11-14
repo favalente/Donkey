@@ -999,7 +999,8 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
               <?php foreach ($porDia[$dia] ?? [] as $s): $b = $bandas[$s['banda_id']] ?? null; ?>
                 <button type="button" class="cal-show u-<?= e($s['unidade']) ?> st-<?= e($s['status']) ?>" data-show="<?= e($s['id']) ?>"
                   data-info="<?= e(json_encode(['banda' => $b['nome'] ?? '—', 'tributo' => $s['tributo'], 'quando' => dh_data_curta($s['data']) . ' · ' . $s['hora'] . ' · ' . DH_UNIDADES[$s['unidade']], 'situacao' => DH_STATUS_SHOW[$s['status']] ?? '', 'status' => $s['status'],
-                    'banda_id' => $s['banda_id'], 'instagram' => $b['instagram'] ?? '', 'tributos_banda' => implode(' / ', $b['tributos'] ?? []), 'sem_pasta' => dh_banda_sem_pasta($b), 'fotos' => count($b['fotos'] ?? []), 'drive' => $b['drive'][0] ?? '']
+                    'banda_id' => $s['banda_id'], 'instagram' => $b['instagram'] ?? '', 'tributos_banda' => implode(' / ', $b['tributos'] ?? []), 'sem_pasta' => dh_banda_sem_pasta($b), 'fotos' => count($b['fotos'] ?? []), 'drive' => $b['drive'][0] ?? '',
+                    'foto' => !empty($b['fotos']) ? '../' . str_replace('media-', 'mini-', dh_banda_foto($b)) : '']
                     + (pode('valores') ? ['pix' => $b['pix'] ?? '', 'pix_nome' => $b['pix_nome'] ?? '', 'cache' => dh_moeda($s['cache'])] : []), JSON_UNESCAPED_UNICODE)) ?>"><?php if ($s['status'] === 'pago'): ?><span class="flag-pago" title="Pago">✓</span><?php endif; ?><?= e(dh_banda_nome_curto($b['nome'] ?? '—')) ?></button>
               <?php endforeach; ?>
             </div>
@@ -1012,7 +1013,13 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
         <h3 class="cal-menu-banda"></h3>
         <p class="cal-menu-tributo"></p>
         <p class="cal-menu-situacao"></p>
-        <p class="cal-menu-sem-pasta" hidden><em class="tag alerta grande">Sem pasta</em> ainda sem arte</p>
+        <div class="cal-menu-imagem">
+          <img alt="" width="64" height="64" hidden>
+          <div>
+            <p class="cmi-foto"></p>
+            <p class="cmi-arte"></p>
+          </div>
+        </div>
         <?php if (pode('valores')): ?>
           <div class="cal-menu-pix">
             <p class="pix-valor"></p>
@@ -1090,7 +1097,14 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
                 caixaPix.querySelector('[data-op=copiar-pix]').hidden = !i.pix;
                 caixaPix.dataset.pix = i.pix || '';
               }
-              menu.querySelector('.cal-menu-sem-pasta').hidden = !i.sem_pasta;
+              // Imagem da banda: foto cadastrada e pasta da arte no Drive
+              var img = menu.querySelector('.cal-menu-imagem img');
+              img.hidden = !i.foto; if (i.foto) img.src = i.foto; else img.removeAttribute('src');
+              var cf = menu.querySelector('.cmi-foto'), ca = menu.querySelector('.cmi-arte');
+              cf.textContent = i.fotos ? '✅ Foto: ' + i.fotos + (i.fotos > 1 ? ' fotos' : ' foto') : '⚠️ Sem foto da banda';
+              cf.className = 'cmi-foto ' + (i.fotos ? 'cmi-ok' : 'cmi-falta');
+              ca.textContent = i.sem_pasta ? '⚠️ Sem pasta: ainda sem arte' : '✅ Arte: pasta no Drive';
+              ca.className = 'cmi-arte ' + (i.sem_pasta ? 'cmi-falta' : 'cmi-ok');
               menu.querySelector('.cal-menu-situacao').className = 'cal-menu-situacao sit-' + i.status;
               menu.querySelector('.cal-menu-situacao').textContent = i.status === 'pago' ? '✓ Pago' : (i.status === 'cancelado' ? 'Cancelado' : '');
               menu.showModal();
@@ -1291,20 +1305,26 @@ function agenda_tela_show(): void
         echo '<p class="cal-de-qual">Agenda da <b>' . e(DH_UNIDADES[$s['unidade']] ?? '') . '</b></p>';
         agenda_calendario($a, $mesCal, $s['unidade'], true, $s['data'], $extra);
       ?>
-      <?php if ($origem): $bOrig = dh_bandas_por_id($a)[$origem['banda_id']] ?? null; ?>
+      <?php
+        // O formulário abre numa janela por cima do calendário (novo, editar ou duplicar)
+        $bOrig = dh_bandas_por_id($a)[($origem ?? $s)['banda_id'] ?? ''] ?? null;
+        $voltarMes = substr(($origem['data'] ?? '') ?: ($s['data'] ?: date('Y-m-d')), 0, 7);
+        $tituloModal = $s['id'] ? 'Editar show' : ($origem ? 'Duplicar show' : 'Novo show');
+        $subModal = $origem ? ($bOrig['nome'] ?? '') . ($origem['tributo'] !== '' ? ' · ' . $origem['tributo'] : '') . ' · cópia de ' . dh_data_curta($origem['data'])
+            : ($s['id'] ? ($bOrig['nome'] ?? '') . ' · ' . dh_data_curta($s['data']) : ($s['data'] ? dh_data_curta($s['data']) : ''));
+      ?>
       <dialog class="dup-modal" id="dup-modal">
         <div class="dup-topo">
-          <div><strong>Duplicar show</strong><small><?= e($bOrig['nome'] ?? '') ?><?= $origem['tributo'] !== '' ? ' · ' . e($origem['tributo']) : '' ?> · cópia de <?= e(dh_data_curta($origem['data'])) ?></small></div>
-          <a class="dup-fechar" href="./?acao=agenda&amp;mes=<?= e(substr($origem['data'], 0, 7)) ?>" aria-label="Cancelar">×</a>
+          <div><strong><?= e($tituloModal) ?></strong><?php if ($subModal !== ''): ?><small><?= e($subModal) ?></small><?php endif; ?></div>
+          <a class="dup-fechar" href="./?acao=agenda&amp;mes=<?= e($voltarMes) ?>" aria-label="Cancelar">×</a>
         </div>
-        <p class="dica">Escolha a nova data e mude só o que for diferente. O resto já veio do show copiado.</p>
-      <?php endif; ?>
+        <?php if ($origem): ?><p class="dica">Escolha a nova data e mude só o que for diferente. O resto já veio do show copiado.</p><?php endif; ?>
       <form method="post" action="./?acao=show-salvar" class="form-cerveja" id="form-show">
         <?= $csrf ?>
         <input type="hidden" name="id" value="<?= e($s['id']) ?>">
         <div class="duas">
           <label>Data <input type="date" name="data" value="<?= e($s['data']) ?>" required>
-            <span class="data-extenso" id="data-extenso"><?= $s['data'] ? e(dh_data_curta($s['data'])) . '/' . e(substr($s['data'], 0, 4)) : ($origem ? 'Toque no campo para escolher o novo dia' : 'Toque no dia no calendário acima') ?></span></label>
+            <span class="data-extenso" id="data-extenso"><?= $s['data'] ? e(dh_data_curta($s['data'])) . '/' . e(substr($s['data'], 0, 4)) : 'Toque no campo para escolher o dia' ?></span></label>
           <label>Horário <input type="time" name="hora" value="<?= e($s['hora']) ?>" required></label>
         </div>
         <label>Unidade
@@ -1346,7 +1366,12 @@ function agenda_tela_show(): void
         <?php endif; ?>
         <div class="barra-salvar"><button class="btn primario">Salvar show</button></div>
       </form>
-      <?php if ($origem): ?>
+      <?php if ($s['id']): ?>
+        <form method="post" action="./?acao=show-excluir" class="excluir" onsubmit="return confirm('Excluir este show?');">
+          <?= $csrf ?><input type="hidden" name="id" value="<?= e($s['id']) ?>">
+          <button class="btn perigo">Excluir show</button>
+        </form>
+      <?php endif; ?>
       </dialog>
       <script>
         (function () {
@@ -1356,13 +1381,6 @@ function agenda_tela_show(): void
           if (d) d.addEventListener('cancel', function (e) { e.preventDefault(); location.href = d.querySelector('.dup-fechar').href; });
         })();
       </script>
-      <?php endif; ?>
-      <?php if ($s['id']): ?>
-        <form method="post" action="./?acao=show-excluir" class="excluir" onsubmit="return confirm('Excluir este show?');">
-          <?= $csrf ?><input type="hidden" name="id" value="<?= e($s['id']) ?>">
-          <button class="btn perigo">Excluir show</button>
-        </form>
-      <?php endif; ?>
       <script>
         (function () {
           var bandas = <?= json_encode($listaBandas, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;

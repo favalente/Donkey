@@ -845,3 +845,10 @@ h3 small { font-weight: 400; color: var(--muted); }
 .caderno-corrigir form { margin-top: 8px; }
 .caderno-apagar { border: 0; background: none; color: var(--erro); text-decoration: underline; font: inherit; cursor: pointer; padding: 6px 0; }
 .reserva-detalhe { max-height: calc(100dvh - 40px); overflow-y: auto; }
+
+/* Agenda: imagem da banda na janela do show */
+.cal-menu-imagem { display: flex; gap: 12px; align-items: center; margin: 4px 0 10px; padding: 10px; border-radius: 12px; background: var(--caixa); border: 1px solid var(--line); }
+.cal-menu-imagem img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; flex: none; }
+.cal-menu-imagem p { margin: 2px 0; font-weight: 600; font-size: .95rem; }
+.cal-menu-imagem .cmi-ok { color: var(--verde-txt); }
+.cal-menu-imagem .cmi-falta { color: var(--vermelho-txt); }
