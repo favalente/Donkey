@@ -884,3 +884,6 @@ h3 small { font-weight: 400; color: var(--muted); }
 .ct-baixou { color: var(--vermelho-txt); }
 .ct-subiu { color: var(--verde-txt); }
 .ct-novo { background: var(--azul-bg); color: var(--azul-txt); font-style: normal; }
+.ct-barril { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.6fr; gap: 6px; }
+.ct-barril select { margin: 0 !important; }
+.ct-num { white-space: normal; }

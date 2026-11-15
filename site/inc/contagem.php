@@ -8,6 +8,19 @@ declare(strict_types=1);
 const DH_ARQ_CONTAGEM = DH_RAIZ . '/dados/contagem.json';
 const DH_CONTAGEM_UNIDADES = ['barril', 'un', 'fardo', 'caixa', 'garrafa', 'lata', 'kg', 'L', 'pacote'];
 const DH_CONTAGEM_LOCAIS = ['Câmara produção', 'Câmara estoque', 'Estoque seco', 'Estoque frio'];
+const DH_CONTAGEM_LITROS = ['50', '30'];
+// Barril aberto conta como inteiro, com o nível anotado
+const DH_CONTAGEM_ABERTO = ['' => 'Todos fechados', 'cheio' => '1 aberto · cheio', '90' => '1 aberto · 90%', '60' => '1 aberto · 60%', '30' => '1 aberto · 30%'];
+
+// "2 barris de 50 L (1 aberto · 60%)"
+function dh_contagem_detalhe_barril(array $l): string
+{
+    if ($l['unidade'] !== 'barril') {
+        return '';
+    }
+    $t = ($l['litros'] ?? '') !== '' ? ' de ' . $l['litros'] . ' L' : '';
+    return $t . (($l['aberto'] ?? '') !== '' ? ' (' . DH_CONTAGEM_ABERTO[$l['aberto']] . ')' : '');
+}
 
 function dh_contagem(): array
 {
@@ -73,7 +86,7 @@ function dh_contagem_unidade_txt(string $u, ?float $q): string
 // Chave para comparar o mesmo item entre contagens (lugar + nome + unidade, sem acento)
 function dh_contagem_chave(array $l): string
 {
-    return dh_sem_acento(mb_strtolower(trim($l['local']) . '|' . trim($l['nome']) . '|' . $l['unidade']));
+    return dh_sem_acento(mb_strtolower(trim($l['local']) . '|' . trim($l['nome']) . '|' . $l['unidade'] . ($l['unidade'] === 'barril' ? '|' . ($l['litros'] ?? '') : '')));
 }
 
 // Linhas organizadas por lugar, na ordem em que aparecem
@@ -144,7 +157,20 @@ function dh_contagem_do_texto(string $txt): array
             $local = mb_strimwidth(trim($ln, " :-"), 0, 60);
             continue;
         }
-        $linhas[] = ['local' => $local, 'nome' => mb_strimwidth(trim($nome, " -:"), 0, 80), 'unidade' => $u, 'qtd' => $q, 'obs' => mb_strimwidth($obs, 0, 80)];
+        // Vinhos e cervejas engarrafadas sem unidade escrita: garrafa
+        if ($u === 'un' && !preg_match('/\b(un|unidades?)\b/iu', $ln) && preg_match('/engarraf|vinho|garraf/iu', $local)) {
+            $u = 'garrafa';
+        }
+        // Barril: "de 30" vira o tamanho; sem tamanho escrito, 50 L (o mais comum)
+        $litros = '';
+        if ($u === 'barril') {
+            $litros = '50';
+            if (preg_match('/\bde\s*(30|50)\s*(l|litros)?\b/iu', $obs, $mm)) {
+                $litros = $mm[1];
+                $obs = trim(preg_replace('/\bde\s*(30|50)\s*(l|litros)?\b/iu', '', $obs), ' ·-');
+            }
+        }
+        $linhas[] = ['local' => $local, 'nome' => mb_strimwidth(trim($nome, " -:"), 0, 80), 'unidade' => $u, 'qtd' => $q, 'obs' => mb_strimwidth($obs, 0, 80), 'litros' => $litros, 'aberto' => ''];
     }
     return $linhas;
 }
@@ -156,7 +182,7 @@ function dh_contagem_texto(array $x): string
     foreach (dh_contagem_por_local($x['linhas']) as $local => $ls) {
         $t .= "\n*" . $local . "*\n";
         foreach ($ls as $l) {
-            $t .= $l['nome'] . ': ' . dh_qtd_txt($l['qtd']) . ' ' . dh_contagem_unidade_txt($l['unidade'], $l['qtd']) . ($l['obs'] !== '' ? ' (' . $l['obs'] . ')' : '') . "\n";
+            $t .= $l['nome'] . ': ' . dh_qtd_txt($l['qtd']) . ' ' . dh_contagem_unidade_txt($l['unidade'], $l['qtd']) . dh_contagem_detalhe_barril($l) . ($l['obs'] !== '' ? ' (' . $l['obs'] . ')' : '') . "\n";
         }
     }
     return $t . "\nContado por " . ($x['por'] ?? '');

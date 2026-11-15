@@ -62,7 +62,7 @@ function contagem_acao(string $acao): bool
             }
             if ($modo === 'engatadas' || !$linhas) {
                 foreach (contagem_engatadas($casa) as $nome) {
-                    $linhas[] = ['local' => DH_CONTAGEM_LOCAIS[0], 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => ''];
+                    $linhas[] = ['local' => DH_CONTAGEM_LOCAIS[0], 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => '', 'litros' => '50', 'aberto' => ''];
                 }
             }
             $x = ['id' => dh_id_novo('k'), 'casa' => $casa, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => $linhas];
@@ -88,7 +88,9 @@ function contagem_acao(string $acao): bool
                 }
                 $linhas[] = ['local' => mb_strimwidth(trim((string) ($l['local'] ?? '')) ?: 'Estoque', 0, 60), 'nome' => $nome,
                     'unidade' => in_array($l['unidade'] ?? '', DH_CONTAGEM_UNIDADES, true) ? $l['unidade'] : 'un',
-                    'qtd' => dh_qtd_ler((string) ($l['qtd'] ?? '')), 'obs' => mb_strimwidth(trim((string) ($l['obs'] ?? '')), 0, 80)];
+                    'qtd' => dh_qtd_ler((string) ($l['qtd'] ?? '')), 'obs' => mb_strimwidth(trim((string) ($l['obs'] ?? '')), 0, 80),
+                    'litros' => in_array((string) ($l['litros'] ?? ''), DH_CONTAGEM_LITROS, true) ? (string) $l['litros'] : '',
+                    'aberto' => isset(DH_CONTAGEM_ABERTO[(string) ($l['aberto'] ?? '')]) ? (string) $l['aberto'] : ''];
             }
             $data = (string) ($_POST['data'] ?? '');
             $c['contagens'][$i]['linhas'] = $linhas;
@@ -229,7 +231,11 @@ function contagem_tela_editar(): void
               <button type="button" class="ct-mais" aria-label="Mais">+</button>
             </div>
             <select class="ct-u" aria-label="Unidade"><?php foreach (DH_CONTAGEM_UNIDADES as $u): ?><option <?= $u === $l['unidade'] ? 'selected' : '' ?>><?= e($u) ?></option><?php endforeach; ?></select>
-            <input class="ct-o" value="<?= e($l['obs']) ?>" placeholder="obs. (ex.: de 30, 1 aberto)" aria-label="Observação">
+            <div class="ct-barril"<?= $l['unidade'] !== 'barril' ? ' hidden' : '' ?>>
+              <select class="ct-l" aria-label="Tamanho do barril"><?php foreach (DH_CONTAGEM_LITROS as $lt): ?><option value="<?= $lt ?>" <?= ($l['litros'] ?? '50') === $lt || (($l['litros'] ?? '') === '' && $lt === '50') ? 'selected' : '' ?>><?= $lt ?> litros</option><?php endforeach; ?></select>
+              <select class="ct-a" aria-label="Barril aberto"><?php foreach (DH_CONTAGEM_ABERTO as $k => $rot): ?><option value="<?= e($k) ?>" <?= ($l['aberto'] ?? '') === (string) $k ? 'selected' : '' ?>><?= e($rot) ?></option><?php endforeach; ?></select>
+            </div>
+            <input class="ct-o" value="<?= e($l['obs']) ?>" placeholder="obs." aria-label="Observação">
             <button type="button" class="ct-tirar" aria-label="Tirar este item" title="Tirar">×</button>
           </div>
         <?php
@@ -252,7 +258,7 @@ function contagem_tela_editar(): void
           <?php endforeach; ?>
         </div>
         <button type="button" class="btn secundario" id="ct-add-local">+ Outro lugar</button>
-        <template id="ct-modelo"><?php $linha(['nome' => '', 'qtd' => null, 'unidade' => 'un', 'obs' => '']); ?></template>
+        <template id="ct-modelo"><?php $linha(['nome' => '', 'qtd' => null, 'unidade' => 'un', 'obs' => '', 'litros' => '50', 'aberto' => '']); ?></template>
         <div class="barra-salvar ct-barra">
           <button class="btn secundario" data-enviar="">💾 Salvar</button>
           <button class="btn primario" data-enviar="1">✅ Enviar contagem</button>
@@ -276,10 +282,14 @@ function contagem_tela_editar(): void
             if (!it.querySelector('.ct-n').value || confirm('Tirar ' + it.querySelector('.ct-n').value + ' da contagem?')) it.remove();
           } else if (b.classList.contains('ct-add')) {
             var novo = modelo.content.firstElementChild.cloneNode(true), lista = b.closest('.ct-local').querySelector('.ct-itens'), ult = lista.querySelector('.ct-item:last-child .ct-u');
-            if (ult) novo.querySelector('.ct-u').value = ult.value; // mesma unidade do item de cima (ex.: barril na câmara)
+            if (ult) { novo.querySelector('.ct-u').value = ult.value; novo.querySelector('.ct-barril').hidden = ult.value !== 'barril'; } // mesma unidade do item de cima (ex.: barril na câmara)
             lista.appendChild(novo);
             novo.querySelector('.ct-n').focus();
           }
+        });
+        // Tamanho e barril aberto só aparecem para barril
+        locais.addEventListener('change', function (e) {
+          if (e.target.classList.contains('ct-u')) e.target.closest('.ct-item').querySelector('.ct-barril').hidden = e.target.value !== 'barril';
         });
         document.getElementById('ct-add-local').addEventListener('click', function () {
           var s = document.createElement('section'); s.className = 'ct-local';
@@ -297,7 +307,9 @@ function contagem_tela_editar(): void
               var nome = it.querySelector('.ct-n').value.trim(), q = it.querySelector('.ct-q').value.trim();
               if (!nome) return;
               if (!q) vazios++;
-              linhas.push({ local: local, nome: nome, qtd: q, unidade: it.querySelector('.ct-u').value, obs: it.querySelector('.ct-o').value.trim() });
+              var u = it.querySelector('.ct-u').value;
+              linhas.push({ local: local, nome: nome, qtd: q, unidade: u, obs: it.querySelector('.ct-o').value.trim(),
+                litros: u === 'barril' ? it.querySelector('.ct-l').value : '', aberto: u === 'barril' ? it.querySelector('.ct-a').value : '' });
             });
           });
           if (document.getElementById('ct-enviar').value === '1' && vazios && !confirm(vazios + ' ' + (vazios > 1 ? 'itens estão' : 'item está') + ' sem quantidade. Enviar mesmo assim?')) { e.preventDefault(); return; }
@@ -338,7 +350,7 @@ function contagem_tela_ver(): void
           <?php foreach ($ls as $l): $k = dh_contagem_chave($l); $tinha = array_key_exists($k, $antes) ? $antes[$k] : false; $dif = $tinha !== false && $tinha !== null && $l['qtd'] !== null ? round($l['qtd'] - $tinha, 2) : null; ?>
             <tr>
               <td><?= e($l['nome']) ?><?= $l['obs'] !== '' ? ' <small>(' . e($l['obs']) . ')</small>' : '' ?></td>
-              <td class="ct-num"><b><?= e(dh_qtd_txt($l['qtd'])) ?></b> <?= e(dh_contagem_unidade_txt($l['unidade'], $l['qtd'])) ?></td>
+              <td class="ct-num"><b><?= e(dh_qtd_txt($l['qtd'])) ?></b> <?= e(dh_contagem_unidade_txt($l['unidade'], $l['qtd']) . dh_contagem_detalhe_barril($l)) ?></td>
               <td class="ct-dif"><?php if ($ant && $tinha === false): ?><em class="tag ct-novo">novo</em><?php elseif ($dif): ?><span class="<?= $dif < 0 ? 'ct-baixou' : 'ct-subiu' ?>"><?= $dif > 0 ? '+' : '−' ?><?= e(dh_qtd_txt(abs($dif))) ?></span><?php endif; ?></td>
             </tr>
           <?php endforeach; ?>
