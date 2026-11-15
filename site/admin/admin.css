@@ -852,3 +852,35 @@ h3 small { font-weight: 400; color: var(--muted); }
 .cal-menu-imagem p { margin: 2px 0; font-weight: 600; font-size: .95rem; }
 .cal-menu-imagem .cmi-ok { color: var(--verde-txt); }
 .cal-menu-imagem .cmi-falta { color: var(--vermelho-txt); }
+
+/* Contagem de estoque */
+.ct-novas { display: grid; gap: 10px; margin-bottom: 20px; }
+.ct-novas form { margin: 0; }
+.ct-nova { width: 100%; display: grid; grid-template-columns: 44px 1fr; gap: 2px 10px; text-align: left; padding: 14px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.ct-nova span { grid-row: 1 / 3; font-size: 1.8rem; align-self: center; }
+.ct-nova small { color: var(--muted); font-size: .9rem; }
+.ct-colar summary { display: grid; grid-template-columns: 44px 1fr; gap: 2px 10px; list-style: none; cursor: pointer; }
+.ct-colar summary::-webkit-details-marker { display: none; }
+.ct-colar form { grid-column: 1 / -1; margin-top: 10px; }
+.ct-hist { display: flex; gap: 14px; align-items: center; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; }
+.ct-local { margin: 16px 0; padding: 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); }
+.ct-local h2 { margin: 0 0 8px; }
+.ct-local-nome { font-size: 1.15rem !important; font-weight: 800; border: 0 !important; background: transparent !important; padding: 4px 0 !important; min-height: 0 !important; margin: 0 !important; }
+.ct-item { display: grid; grid-template-columns: 1fr auto; gap: 6px 8px; padding: 10px 0; border-top: 1px dashed var(--line); }
+.ct-item .ct-n { grid-column: 1 / 2; margin: 0 !important; font-weight: 700; }
+.ct-item .ct-tirar { grid-column: 2; grid-row: 1; border: 0; background: none; color: var(--erro); font-size: 1.6rem; cursor: pointer; padding: 0 6px; }
+.ct-qtd { display: flex; gap: 6px; align-items: center; }
+.ct-qtd button { width: 52px; height: 52px; flex: none; border-radius: 14px; border: 2px solid var(--line); background: var(--caixa); color: var(--text); font-size: 1.6rem; font-weight: 800; cursor: pointer; }
+.ct-qtd .ct-q { width: 90px; text-align: center; font-size: 1.4rem !important; font-weight: 800; margin: 0 !important; }
+.ct-item .ct-u { margin: 0 !important; width: auto; align-self: center; }
+.ct-item .ct-o { grid-column: 1 / -1; margin: 0 !important; min-height: 40px !important; padding: 8px 12px !important; font-size: .95rem; }
+.ct-barra { display: flex; gap: 8px; }
+.ct-barra .btn { flex: 1; }
+.ct-tabela { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.ct-tabela td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.ct-tabela small { color: var(--muted); }
+.ct-num { white-space: nowrap; text-align: right; }
+.ct-dif { width: 60px; text-align: right; font-weight: 800; }
+.ct-baixou { color: var(--vermelho-txt); }
+.ct-subiu { color: var(--verde-txt); }
+.ct-novo { background: var(--azul-bg); color: var(--azul-txt); font-style: normal; }

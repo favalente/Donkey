@@ -17,6 +17,7 @@ const DH_NOTIF_TIPOS = [
     'brassagem_caderno' => ['brassagem', '🧪', 'Caderno de brassagem atualizado', 'Lote novo, anotação ou mudança de situação feita por outra pessoa', 'todos'],
     'brassagem_lembrete' => ['brassagem', '📓', 'Lembrete diário dos cadernos', 'Todo dia, para atualizar os cadernos', 'equipe'],
     'delivery_assinado' => ['entregas', '🚚', 'Novo Chope Delivery', 'Quando um pedido de chope fica assinado pelas duas partes (abre o card da entrega)', 'equipe'],
+    'contagem_enviada' => ['contagem', '📦', 'Contagem de estoque enviada', 'Quando o barman envia a contagem', 'admin'],
     'chegada_lembrete' => ['chegada', '📒', 'Lembrete do caderno de chegada', 'Às 16h50, de terça a domingo, quando tem escala', 'equipe'],
     'evento_lembrete' => ['contratos', '📅', 'Lembrete de evento', 'Na véspera e no dia de cada evento ou entrega de chope', 'todos'],
 ];
