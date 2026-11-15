@@ -5,7 +5,7 @@
 function contagem_casa(): string
 {
     global $usuario;
-    if (isset(DH_UNIDADES[$_GET['casa'] ?? ''])) {
+    if (isset(DH_CONTAGEM_CASAS[$_GET['casa'] ?? ''])) {
         $_SESSION['contagem_casa'] = $_GET['casa'];
     }
     return $_SESSION['contagem_casa'] ?? (isset(DH_UNIDADES[$usuario['unidade'] ?? '']) ? $usuario['unidade'] : array_key_first(DH_UNIDADES));
@@ -45,7 +45,7 @@ function contagem_acao(string $acao): bool
             exigir_post();
             exigir('contagem');
             $telaErro = 'contagem';
-            $casa = isset(DH_UNIDADES[$_POST['casa'] ?? '']) ? $_POST['casa'] : contagem_casa();
+            $casa = isset(DH_CONTAGEM_CASAS[$_POST['casa'] ?? '']) ? $_POST['casa'] : contagem_casa();
             $c = dh_contagem();
             $modo = (string) ($_POST['modo'] ?? '');
             $linhas = [];
@@ -61,8 +61,10 @@ function contagem_acao(string $acao): bool
                 }
             }
             if ($modo === 'engatadas' || !$linhas) {
-                foreach (contagem_engatadas($casa) as $nome) {
-                    $linhas[] = ['local' => DH_CONTAGEM_LOCAIS[0], 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => '', 'litros' => '50', 'aberto' => ''];
+                // Fábrica: as cervejas engatadas nas duas casas, na câmara de produção
+                $engatadas = $casa === 'fabrica' ? array_values(array_unique(array_merge(...array_map('contagem_engatadas', array_keys(DH_UNIDADES))))) : contagem_engatadas($casa);
+                foreach ($engatadas as $nome) {
+                    $linhas[] = ['local' => $casa === 'fabrica' ? 'Câmara produção' : 'Chope (barris)', 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => '', 'litros' => '50', 'aberto' => ''];
                 }
             }
             $x = ['id' => dh_id_novo('k'), 'casa' => $casa, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => $linhas];
@@ -106,7 +108,7 @@ function contagem_acao(string $acao): bool
             dh_contagem_salvar($c);
             $x = $c['contagens'][$i];
             if ($primeiraVez) {
-                dh_notificar('contagem', '📦', 'Contagem de estoque · ' . (DH_UNIDADES[$x['casa']] ?? ''), count($linhas) . ' itens, contados por ' . $usuario['nome'] . ' em ' . dh_data_br($x['data']) . '.',
+                dh_notificar('contagem', '📦', 'Contagem de estoque · ' . dh_contagem_casa_nome($x['casa']), count($linhas) . ' itens, contados por ' . $usuario['nome'] . ' em ' . dh_data_br($x['data']) . '.',
                     './?acao=contagem-ver&id=' . $x['id'], $usuario['login'], [], 'contagem_enviada');
             }
             ir($enviar ? './?acao=contagem-ver&id=' . $x['id'] : './?acao=contagem-editar&id=' . $x['id'], $enviar ? 'Contagem enviada. Obrigado!' : 'Contagem salva (rascunho). Dá para continuar depois.');
@@ -153,7 +155,7 @@ function contagem_tela_lista(): void
     ?>
       <h1>📦 Contagem de estoque</h1>
       <nav class="sede-escolha" aria-label="Contagem de qual casa">
-        <?php foreach (DH_UNIDADES as $u => $nomeU): ?>
+        <?php foreach (DH_CONTAGEM_CASAS as $u => $nomeU): ?>
           <a class="sede-opcao u-<?= $u ?><?= $casa === $u ? ' ativa' : '' ?>" href="./?acao=contagem&amp;casa=<?= $u ?>"><?= $casa === $u ? '✓ ' : '' ?><?= e($nomeU) ?></a>
         <?php endforeach; ?>
       </nav>
@@ -170,7 +172,7 @@ function contagem_tela_lista(): void
             <button class="ct-nova"><span>📋</span><strong>Copiar a contagem de <?= e(date('d/m', strtotime($ant['data']))) ?></strong><small>Vêm todos os <?= count($ant['linhas']) ?> itens com as quantidades; é só corrigir o que mudou.</small></button></form>
         <?php endif; ?>
         <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="engatadas">
-          <button class="ct-nova"><span>🍺</span><strong>Começar pelas cervejas engatadas</strong><small>A lista vem com o chope que está na tap list; adicione o resto.</small></button></form>
+          <button class="ct-nova"><span>🍺</span><strong>Começar pelas cervejas engatadas</strong><small><?= $casa === 'fabrica' ? 'A câmara de produção vem com o chope engatado nas duas casas; adicione o resto.' : 'A lista vem com o chope que está na tap list; adicione o resto.' ?></small></button></form>
         <details class="ct-nova ct-colar">
           <summary><span>📝</span><strong>Colar a contagem do WhatsApp</strong><small>Para aproveitar a última contagem que foi mandada em texto.</small></summary>
           <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="texto">
@@ -215,7 +217,7 @@ function contagem_tela_editar(): void
     }
     $locais = array_keys(dh_contagem_por_local($x['linhas']));
     $jaTem = array_map(fn($l) => dh_sem_acento(mb_strtolower($l)), $locais);
-    foreach (DH_CONTAGEM_LOCAIS as $lc) {
+    foreach (dh_contagem_locais($x['casa']) as $lc) {
         if (!in_array(dh_sem_acento(mb_strtolower($lc)), $jaTem, true)) {
             $locais[] = $lc;
         }
@@ -242,7 +244,7 @@ function contagem_tela_editar(): void
     };
     ?>
       <p><a class="voltar" href="./?acao=contagem">‹ Contagem</a></p>
-      <h1>📦 Contagem · <?= e(DH_UNIDADES[$x['casa']] ?? '') ?></h1>
+      <h1>📦 Contagem · <?= e(dh_contagem_casa_nome($x['casa'])) ?></h1>
       <p class="dica">Digite a quantidade de cada item (meio fardo: <b>0,5</b> ou <b>1/2</b>). Os botões − e + mudam de 1 em 1. Toque em <b>Salvar</b> para continuar depois, e em <b>Enviar</b> quando terminar.</p>
       <datalist id="ct-nomes"><?php foreach (array_keys($nomes) as $n): ?><option value="<?= e($n) ?>"><?php endforeach; ?></datalist>
       <form method="post" action="./?acao=contagem-salvar" id="ct-form" class="ct-form">
@@ -337,7 +339,7 @@ function contagem_tela_ver(): void
     $texto = dh_contagem_texto($x);
     ?>
       <p><a class="voltar" href="./?acao=contagem">‹ Contagem</a></p>
-      <h1>📦 Contagem · <?= e(DH_UNIDADES[$x['casa']] ?? '') ?> · <?= e(date('d/m', strtotime($x['data']))) ?></h1>
+      <h1>📦 Contagem · <?= e(dh_contagem_casa_nome($x['casa'])) ?> · <?= e(date('d/m', strtotime($x['data']))) ?></h1>
       <p class="dica">Por <?= e($x['por']) ?><?= !empty($x['alterado_por']) && $x['alterado_por'] !== $x['por'] ? ' · alterada por ' . e($x['alterado_por']) : '' ?>.<?= $ant ? ' Comparando com a contagem de ' . e(date('d/m', strtotime($ant['data']))) . '.' : '' ?></p>
       <p class="botoes-link">
         <a class="btn secundario" href="https://wa.me/?text=<?= e(rawurlencode($texto)) ?>" target="_blank" rel="noopener">Enviar no WhatsApp</a>

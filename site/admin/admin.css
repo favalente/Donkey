@@ -887,3 +887,5 @@ h3 small { font-weight: 400; color: var(--muted); }
 .ct-barril { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.6fr; gap: 6px; }
 .ct-barril select { margin: 0 !important; }
 .ct-num { white-space: normal; }
+.sede-escolha:has(> :nth-child(3)) { grid-template-columns: repeat(3, 1fr); }
+.u-fabrica { --cor: #b08968; }

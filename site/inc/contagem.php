@@ -7,7 +7,19 @@ declare(strict_types=1);
 
 const DH_ARQ_CONTAGEM = DH_RAIZ . '/dados/contagem.json';
 const DH_CONTAGEM_UNIDADES = ['barril', 'un', 'fardo', 'caixa', 'garrafa', 'lata', 'kg', 'L', 'pacote'];
-const DH_CONTAGEM_LOCAIS = ['Câmara produção', 'Câmara estoque', 'Estoque seco', 'Estoque frio'];
+// Onde se conta: as duas casas e a fábrica (com os lugares de cada uma)
+const DH_CONTAGEM_CASAS = ['aldeota' => 'Aldeota', 'maraponga' => 'Maraponga', 'fabrica' => 'Fábrica'];
+const DH_CONTAGEM_LOCAIS_CASA = ['fabrica' => ['Câmara produção', 'Câmara estoque'], '*' => ['Estoque seco', 'Estoque frio']];
+
+function dh_contagem_locais(string $casa): array
+{
+    return DH_CONTAGEM_LOCAIS_CASA[$casa] ?? DH_CONTAGEM_LOCAIS_CASA['*'];
+}
+
+function dh_contagem_casa_nome(string $casa): string
+{
+    return DH_CONTAGEM_CASAS[$casa] ?? (DH_UNIDADES[$casa] ?? $casa);
+}
 const DH_CONTAGEM_LITROS = ['50', '30'];
 // Barril aberto conta como inteiro, com o nível anotado
 const DH_CONTAGEM_ABERTO = ['' => 'Todos fechados', 'cheio' => '1 aberto · cheio', '90' => '1 aberto · 90%', '60' => '1 aberto · 60%', '30' => '1 aberto · 30%'];
@@ -178,7 +190,7 @@ function dh_contagem_do_texto(string $txt): array
 // Texto para mandar no WhatsApp
 function dh_contagem_texto(array $x): string
 {
-    $t = '*Contagem de estoque · ' . (DH_UNIDADES[$x['casa']] ?? '') . ' · ' . date('d/m', strtotime($x['data'])) . "*\n";
+    $t = '*Contagem de estoque · ' . dh_contagem_casa_nome($x['casa']) . ' · ' . date('d/m', strtotime($x['data'])) . "*\n";
     foreach (dh_contagem_por_local($x['linhas']) as $local => $ls) {
         $t .= "\n*" . $local . "*\n";
         foreach ($ls as $l) {
