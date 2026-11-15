@@ -9,7 +9,7 @@ const DH_ARQ_CONTAGEM = DH_RAIZ . '/dados/contagem.json';
 const DH_CONTAGEM_UNIDADES = ['barril', 'un', 'fardo', 'caixa', 'garrafa', 'lata', 'kg', 'L', 'pacote'];
 // Onde se conta: as duas casas e a fábrica (com os lugares de cada uma)
 const DH_CONTAGEM_CASAS = ['aldeota' => 'Aldeota', 'maraponga' => 'Maraponga', 'fabrica' => 'Fábrica'];
-const DH_CONTAGEM_LOCAIS_CASA = ['fabrica' => ['Câmara produção', 'Câmara estoque'], '*' => ['Estoque seco', 'Estoque frio']];
+const DH_CONTAGEM_LOCAIS_CASA = ['fabrica' => ['Câmara produção', 'Câmara estoque'], '*' => ['Câmara produção', 'Câmara estoque', 'Estoque seco', 'Estoque frio']];
 
 function dh_contagem_locais(string $casa): array
 {

@@ -64,7 +64,7 @@ function contagem_acao(string $acao): bool
                 // Fábrica: as cervejas engatadas nas duas casas, na câmara de produção
                 $engatadas = $casa === 'fabrica' ? array_values(array_unique(array_merge(...array_map('contagem_engatadas', array_keys(DH_UNIDADES))))) : contagem_engatadas($casa);
                 foreach ($engatadas as $nome) {
-                    $linhas[] = ['local' => $casa === 'fabrica' ? 'Câmara produção' : 'Chope (barris)', 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => '', 'litros' => '50', 'aberto' => ''];
+                    $linhas[] = ['local' => 'Câmara produção', 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => '', 'litros' => '50', 'aberto' => ''];
                 }
             }
             $x = ['id' => dh_id_novo('k'), 'casa' => $casa, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => $linhas];
@@ -172,7 +172,7 @@ function contagem_tela_lista(): void
             <button class="ct-nova"><span>📋</span><strong>Copiar a contagem de <?= e(date('d/m', strtotime($ant['data']))) ?></strong><small>Vêm todos os <?= count($ant['linhas']) ?> itens com as quantidades; é só corrigir o que mudou.</small></button></form>
         <?php endif; ?>
         <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="engatadas">
-          <button class="ct-nova"><span>🍺</span><strong>Começar pelas cervejas engatadas</strong><small><?= $casa === 'fabrica' ? 'A câmara de produção vem com o chope engatado nas duas casas; adicione o resto.' : 'A lista vem com o chope que está na tap list; adicione o resto.' ?></small></button></form>
+          <button class="ct-nova"><span>🍺</span><strong>Começar pelas cervejas engatadas</strong><small><?= $casa === 'fabrica' ? 'A câmara de produção vem com o chope engatado nas duas casas; adicione o resto.' : 'A câmara de produção vem com o chope que está na tap list; adicione o resto.' ?></small></button></form>
         <button type="button" class="ct-nova" onclick="var f=document.getElementById('ct-colar-form'); f.hidden=!f.hidden; if(!f.hidden) f.querySelector('textarea').focus();"><span>📝</span><strong>Colar a contagem do WhatsApp</strong><small>Para aproveitar a última contagem que foi mandada em texto.</small></button>
         <form method="post" action="./?acao=contagem-nova" id="ct-colar-form" class="ct-colar-form" hidden><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="texto">
           <label>Cole aqui a mensagem da contagem <textarea name="texto" rows="8" placeholder="Câmara produção&#10;Softhop 1 barril&#10;&#10;Estoque seco&#10;3 fardo guaraná zero&#10;1/2 fardo de fanta uva"></textarea></label>
