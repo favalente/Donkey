@@ -62,7 +62,7 @@ function contagem_acao(string $acao): bool
             }
             if ($modo === 'engatadas' && $casa !== 'fabrica') {
                 foreach (contagem_engatadas($casa) as $nome) {
-                    $linhas[] = ['local' => 'Câmara produção', 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => '', 'litros' => '50', 'barris' => []];
+                    $linhas[] = ['local' => 'Câmara produção', 'nome' => $nome, 'unidade' => 'barril', 'qtd' => 1.0, 'obs' => '', 'litros' => '50', 'barris' => []];
                 }
             }
             // Ainda não grava: a contagem só é guardada ao tocar em Salvar ou Enviar
@@ -307,8 +307,11 @@ function contagem_tela_editar(): void
             if (!it.querySelector('.ct-n').value || confirm('Tirar ' + it.querySelector('.ct-n').value + ' da contagem?')) it.remove();
           } else if (b.classList.contains('ct-add')) {
             var novo = modelo.content.firstElementChild.cloneNode(true), lista = b.closest('.ct-local').querySelector('.ct-itens'), ult = lista.querySelector('.ct-item:last-child .ct-u');
-            if (ult) { novo.querySelector('.ct-u').value = ult.value; novo.querySelector('.ct-barril').hidden = ult.value !== 'barril'; } // mesma unidade do item de cima (ex.: barril na câmara)
+            var camara = /c[aâ]mara/i.test(b.closest('.ct-local').querySelector('.ct-local-nome').value || '');
+            if (camara) { novo.querySelector('.ct-u').value = 'barril'; novo.querySelector('.ct-q').value = '1'; } // câmara: barril, 1 unidade
+            else if (ult) novo.querySelector('.ct-u').value = ult.value; // mesma unidade do item de cima
             lista.appendChild(novo);
+            barris(novo);
             novo.querySelector('.ct-n').focus();
           }
         });
