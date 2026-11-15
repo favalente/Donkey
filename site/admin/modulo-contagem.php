@@ -60,23 +60,30 @@ function contagem_acao(string $acao): bool
                     throw new RuntimeException('Não encontrei itens com quantidade nesse texto. Cole a contagem como mandava no WhatsApp (ex.: "3 fardo guaraná zero").');
                 }
             }
-            if ($modo === 'engatadas' || !$linhas) {
-                // Fábrica: as cervejas engatadas nas duas casas, na câmara de produção
-                $engatadas = $casa === 'fabrica' ? array_values(array_unique(array_merge(...array_map('contagem_engatadas', array_keys(DH_UNIDADES))))) : contagem_engatadas($casa);
-                foreach ($engatadas as $nome) {
-                    $linhas[] = ['local' => 'Câmara produção', 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => '', 'litros' => '50', 'aberto' => ''];
+            if ($modo === 'engatadas' && $casa !== 'fabrica') {
+                foreach (contagem_engatadas($casa) as $nome) {
+                    $linhas[] = ['local' => 'Câmara produção', 'nome' => $nome, 'unidade' => 'barril', 'qtd' => null, 'obs' => '', 'litros' => '50', 'barris' => []];
                 }
             }
-            $x = ['id' => dh_id_novo('k'), 'casa' => $casa, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => $linhas];
-            $c['contagens'][] = $x;
-            dh_contagem_salvar($c);
-            ir('./?acao=contagem-editar&id=' . $x['id']);
+            // Ainda não grava: a contagem só é guardada ao tocar em Salvar ou Enviar
+            $_SESSION['contagem_nova'] = ['id' => '', 'casa' => $casa, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => $linhas];
+            ir('./?acao=contagem-editar&nova=1');
 
         case 'contagem-salvar':
             exigir_post();
             exigir('contagem');
             $c = dh_contagem();
-            $i = contagem_indice($c, (string) ($_POST['id'] ?? ''));
+            $id = (string) ($_POST['id'] ?? '');
+            if ($id === '') {
+                // Primeira vez que essa contagem é salva
+                $nova = $_SESSION['contagem_nova'] ?? null;
+                $casaN = isset(DH_CONTAGEM_CASAS[$_POST['casa'] ?? '']) ? $_POST['casa'] : ($nova['casa'] ?? contagem_casa());
+                $c['contagens'][] = ['id' => dh_id_novo('k'), 'casa' => $casaN, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => []];
+                $i = count($c['contagens']) - 1;
+                unset($_SESSION['contagem_nova']);
+            } else {
+                $i = contagem_indice($c, $id);
+            }
             if ($i === null) {
                 throw new RuntimeException('Contagem não encontrada.');
             }
@@ -92,7 +99,14 @@ function contagem_acao(string $acao): bool
                     'unidade' => in_array($l['unidade'] ?? '', DH_CONTAGEM_UNIDADES, true) ? $l['unidade'] : 'un',
                     'qtd' => dh_qtd_ler((string) ($l['qtd'] ?? '')), 'obs' => mb_strimwidth(trim((string) ($l['obs'] ?? '')), 0, 80),
                     'litros' => in_array((string) ($l['litros'] ?? ''), DH_CONTAGEM_LITROS, true) ? (string) $l['litros'] : '',
-                    'aberto' => isset(DH_CONTAGEM_ABERTO[(string) ($l['aberto'] ?? '')]) ? (string) $l['aberto'] : ''];
+                    'barris' => array_values(array_map('strval', array_filter((array) ($l['barris'] ?? []), fn($b) => isset(DH_CONTAGEM_STATUS[(string) $b]))))];
+                $k = count($linhas) - 1;
+                if ($linhas[$k]['unidade'] === 'barril') {
+                    $linhas[$k]['barris'] = dh_contagem_barris($linhas[$k]);
+                } else {
+                    $linhas[$k]['barris'] = [];
+                    $linhas[$k]['litros'] = '';
+                }
             }
             $data = (string) ($_POST['data'] ?? '');
             $c['contagens'][$i]['linhas'] = $linhas;
@@ -171,8 +185,13 @@ function contagem_tela_lista(): void
           <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="copiar">
             <button class="ct-nova"><span>📋</span><strong>Copiar a contagem de <?= e(date('d/m', strtotime($ant['data']))) ?></strong><small>Vêm todos os <?= count($ant['linhas']) ?> itens com as quantidades; é só corrigir o que mudou.</small></button></form>
         <?php endif; ?>
+        <?php if ($casa !== 'fabrica'): ?>
         <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="engatadas">
           <button class="ct-nova"><span>🍺</span><strong>Começar pelas cervejas engatadas</strong><small><?= $casa === 'fabrica' ? 'A câmara de produção vem com o chope engatado nas duas casas; adicione o resto.' : 'A câmara de produção vem com o chope que está na tap list; adicione o resto.' ?></small></button></form>
+        <?php else: ?>
+        <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="vazia">
+          <button class="ct-nova"><span>🏭</span><strong>Começar uma contagem vazia</strong><small>Câmara produção e câmara estoque, para adicionar as cervejas dos tanques.</small></button></form>
+        <?php endif; ?>
         <button type="button" class="ct-nova" onclick="var f=document.getElementById('ct-colar-form'); f.hidden=!f.hidden; if(!f.hidden) f.querySelector('textarea').focus();"><span>📝</span><strong>Colar a contagem do WhatsApp</strong><small>Para aproveitar a última contagem que foi mandada em texto.</small></button>
         <form method="post" action="./?acao=contagem-nova" id="ct-colar-form" class="ct-colar-form" hidden><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="texto">
           <label>Cole aqui a mensagem da contagem <textarea name="texto" rows="8" placeholder="Câmara produção&#10;Softhop 1 barril&#10;&#10;Estoque seco&#10;3 fardo guaraná zero&#10;1/2 fardo de fanta uva"></textarea></label>
@@ -197,12 +216,16 @@ function contagem_tela_editar(): void
 {
     global $csrf;
     $c = dh_contagem();
-    $i = contagem_indice($c, (string) ($_GET['id'] ?? ''));
-    if ($i === null) {
-        echo '<p class="dica">Contagem não encontrada. <a href="./?acao=contagem">Voltar</a></p>';
-        return;
+    if (!empty($_GET['nova']) && isset($_SESSION['contagem_nova'])) {
+        $x = $_SESSION['contagem_nova']; // ainda não gravada
+    } else {
+        $i = contagem_indice($c, (string) ($_GET['id'] ?? ''));
+        if ($i === null) {
+            echo '<p class="dica">Contagem não encontrada. <a href="./?acao=contagem">Voltar</a></p>';
+            return;
+        }
+        $x = $c['contagens'][$i];
     }
-    $x = $c['contagens'][$i];
     // Sugestões de nomes: o que já foi contado nessa casa e as cervejas cadastradas
     $nomes = [];
     foreach ($c['contagens'] as $y) {
@@ -233,7 +256,7 @@ function contagem_tela_editar(): void
             <select class="ct-u" aria-label="Unidade"><?php foreach (DH_CONTAGEM_UNIDADES as $u): ?><option <?= $u === $l['unidade'] ? 'selected' : '' ?>><?= e($u) ?></option><?php endforeach; ?></select>
             <div class="ct-barril"<?= $l['unidade'] !== 'barril' ? ' hidden' : '' ?>>
               <select class="ct-l" aria-label="Tamanho do barril"><?php foreach (DH_CONTAGEM_LITROS as $lt): ?><option value="<?= $lt ?>" <?= ($l['litros'] ?? '50') === $lt || (($l['litros'] ?? '') === '' && $lt === '50') ? 'selected' : '' ?>><?= $lt ?> litros</option><?php endforeach; ?></select>
-              <select class="ct-a" aria-label="Barril aberto"><?php foreach (DH_CONTAGEM_ABERTO as $k => $rot): ?><option value="<?= e($k) ?>" <?= ($l['aberto'] ?? '') === (string) $k ? 'selected' : '' ?>><?= e($rot) ?></option><?php endforeach; ?></select>
+              <div class="ct-barris"><?php foreach ($l['unidade'] === 'barril' ? dh_contagem_barris($l) : [] as $n => $st): ?><label>Barril <?= $n + 1 ?> <select class="ct-st"><?php foreach (DH_CONTAGEM_STATUS as $k => $rot): ?><option value="<?= $k ?>" <?= (string) $st === (string) $k ? 'selected' : '' ?>><?= e($rot) ?></option><?php endforeach; ?></select></label><?php endforeach; ?></div>
             </div>
             <input class="ct-o" value="<?= e($l['obs']) ?>" placeholder="obs." aria-label="Observação">
             <button type="button" class="ct-tirar" aria-label="Tirar este item" title="Tirar">×</button>
@@ -246,7 +269,7 @@ function contagem_tela_editar(): void
       <p class="dica">Digite a quantidade de cada item (meio fardo: <b>0,5</b> ou <b>1/2</b>). Os botões − e + mudam de 1 em 1. Toque em <b>Salvar</b> para continuar depois, e em <b>Enviar</b> quando terminar.</p>
       <datalist id="ct-nomes"><?php foreach (array_keys($nomes) as $n): ?><option value="<?= e($n) ?>"><?php endforeach; ?></datalist>
       <form method="post" action="./?acao=contagem-salvar" id="ct-form" class="ct-form">
-        <?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><input type="hidden" name="json" id="ct-json"><input type="hidden" name="enviar" id="ct-enviar" value="">
+        <?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><input type="hidden" name="casa" value="<?= e($x['casa']) ?>"><input type="hidden" name="json" id="ct-json"><input type="hidden" name="enviar" id="ct-enviar" value="">
         <label>Data da contagem <input type="date" name="data" value="<?= e($x['data']) ?>"></label>
         <div id="ct-locais">
           <?php foreach ($locais as $lc): ?>
@@ -258,13 +281,14 @@ function contagem_tela_editar(): void
           <?php endforeach; ?>
         </div>
         <button type="button" class="btn secundario" id="ct-add-local">+ Outro lugar</button>
-        <template id="ct-modelo"><?php $linha(['nome' => '', 'qtd' => null, 'unidade' => 'un', 'obs' => '', 'litros' => '50', 'aberto' => '']); ?></template>
+        <template id="ct-modelo"><?php $linha(['nome' => '', 'qtd' => null, 'unidade' => 'un', 'obs' => '', 'litros' => '50', 'barris' => [], 'local' => '']); ?></template>
         <div class="barra-salvar ct-barra">
           <button class="btn secundario" data-enviar="">💾 Salvar</button>
           <button class="btn primario" data-enviar="1">✅ Enviar contagem</button>
         </div>
       </form>
-      <form method="post" action="./?acao=contagem-excluir" class="excluir" onsubmit="return confirm('Apagar esta contagem?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="btn perigo">Apagar contagem</button></form>
+      <?php if ($x['id'] === ''): ?><p class="dica centro">Ainda não foi salva: toque em <b>Salvar</b> para guardar.</p><?php else: ?>
+      <form method="post" action="./?acao=contagem-excluir" class="excluir" onsubmit="return confirm('Apagar esta contagem?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="btn perigo">Apagar contagem</button></form><?php endif; ?>
       <script>
       (function () {
         var form = document.getElementById('ct-form'), locais = document.getElementById('ct-locais'), modelo = document.getElementById('ct-modelo');
@@ -278,6 +302,7 @@ function contagem_tela_editar(): void
             var q = it.querySelector('.ct-q'), v = num(q.value) || 0;
             v = Math.max(0, v + (b.classList.contains('ct-mais') ? 1 : -1));
             q.value = txt(v);
+            barris(it);
           } else if (b.classList.contains('ct-tirar')) {
             if (!it.querySelector('.ct-n').value || confirm('Tirar ' + it.querySelector('.ct-n').value + ' da contagem?')) it.remove();
           } else if (b.classList.contains('ct-add')) {
@@ -287,10 +312,28 @@ function contagem_tela_editar(): void
             novo.querySelector('.ct-n').focus();
           }
         });
-        // Tamanho e barril aberto só aparecem para barril
+        // Barril: um campo de situação para cada barril (produção já vem mexido; estoque, cheio)
+        var STATUS = <?= json_encode(DH_CONTAGEM_STATUS, JSON_UNESCAPED_UNICODE) ?>;
+        function barris(it) {
+          var cx = it.querySelector('.ct-barris'), barril = it.querySelector('.ct-u').value === 'barril';
+          it.querySelector('.ct-barril').hidden = !barril;
+          var n = barril ? Math.max(0, Math.floor(num(it.querySelector('.ct-q').value) || 0)) : 0;
+          if (n > 30) n = 30;
+          var atuais = cx.querySelectorAll('label');
+          var local = (it.closest('.ct-local').querySelector('.ct-local-nome').value || '');
+          var padrao = /produ/i.test(local) ? '80' : '100';
+          for (var k = atuais.length; k < n; k++) {
+            var lb = document.createElement('label'), sel = document.createElement('select');
+            sel.className = 'ct-st';
+            Object.keys(STATUS).forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = STATUS[v]; if (v === padrao) o.selected = true; sel.appendChild(o); });
+            lb.textContent = 'Barril ' + (k + 1) + ' '; lb.appendChild(sel); cx.appendChild(lb);
+          }
+          for (var j = atuais.length - 1; j >= n; j--) atuais[j].remove();
+        }
         locais.addEventListener('change', function (e) {
-          if (e.target.classList.contains('ct-u')) e.target.closest('.ct-item').querySelector('.ct-barril').hidden = e.target.value !== 'barril';
+          if (e.target.classList.contains('ct-u') || e.target.classList.contains('ct-q')) barris(e.target.closest('.ct-item'));
         });
+        locais.addEventListener('input', function (e) { if (e.target.classList.contains('ct-q')) barris(e.target.closest('.ct-item')); });
         document.getElementById('ct-add-local').addEventListener('click', function () {
           var s = document.createElement('section'); s.className = 'ct-local';
           s.innerHTML = '<h2><input class="ct-local-nome" placeholder="Nome do lugar (ex.: Bar de cima)" aria-label="Lugar"></h2><div class="ct-itens"></div><button type="button" class="link ct-add">+ Adicionar item</button>';
@@ -309,7 +352,8 @@ function contagem_tela_editar(): void
               if (!q) vazios++;
               var u = it.querySelector('.ct-u').value;
               linhas.push({ local: local, nome: nome, qtd: q, unidade: u, obs: it.querySelector('.ct-o').value.trim(),
-                litros: u === 'barril' ? it.querySelector('.ct-l').value : '', aberto: u === 'barril' ? it.querySelector('.ct-a').value : '' });
+                litros: u === 'barril' ? it.querySelector('.ct-l').value : '',
+                barris: u === 'barril' ? [].map.call(it.querySelectorAll('.ct-st'), function (x) { return x.value; }) : [] });
             });
           });
           if (document.getElementById('ct-enviar').value === '1' && vazios && !confirm(vazios + ' ' + (vazios > 1 ? 'itens estão' : 'item está') + ' sem quantidade. Enviar mesmo assim?')) { e.preventDefault(); return; }

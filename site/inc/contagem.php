@@ -21,17 +21,45 @@ function dh_contagem_casa_nome(string $casa): string
     return DH_CONTAGEM_CASAS[$casa] ?? (DH_UNIDADES[$casa] ?? $casa);
 }
 const DH_CONTAGEM_LITROS = ['50', '30'];
-// Barril aberto conta como inteiro, com o nível anotado
-const DH_CONTAGEM_ABERTO = ['' => 'Todos fechados', 'cheio' => '1 aberto · cheio', '90' => '1 aberto · 90%', '60' => '1 aberto · 60%', '30' => '1 aberto · 30%'];
+// Situação de cada barril: na câmara de produção já vem "mexido", na de estoque "cheio"
+const DH_CONTAGEM_STATUS = ['100' => 'Cheio (100%)', '80' => 'Mexido 80%', '50' => 'Mexido 50%', '20' => 'Mexido 20%'];
+const DH_CONTAGEM_ABERTO = ['' => '', 'cheio' => 'Cheio (100%)', '90' => 'Mexido 90%', '60' => 'Mexido 60%', '30' => 'Mexido 30%']; // contagens antigas
 
-// "2 barris de 50 L (1 aberto · 60%)"
+function dh_contagem_status_padrao(string $local): string
+{
+    return preg_match('/produ/iu', $local) ? '80' : '100';
+}
+
+// Uma situação para cada barril (quantidade inteira), completando com o padrão do lugar
+function dh_contagem_barris(array $l): array
+{
+    $n = max(0, (int) floor((float) ($l['qtd'] ?? 0)));
+    $b = array_values(array_filter((array) ($l['barris'] ?? []), fn($x) => isset(DH_CONTAGEM_STATUS[(string) $x])));
+    $b = array_map('strval', array_slice($b, 0, $n));
+    while (count($b) < $n) {
+        $b[] = dh_contagem_status_padrao($l['local'] ?? '');
+    }
+    return $b;
+}
+
+// "2 barris de 50 L (1 cheio, 1 mexido 50%)"
 function dh_contagem_detalhe_barril(array $l): string
 {
     if ($l['unidade'] !== 'barril') {
         return '';
     }
     $t = ($l['litros'] ?? '') !== '' ? ' de ' . $l['litros'] . ' L' : '';
-    return $t . (($l['aberto'] ?? '') !== '' ? ' (' . DH_CONTAGEM_ABERTO[$l['aberto']] . ')' : '');
+    if (!empty($l['barris'])) {
+        $cont = array_count_values($l['barris']);
+        $partes = [];
+        foreach (DH_CONTAGEM_STATUS as $k => $rot) {
+            if (!empty($cont[$k])) {
+                $partes[] = $cont[$k] . ' ' . mb_strtolower(preg_replace('/\s*\(100%\)/', '', $rot));
+            }
+        }
+        return $t . ($partes ? ' (' . implode(', ', $partes) . ')' : '');
+    }
+    return $t . (($l['aberto'] ?? '') !== '' ? ' (1 ' . mb_strtolower(DH_CONTAGEM_ABERTO[$l['aberto']] ?? '') . ')' : '');
 }
 
 function dh_contagem(): array
@@ -182,7 +210,7 @@ function dh_contagem_do_texto(string $txt): array
                 $obs = trim(preg_replace('/\bde\s*(30|50)\s*(l|litros)?\b/iu', '', $obs), ' ·-');
             }
         }
-        $linhas[] = ['local' => $local, 'nome' => mb_strimwidth(trim($nome, " -:"), 0, 80), 'unidade' => $u, 'qtd' => $q, 'obs' => mb_strimwidth($obs, 0, 80), 'litros' => $litros, 'aberto' => ''];
+        $linhas[] = ['local' => $local, 'nome' => mb_strimwidth(trim($nome, " -:"), 0, 80), 'unidade' => $u, 'qtd' => $q, 'obs' => mb_strimwidth($obs, 0, 80), 'litros' => $litros, 'barris' => []];
     }
     return $linhas;
 }
