@@ -173,13 +173,11 @@ function contagem_tela_lista(): void
         <?php endif; ?>
         <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="engatadas">
           <button class="ct-nova"><span>🍺</span><strong>Começar pelas cervejas engatadas</strong><small><?= $casa === 'fabrica' ? 'A câmara de produção vem com o chope engatado nas duas casas; adicione o resto.' : 'A lista vem com o chope que está na tap list; adicione o resto.' ?></small></button></form>
-        <details class="ct-nova ct-colar">
-          <summary><span>📝</span><strong>Colar a contagem do WhatsApp</strong><small>Para aproveitar a última contagem que foi mandada em texto.</small></summary>
-          <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="texto">
-            <textarea name="texto" rows="8" placeholder="Câmara produção&#10;Softhop 1 barril&#10;&#10;Estoque seco&#10;3 fardo guaraná zero&#10;1/2 fardo de fanta uva"></textarea>
-            <button class="btn primario largo">Ler o texto</button>
-          </form>
-        </details>
+        <button type="button" class="ct-nova" onclick="var f=document.getElementById('ct-colar-form'); f.hidden=!f.hidden; if(!f.hidden) f.querySelector('textarea').focus();"><span>📝</span><strong>Colar a contagem do WhatsApp</strong><small>Para aproveitar a última contagem que foi mandada em texto.</small></button>
+        <form method="post" action="./?acao=contagem-nova" id="ct-colar-form" class="ct-colar-form" hidden><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="texto">
+          <label>Cole aqui a mensagem da contagem <textarea name="texto" rows="8" placeholder="Câmara produção&#10;Softhop 1 barril&#10;&#10;Estoque seco&#10;3 fardo guaraná zero&#10;1/2 fardo de fanta uva"></textarea></label>
+          <button class="btn primario largo">Ler o texto</button>
+        </form>
       </div>
 
       <h2>Contagens</h2>
