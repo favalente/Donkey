@@ -701,13 +701,13 @@ function escala_tela_freelancers(): void
 // Abas do Financeiro: Freelancers · Bandas · Chope
 function financeiro_abas(string $ativa): void
 {
-    $abas = array_filter(['freelancers' => ['Freelancers', pode('freelancers')], 'relatorio' => ['Bandas', pode('relatorio')], 'relatorios' => ['Chope', pode('vendas')]], fn($a) => $a[1]);
+    $abas = array_filter(['freelancers' => ['Freelancers', pode('freelancers'), '👷'], 'relatorio' => ['Bandas', pode('relatorio'), '🎸'], 'relatorios' => ['Chope', pode('vendas'), '🍺']], fn($a) => $a[1]);
     if (count($abas) < 2) {
         return;
     }
-    echo '<nav class="abas-financeiro" aria-label="Financeiro">';
-    foreach ($abas as $acao => [$rot]) {
-        echo '<a href="./?acao=' . $acao . '" class="' . ($acao === $ativa ? 'ativo' : '') . '">' . e($rot) . '</a>';
+    echo '<nav class="abas-icones" aria-label="Financeiro">';
+    foreach ($abas as $acao => [$rot, , $ic]) {
+        echo '<a href="./?acao=' . $acao . '" class="' . ($acao === $ativa ? 'ativo' : '') . '"><span aria-hidden="true">' . $ic . '</span>' . e($rot) . '</a>';
     }
     echo '</nav>';
 }

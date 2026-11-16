@@ -921,3 +921,9 @@ h3 small { font-weight: 400; color: var(--muted); }
 .prog-cfg-linha small { color: var(--muted); margin-top: -4px; }
 .prog-cfg-linha label { margin: 0; font-size: .85rem; }
 .prog-cfg-linha select, .prog-cfg-linha input { margin: 0 !important; }
+
+/* Subabas com ícone (Brassagem e as próximas) */
+.abas-icones { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin: 4px 0 18px; }
+.abas-icones a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font-weight: 700; font-size: .95rem; }
+.abas-icones a span { font-size: 1.6rem; line-height: 1; }
+.abas-icones a.ativo { border-color: var(--amber); background: var(--caixa); }

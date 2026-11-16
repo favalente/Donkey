@@ -440,6 +440,21 @@ function brassagem_acao(string $acao): bool
     return false;
 }
 
+// Subabas da Brassagem (com ícone), como no Financeiro. Para uma parte nova, é só acrescentar aqui.
+function brassagem_abas(string $ativa): void
+{
+    $abas = [
+        'brassagem' => ['🛢️', 'Tanques'],
+        'brassagem-programacao' => ['📅', 'Programação'],
+        'brassagem-tanques' => ['⚙️', 'Configurar'],
+    ];
+    echo '<nav class="abas-icones" aria-label="Brassagem">';
+    foreach ($abas as $acao => [$ic, $rot]) {
+        echo '<a href="./?acao=' . $acao . '" class="' . ($acao === $ativa ? 'ativo' : '') . '"><span aria-hidden="true">' . $ic . '</span>' . e($rot) . '</a>';
+    }
+    echo '</nav>';
+}
+
 function brassagem_tela(string $tela): bool
 {
     if ($tela === 'brassagem') {
@@ -500,11 +515,8 @@ function brassagem_tela_tanques(): void
     $tanques = array_values(array_filter($b['tanques'], fn($t) => $t['ativo'] || dh_tanque_lote($b, $t['id'])));
     $cadastro = dh_brassagem_cervejas();
     ?>
-      <div class="titulo-acao"><h1>Brassagem</h1><a class="btn secundario" href="./?acao=brassagem-tanques">⚙ Tanques</a></div>
-      <section class="prog-card">
-        <div class="prog-card-topo"><h2>📅 Programação da semana</h2><a class="btn-acao" href="./?acao=brassagem-programacao"><?= ($usuario['papel'] ?? '') === 'admin' ? 'Sugestões e programar' : 'Ver semana' ?></a></div>
-        <?php prog_lista_semana($b, dh_semana_inicio(date('Y-m-d')), false); ?>
-      </section>
+      <h1>Brassagem</h1>
+      <?php brassagem_abas('brassagem'); ?>
       <?php if ($novos): ?>
         <section class="alertas-brassagem" aria-label="Atualizações nos cadernos">
           <div class="alertas-topo">
@@ -797,8 +809,9 @@ function brassagem_tela_config(): void
         <?php
     };
     ?>
-      <p><a class="voltar" href="./?acao=brassagem">‹ Voltar para Brassagem</a></p>
-      <h1>Tanques</h1>
+      <h1>Brassagem</h1>
+      <?php brassagem_abas('brassagem-tanques'); ?>
+      <h2>Tanques</h2>
       <p class="dica">Os tanques de fermentação da fábrica (que atende as duas sedes). Cada tanque recebe um lote por vez; ao finalizar o lote, ele fica livre de novo.</p>
       <ul class="lista-lotes">
         <?php foreach ($b['tanques'] as $t): $l = dh_tanque_lote($b, $t['id']); ?>

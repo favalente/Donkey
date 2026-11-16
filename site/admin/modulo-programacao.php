@@ -114,8 +114,8 @@ function programacao_tela(string $tela): bool
     $admin = prog_admin();
     $dias = array_map(fn($n) => date('Y-m-d', strtotime($semana . ' +' . $n . ' days')), range(0, 5));
     ?>
-      <p><a class="voltar" href="./?acao=brassagem">‹ Brassagem</a></p>
-      <h1>📅 Programação de brassagem</h1>
+      <h1>Brassagem</h1>
+      <?php brassagem_abas('brassagem-programacao'); ?>
       <div class="semana-nav">
         <a class="semana-seta" href="./?acao=brassagem-programacao&amp;semana=<?= date('Y-m-d', strtotime($semana . ' -7 days')) ?>" aria-label="Semana anterior">‹</a>
         <div class="semana-centro"><small><?= $semana === dh_semana_inicio(date('Y-m-d')) ? 'Esta semana' : 'Semana' ?></small><strong><?= date('d/m', strtotime($semana)) ?> a <?= date('d/m', strtotime($semana . ' +6 days')) ?></strong></div>
