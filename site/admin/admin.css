@@ -927,3 +927,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .abas-icones a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font-weight: 700; font-size: .95rem; }
 .abas-icones a span { font-size: 1.6rem; line-height: 1; }
 .abas-icones a.ativo { border-color: var(--amber); background: var(--caixa); }
+.tres-campos:has(> :nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }

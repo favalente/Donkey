@@ -261,7 +261,7 @@ function escala_acao(string $acao): bool
             }
             $e['funcoes'] = array_values($novas);
             $e['config']['atraso'] = ['faixa' => max(1, min(120, (int) ($_POST['atraso_faixa'] ?? 30))), 'desconto' => brassagem_num($_POST['atraso_desconto'] ?? '') ?: '0',
-                'maximo' => brassagem_num($_POST['atraso_maximo'] ?? '') ?: '0'];
+                'maximo' => brassagem_num($_POST['atraso_maximo'] ?? '') ?: '0', 'tolerancia' => max(0, min(60, (int) ($_POST['atraso_tolerancia'] ?? 15)))];
             dh_escala_salvar($e);
             ir('./?acao=escala-funcoes', 'Funções e diárias salvas.');
 
@@ -638,6 +638,7 @@ function escala_tela_funcoes(): void
         <div class="tres-campos">
           <label>A cada (minutos) <input name="atraso_faixa" inputmode="numeric" value="<?= (int) $a['faixa'] ?>"></label>
           <label>Desconta (R$) <input name="atraso_desconto" inputmode="decimal" value="<?= $v($a['desconto']) ?>"></label>
+          <label>Tolerância (minutos) <small>(não desconta)</small><input name="atraso_tolerancia" inputmode="numeric" value="<?= (int) ($a['tolerancia'] ?? 15) ?>"></label>
           <label>No máximo (R$) <small>(0 = sem limite)</small><input name="atraso_maximo" inputmode="decimal" value="<?= $v($a['maximo'] ?? '0') ?>"></label>
         </div>
         <?php
@@ -650,7 +651,7 @@ function escala_tela_funcoes(): void
               $ex[] = 'até ' . date('H:i', strtotime('17:00 +' . $n * $fx . ' minutes')) . ', −' . dh_moeda($d);
           }
         ?>
-        <p class="dica">Com entrada às 17h: <?= e(implode('; ', $ex)) ?>. A diária sai sempre, com o desconto.</p>
+        <p class="dica">Com entrada às 17h: até <?= e(date('H:i', strtotime('17:00 +' . (int) ($a['tolerancia'] ?? 15) . ' minutes'))) ?>, sem desconto (tolerância); <?= e(implode('; ', $ex)) ?>. A diária sai sempre, com o desconto.</p>
         <div class="barra-salvar"><button class="btn primario">Salvar funções, diárias e atraso</button></div>
       </form>
     <?php

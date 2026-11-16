@@ -24,7 +24,8 @@ const DH_ESCALA_AMBIENTES_PADRAO = ['ROOFTOP' => 'ATENDENTE', 'PISO SUP.' => 'AT
 // Atraso (a partir da entrada marcada na escala): R$ 10 a menos a cada 15 min; passou de 30 min, volta para casa sem diária
 // Desconto por atraso: R$ 10 a cada 30 minutos (até 17:30 −10, até 18h −20, até 18:30 −30, depois −40), no máximo R$ 40.
 // Não existe mais "voltar para casa": a diária sai sempre, com o desconto.
-const DH_ESCALA_ATRASO_PADRAO = ['faixa' => 30, 'desconto' => '10', 'maximo' => '40'];
+// Tolerância: até 15 minutos de atraso não desconta nada.
+const DH_ESCALA_ATRASO_PADRAO = ['faixa' => 30, 'desconto' => '10', 'maximo' => '40', 'tolerancia' => 15];
 
 function dh_escala(): array
 {
@@ -310,6 +311,9 @@ function dh_escala_atraso(array $e, array $pos, string $dia = ''): array
         return [0, 0.0, false];
     }
     $c = ($e['config']['atraso'] ?? []) + DH_ESCALA_ATRASO_PADRAO;
+    if ($atraso <= (int) $c['tolerancia']) {
+        return [$atraso, 0.0, false];
+    }
     $desc = (int) ceil($atraso / max(1, (int) $c['faixa'])) * (float) $c['desconto'];
     if ((float) $c['maximo'] > 0) {
         $desc = min($desc, (float) $c['maximo']);
