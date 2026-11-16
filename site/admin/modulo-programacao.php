@@ -38,7 +38,8 @@ function programacao_acao(string $acao): bool
                     continue;
                 }
                 $dia = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($it['dia'] ?? '')) ? $it['dia'] : $semana;
-                $lista[] = ['id' => dh_id_novo('p'), 'grupo' => $k, 'nome' => $grupos[$k]['nome'], 'receita' => $grupos[$k]['receitas'][0]['id'] ?? '',
+                $rc0 = $grupos[$k]['receitas'][0] ?? null;
+                $lista[] = ['id' => dh_id_novo('p'), 'grupo' => $k, 'nome' => $k === 'newengland' && $rc0 ? $rc0['nome'] : $grupos[$k]['nome'], 'receita' => $rc0['id'] ?? '',
                     'dia' => $dia, 'tanque' => (string) ($it['tanque'] ?? ''), 'obs' => mb_strimwidth(trim((string) ($it['obs'] ?? '')), 0, 120), 'por' => $usuario['nome']];
             }
             $b['config']['programacao']['semanas'][$semana] = $lista;
@@ -129,7 +130,18 @@ function programacao_tela(string $tela): bool
           $livres = array_values(array_filter($b['tanques'], fn($t) => ($t['ativo'] ?? true) && !dh_tanque_lote($b, $t['id'])));
           $jaProg = array_column(dh_prog_semana($b, $semana), 'grupo');
       ?>
+        <?php
+          // Lotes nos tanques que não batem com nenhuma receita (não entram na conta)
+          $gruposT = dh_prog_grupos($b);
+          $semReceita = [];
+          foreach ($b['lotes'] as $lt) {
+              if ($lt['status'] !== 'finalizado' && !dh_prog_achar_grupo($lt['cerveja'], $gruposT, (string) ($lt['cerveja_id'] ?? ''))) {
+                  $semReceita[] = $lt['cerveja'] . ' (' . (dh_tanque($b, $lt['tanque'])['nome'] ?? 'tanque ?') . ')';
+              }
+          }
+        ?>
         <h2>Sugestões</h2>
+        <?php if ($semReceita): ?><p class="aviso">Nos tanques, sem receita reconhecida (não entram na conta): <?= e(implode(', ', $semReceita)) ?>. Confira se a receita existe em Receitas com um nome parecido.</p><?php endif; ?>
         <p class="dica"><?= $s['livres'] ?> tanque<?= $s['livres'] !== 1 ? 's' : '' ?> livre<?= $s['livres'] !== 1 ? 's' : '' ?> agora. Conta o estoque da última contagem (fábrica e casas, em barris de 50 L; mexido conta a parte que sobra), o que está nos tanques e o consumo por semana de cada cerveja. Sem dry hop o lote leva <?= DH_PROG_DIAS_SEM_DRYHOP ?> dias; com dry hop, <?= DH_PROG_DIAS_COM_DRYHOP ?>. Marque o que vai brassar e toque em <b>Programar</b>; a equipe vê só o que for programado.</p>
         <form method="post" action="./?acao=programacao-salvar" class="prog-form">
           <?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>">

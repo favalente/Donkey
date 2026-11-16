@@ -21,7 +21,7 @@ const DH_PROG_MAX_SEMANA = 4;     // brassagens por semana, no máximo
 const DH_PROG_CLASSES = [
     'fora' => ['arabica', 'cacau brownie', 'pele encarnada', 'reliz', 'west coast chocolate'],
     'rara' => ['dragao do mar', 'maracutaia', 'metanoia', 'pifitao', 'red hop', 'rye se lascar', 'rye timbora', 'santa stout', 'strawberry', 'strowberry'],
-    'sazonal' => ['assum preto', 'quadrupel', 'tripel', 'new england', 'azedinha', 'velas do mucuripe'],
+    'sazonal' => ['assum preto', 'quadrupel', 'tripel', 'new england', 'all my love', 'caldo de bila', 'citranela', 'azedinha', 'velas do mucuripe'],
     'essencial' => ['stigm', 'mandacar', 'soft hop', 'softhop', 'premium lager', 'lager'],
     'linha' => ['severina caju', 'caju', 'miolo de pote', 'asa branca', 'galo campina', 'mel da goiaba', 'vixe', 'peste'],
 ];
@@ -42,8 +42,8 @@ function dh_prog_grupo(string $nome): string
     if (preg_match('/peste|pardal/', $s)) {
         return 'pestenegra';
     }
-    if (preg_match('/new ?england/', $s)) {
-        return 'newengland';
+    if (preg_match('/new ?england|all my love|caldo de bila|citranela/', $s)) {
+        return 'newengland'; // All My Love, Caldo de Bila e Citranela se alternam
     }
     if (str_contains($s, 'severina')) {
         return str_contains($s, 'caju') ? 'severinacaju' : 'severinafrutas';
@@ -87,7 +87,10 @@ function dh_prog_grupos(array $b): array
         if ($k === '') {
             continue;
         }
-        $g[$k] ??= ['chave' => $k, 'nome' => $rc['nome'], 'receitas' => [], 'dryhop' => false];
+        $g[$k] ??= ['chave' => $k, 'nome' => $rc['nome'], 'receitas' => [], 'dryhop' => false, 'cervejas' => []];
+        if (($rc['cerveja_id'] ?? '') !== '') {
+            $g[$k]['cervejas'][] = $rc['cerveja_id'];
+        }
         $g[$k]['receitas'][] = $rc;
         $g[$k]['dryhop'] = $g[$k]['dryhop'] || dh_prog_tem_dryhop($rc);
         if (mb_strlen($rc['nome']) < mb_strlen($g[$k]['nome'])) {
@@ -98,7 +101,18 @@ function dh_prog_grupos(array $b): array
         if ($k === 'pestenegra') {
             $x['nome'] = 'Peste Negra (e variações)';
         } elseif ($k === 'newengland') {
-            $x['nome'] = 'New England (alternando)';
+            // Alterna: a próxima é a que foi brassada há mais tempo (ou nunca)
+            $ultima = [];
+            foreach (dh_brassagem()['lotes'] as $l) {
+                foreach ($x['receitas'] as $rc) {
+                    if ((($l['cerveja_id'] ?? '') !== '' && $l['cerveja_id'] === ($rc['cerveja_id'] ?? '')) || dh_prog_chave($l['cerveja']) === dh_prog_chave($rc['nome'])
+                        || (strlen(dh_prog_chave($l['cerveja'])) >= 5 && str_contains(dh_prog_chave($rc['nome']), dh_prog_chave($l['cerveja'])))) {
+                        $ultima[$rc['id']] = max($ultima[$rc['id']] ?? '', (string) $l['data']);
+                    }
+                }
+            }
+            usort($x['receitas'], fn($a, $c) => [$ultima[$a['id']] ?? '', $a['nome']] <=> [$ultima[$c['id']] ?? '', $c['nome']]);
+            $x['nome'] = 'New England · próxima: ' . $x['receitas'][0]['nome'];
         } elseif ($k === 'severinafrutas') {
             $x['nome'] = 'Severina de frutas';
         }
@@ -113,8 +127,15 @@ function dh_prog_grupos(array $b): array
 }
 
 // Acha o grupo de um nome digitado na contagem ou no caderno ("Lager" -> grupo da Premium Lager)
-function dh_prog_achar_grupo(string $nome, array $grupos): ?string
+function dh_prog_achar_grupo(string $nome, array $grupos, string $cervejaId = ''): ?string
 {
+    if ($cervejaId !== '') {
+        foreach ($grupos as $gk => $g) {
+            if (in_array($cervejaId, $g['cervejas'] ?? [], true)) {
+                return $gk;
+            }
+        }
+    }
     $k = dh_prog_grupo($nome);
     if (isset($grupos[$k])) {
         return $k;
@@ -164,7 +185,7 @@ function dh_prog_tanques(array $b, array $grupos): array
         if ($l['status'] === 'finalizado') {
             continue;
         }
-        $gk = dh_prog_achar_grupo($l['cerveja'], $grupos);
+        $gk = dh_prog_achar_grupo($l['cerveja'], $grupos, (string) ($l['cerveja_id'] ?? ''));
         if (!$gk) {
             continue;
         }
@@ -199,17 +220,22 @@ function dh_prog_sugestoes(array $b): array
             if ($cobertura !== null) {
                 $sugerir = $cobertura < $precisa;
                 $motivo = 'Dá para ' . (int) round($cobertura) . ' dias; um lote novo leva ' . $g['dias'] . ($g['dobro'] ? ' (estoque em dobro)' : '');
+            } elseif (!empty($tanques[$k])) {
+                $sugerir = false; // já tem lote no tanque: sem o consumo, não há por que brassar de novo
             } else {
                 $sugerir = $disp < ($g['dobro'] ? 4 : 2);
                 $motivo = !$sugerir ? '' : ($disp <= 0 ? 'Sem estoque e nada no tanque' : 'Estoque baixo (informe o consumo por semana para o cálculo ficar certo)');
             }
         } elseif ($g['categoria'] === 'sazonal') {
-            $sugerir = $disp <= 0;
+            $sugerir = $disp <= 0 && empty($tanques[$k]);
             $motivo = $disp <= 0 ? 'Sazonal sem estoque: brassar se houver tanque' : '';
+        }
+        if (!$sugerir && !empty($tanques[$k]) && $motivo === '') {
+            $motivo = 'Já tem lote no tanque (pronto ~' . date('d/m', strtotime(min(array_column($tanques[$k], 'pronto')))) . ')';
         }
         $peso = ['essencial' => 0, 'linha' => 1, 'sazonal' => 2, 'rara' => 3][$g['categoria']] ?? 4;
         $linhas[] = $g + ['estoque' => $est, 'tanque' => $tanques[$k] ?? [], 'em_tanque' => $tq, 'cobertura' => $cobertura, 'sugerir' => $sugerir, 'motivo' => $motivo,
-            'ordem' => [$sugerir ? 0 : 1, $peso, $cobertura ?? ($disp > 0 ? 999 : -1)]];
+            'ordem' => [$sugerir ? 0 : 1, empty($tanques[$k]) ? 0 : 1, $peso, $cobertura ?? ($disp > 0 ? 999 : -1)]];
     }
     usort($linhas, fn($a, $c) => $a['ordem'] <=> $c['ordem']);
     // Só o que cabe nos tanques livres (e no máximo 4 por semana)
