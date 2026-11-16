@@ -493,7 +493,7 @@ function brassagem_medidas(array $r): string
 
 function brassagem_tela_tanques(): void
 {
-    global $csrf;
+    global $csrf, $usuario;
     $b = dh_brassagem();
     $novos = array_reverse(brassagem_alertas_novos($b));
     $busca = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
@@ -501,6 +501,10 @@ function brassagem_tela_tanques(): void
     $cadastro = dh_brassagem_cervejas();
     ?>
       <div class="titulo-acao"><h1>Brassagem</h1><a class="btn secundario" href="./?acao=brassagem-tanques">⚙ Tanques</a></div>
+      <section class="prog-card">
+        <div class="prog-card-topo"><h2>📅 Programação da semana</h2><a class="btn-acao" href="./?acao=brassagem-programacao"><?= ($usuario['papel'] ?? '') === 'admin' ? 'Sugestões e programar' : 'Ver semana' ?></a></div>
+        <?php prog_lista_semana($b, dh_semana_inicio(date('Y-m-d')), false); ?>
+      </section>
       <?php if ($novos): ?>
         <section class="alertas-brassagem" aria-label="Atualizações nos cadernos">
           <div class="alertas-topo">

@@ -893,3 +893,31 @@ h3 small { font-weight: 400; color: var(--muted); }
 .ct-barris { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .ct-barris label { margin: 0; font-size: .8rem; color: var(--muted); font-weight: 600; }
 .ct-barris select { margin: 2px 0 0 !important; min-height: 44px !important; padding: 8px 10px !important; font-size: .95rem; }
+
+/* Programação de brassagem */
+.prog-card { margin: 0 0 18px; padding: 14px; border-radius: 16px; border: 2px solid var(--amber); background: var(--caixa); }
+.prog-card-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.prog-card-topo h2 { margin: 0; font-size: 1.2rem; }
+.prog-card-topo .btn-acao { text-decoration: none; }
+.prog-lista { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.prog-lista li { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+.prog-lista .lr-info { flex: 1; }
+.prog-lista .lr-info a { font-size: .9rem; }
+.prog-lista form { margin: 0; }
+.prog-item { padding: 12px; margin: 0 0 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+.prog-item.sugerida { border: 2px solid var(--ok); }
+.prog-item.espera { border: 2px dashed var(--amber); }
+.prog-marcar { display: flex; gap: 10px; align-items: center; margin: 0; }
+.prog-marcar input { width: 26px; height: 26px; accent-color: var(--ok); }
+.prog-numeros { margin: 6px 0 2px; font-size: .95rem; }
+.prog-numeros small { color: var(--muted); }
+.prog-motivo { margin: 2px 0 6px; color: var(--ambar-txt); font-weight: 600; font-size: .92rem; }
+.prog-quando { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.prog-quando select { margin: 0 !important; }
+.prog-outras { margin: 10px 0; }
+.prog-outras summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+.prog-cfg-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.prog-cfg-linha strong, .prog-cfg-linha small { grid-column: 1 / -1; }
+.prog-cfg-linha small { color: var(--muted); margin-top: -4px; }
+.prog-cfg-linha label { margin: 0; font-size: .85rem; }
+.prog-cfg-linha select, .prog-cfg-linha input { margin: 0 !important; }
