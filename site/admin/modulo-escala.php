@@ -260,8 +260,8 @@ function escala_acao(string $acao): bool
                 }
             }
             $e['funcoes'] = array_values($novas);
-            $e['config']['atraso'] = ['faixa' => max(1, min(120, (int) ($_POST['atraso_faixa'] ?? 15))), 'desconto' => brassagem_num($_POST['atraso_desconto'] ?? '') ?: '0',
-                'limite' => max(0, min(600, (int) ($_POST['atraso_limite'] ?? 30)))];
+            $e['config']['atraso'] = ['faixa' => max(1, min(120, (int) ($_POST['atraso_faixa'] ?? 30))), 'desconto' => brassagem_num($_POST['atraso_desconto'] ?? '') ?: '0',
+                'maximo' => brassagem_num($_POST['atraso_maximo'] ?? '') ?: '0'];
             dh_escala_salvar($e);
             ir('./?acao=escala-funcoes', 'Funções e diárias salvas.');
 
@@ -423,7 +423,7 @@ function escala_tela_semana(): void
           <button class="btn secundario">Importar</button>
         </form>
       </details>
-      <p class="dica sem-impressao">Digite o nome como na planilha: quem ainda não está na <a href="./?acao=escala-equipe">Equipe</a> entra como freelancer. Linha sem nome é vaga em aberto (fica amarela). Fixos ficam em azul e não entram no pagamento. Em "⋯" anota-se a hora em que chegou (o desconto por atraso sai sozinho; 🏠 = voltou para casa), falta, ajuste de valor ou o que foi pago no dia pelo caixa (sangria).</p>
+      <p class="dica sem-impressao">Digite o nome como na planilha: quem ainda não está na <a href="./?acao=escala-equipe">Equipe</a> entra como freelancer. Linha sem nome é vaga em aberto (fica amarela). Fixos ficam em azul e não entram no pagamento. Em "⋯" anota-se a hora em que chegou (o desconto por atraso sai sozinho), falta, ajuste de valor ou o que foi pago no dia pelo caixa (sangria).</p>
       <script>
         // 📤 WhatsApp: desenha a escala do dia numa imagem (cores da casa, sem as vagas) e abre o compartilhar do
         // celular; no computador, baixa a imagem e abre o WhatsApp com o texto
@@ -638,9 +638,19 @@ function escala_tela_funcoes(): void
         <div class="tres-campos">
           <label>A cada (minutos) <input name="atraso_faixa" inputmode="numeric" value="<?= (int) $a['faixa'] ?>"></label>
           <label>Desconta (R$) <input name="atraso_desconto" inputmode="decimal" value="<?= $v($a['desconto']) ?>"></label>
-          <label>Passou de (minutos), volta para casa <input name="atraso_limite" inputmode="numeric" value="<?= (int) $a['limite'] ?>"></label>
+          <label>No máximo (R$) <small>(0 = sem limite)</small><input name="atraso_maximo" inputmode="decimal" value="<?= $v($a['maximo'] ?? '0') ?>"></label>
         </div>
-        <p class="dica">Hoje: chegou até <?= (int) $a['faixa'] ?> min depois, −<?= e(dh_moeda((float) $a['desconto'])) ?>; até <?= 2 * (int) $a['faixa'] ?> min, −<?= e(dh_moeda(2 * (float) $a['desconto'])) ?>; passou de <?= (int) $a['limite'] ?> min, volta para casa sem diária.</p>
+        <?php
+          // Exemplo com entrada às 17h
+          $fx = max(1, (int) $a['faixa']); $ex = [];
+          for ($n = 1; $n <= 6; $n++) {
+              $d = $n * (float) $a['desconto'];
+              $max = (float) ($a['maximo'] ?? 0);
+              if ($max > 0 && $d >= $max) { $ex[] = 'depois de ' . date('H:i', strtotime('17:00 +' . ($n - 1) * $fx . ' minutes')) . ', −' . dh_moeda($max); break; }
+              $ex[] = 'até ' . date('H:i', strtotime('17:00 +' . $n * $fx . ' minutes')) . ', −' . dh_moeda($d);
+          }
+        ?>
+        <p class="dica">Com entrada às 17h: <?= e(implode('; ', $ex)) ?>. A diária sai sempre, com o desconto.</p>
         <div class="barra-salvar"><button class="btn primario">Salvar funções, diárias e atraso</button></div>
       </form>
     <?php

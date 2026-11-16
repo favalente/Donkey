@@ -22,13 +22,20 @@ const DH_ESCALA_FUNCOES_PADRAO = [
 // Ambientes onde trabalha o Atendente: na escala aparecem no lugar da função (como na planilha) e pagam a diária dela
 const DH_ESCALA_AMBIENTES_PADRAO = ['ROOFTOP' => 'ATENDENTE', 'PISO SUP.' => 'ATENDENTE', 'PISO INF.' => 'ATENDENTE', 'CALÇADA' => 'ATENDENTE'];
 // Atraso (a partir da entrada marcada na escala): R$ 10 a menos a cada 15 min; passou de 30 min, volta para casa sem diária
-const DH_ESCALA_ATRASO_PADRAO = ['faixa' => 15, 'desconto' => '10', 'limite' => 30];
+// Desconto por atraso: R$ 10 a cada 30 minutos (até 17:30 −10, até 18h −20, até 18:30 −30, depois −40), no máximo R$ 40.
+// Não existe mais "voltar para casa": a diária sai sempre, com o desconto.
+const DH_ESCALA_ATRASO_PADRAO = ['faixa' => 30, 'desconto' => '10', 'maximo' => '40'];
 
 function dh_escala(): array
 {
     $e = json_decode((string) @file_get_contents(DH_ARQ_ESCALA), true);
     $e = (is_array($e) ? $e : []) + ['pessoas' => [], 'funcoes' => [], 'dias' => [], 'pagamentos' => [], 'config' => []];
     $e['config'] += ['atraso' => DH_ESCALA_ATRASO_PADRAO];
+    // Regra nova de atraso (uma vez só): R$ 10 a cada 30 min, no máximo R$ 40, sem volta para casa
+    if (empty($e['config']['atraso_2026_11b'])) {
+        $e['config']['atraso'] = DH_ESCALA_ATRASO_PADRAO;
+        $e['config']['atraso_2026_11b'] = true;
+    }
     if (!$e['funcoes']) {
         $n = 0;
         foreach (array_keys(DH_ESCALA_FUNCOES_PADRAO + DH_ESCALA_AMBIENTES_PADRAO) as $f) {
@@ -302,11 +309,12 @@ function dh_escala_atraso(array $e, array $pos, string $dia = ''): array
     if ($atraso <= 0) {
         return [0, 0.0, false];
     }
-    $c = $e['config']['atraso'] ?? DH_ESCALA_ATRASO_PADRAO;
-    if ($atraso > (int) $c['limite']) {
-        return [$atraso, 0.0, true];
+    $c = ($e['config']['atraso'] ?? []) + DH_ESCALA_ATRASO_PADRAO;
+    $desc = (int) ceil($atraso / max(1, (int) $c['faixa'])) * (float) $c['desconto'];
+    if ((float) $c['maximo'] > 0) {
+        $desc = min($desc, (float) $c['maximo']);
     }
-    return [$atraso, (int) ceil($atraso / max(1, (int) $c['faixa'])) * (float) $c['desconto'], false];
+    return [$atraso, $desc, false];
 }
 
 // O que cada freelancer tem a receber numa semana: [pessoa_id => ['pessoa', 'itens' => [...], 'total']]
