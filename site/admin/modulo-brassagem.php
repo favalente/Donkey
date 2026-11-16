@@ -78,7 +78,7 @@ function brassagem_email_caderno(array $l, ?array $t): string
     $h .= '<table style="border-collapse:collapse;width:100%;max-width:640px;font-size:14px"><tr><th ' . $th . '>Data</th><th ' . $th . '>Medidas</th><th ' . $th . '>Anotação</th></tr>';
     foreach ($regs as $r) {
         $corr = brassagem_brix_corrigido($l, $r);
-        $h .= '<tr><td ' . $td . ' nowrap>' . e(date('d/m', strtotime($r['data']))) . '<br><span style="color:#777;font-size:12px">dia ' . dh_lote_dia($l, $r['data']) . '</span></td>'
+        $h .= '<tr><td ' . $td . ' nowrap>' . e(date('d/m', strtotime($r['data']))) . (brassagem_registro_hora($r) !== '' ? ' ' . e(brassagem_registro_hora($r)) : '') . '<br><span style="color:#777;font-size:12px">dia ' . dh_lote_dia($l, $r['data']) . '</span></td>'
             . '<td ' . $td . '>' . (brassagem_medidas($r) !== '' ? '<b>' . e(brassagem_medidas($r)) . '</b>' : '') . ($corr !== '' ? '<br><span style="color:#1d6e5e;font-size:12px">' . e($corr) . '</span>' : '') . '</td>'
             . '<td ' . $td . '>' . nl2br(e($r['texto'])) . '<br><span style="color:#777;font-size:12px">' . e($r['por']) . '</span></td></tr>';
     }
@@ -119,7 +119,7 @@ function brassagem_alertas_marcar(array $ids): void
 // Resumo de uma anotação para o alerta: "31/10: 4 °Bx · 1,1 kg · Medição 4 Brix"
 function brassagem_resumo_registro(array $r): string
 {
-    return date('d/m', strtotime($r['data'])) . ': ' . implode(' · ', array_filter([brassagem_medidas($r), $r['texto']]));
+    return date('d/m', strtotime($r['data'])) . (brassagem_registro_hora($r) !== '' ? ' ' . brassagem_registro_hora($r) : '') . ': ' . implode(' · ', array_filter([brassagem_medidas($r), $r['texto']]));
 }
 
 function brassagem_acao(string $acao): bool
@@ -253,7 +253,7 @@ function brassagem_acao(string $acao): bool
             if ($i === null) {
                 throw new RuntimeException('Lote não encontrado.');
             }
-            $r = ['data' => brassagem_data($_POST['data'] ?? ''), 'brix' => brassagem_num($_POST['brix'] ?? ''), 'pressao' => brassagem_num($_POST['pressao'] ?? ''),
+            $r = ['data' => brassagem_data($_POST['data'] ?? ''), 'hora' => dh_escala_hora((string) ($_POST['hora'] ?? '')), 'brix' => brassagem_num($_POST['brix'] ?? ''), 'pressao' => brassagem_num($_POST['pressao'] ?? ''),
                 'temp' => brassagem_num($_POST['temp'] ?? ''), 'texto' => $txt('texto', 500)];
             if ($r['data'] === '') {
                 throw new RuntimeException('Informe a data da anotação.');
@@ -453,6 +453,16 @@ function brassagem_abas(string $ativa): void
         echo '<a href="./?acao=' . $acao . '" class="' . ($acao === $ativa ? 'ativo' : '') . '"><span aria-hidden="true">' . $ic . '</span>' . e($rot) . '</a>';
     }
     echo '</nav>';
+}
+
+// Hora da anotação: a digitada ou, se não tiver, a hora em que foi feita (quando foi no mesmo dia)
+function brassagem_registro_hora(array $r): string
+{
+    if (($r['hora'] ?? '') !== '') {
+        return $r['hora'];
+    }
+    $em = (string) ($r['em'] ?? '');
+    return $em !== '' && substr($em, 0, 10) === ($r['data'] ?? '') && ($r['por'] ?? '') !== 'Caderno de papel' ? substr($em, 11, 5) : '';
 }
 
 function brassagem_tela(string $tela): bool
@@ -736,7 +746,7 @@ function brassagem_tela_lote(): void
           <ol class="caderno-linhas">
             <?php foreach ($regs as $r): $med = brassagem_medidas($r); ?>
               <li<?= !empty($r['evento']) ? ' class="linha-evento"' : '' ?>>
-                <span class="linha-data"><?= e(date('d/m', strtotime($r['data']))) ?><small>dia <?= dh_lote_dia($l, $r['data']) ?></small></span>
+                <span class="linha-data"><?= e(date('d/m', strtotime($r['data']))) ?><?php if (($hr = brassagem_registro_hora($r)) !== ''): ?><b class="linha-hora"><?= e($hr) ?></b><?php endif; ?><small>dia <?= dh_lote_dia($l, $r['data']) ?></small></span>
                 <span class="linha-texto">
                   <?php if ($med !== ''): ?><b class="linha-medidas"><?= e($med) ?></b><?php endif; ?>
                   <?php if (($corr = brassagem_brix_corrigido($l, $r)) !== ''): ?><small class="linha-corrigida">refratômetro corrigido: <?= e($corr) ?></small><?php endif; ?>
@@ -747,8 +757,11 @@ function brassagem_tela_lote(): void
                     <summary>editar</summary>
                     <form method="post" action="./?acao=brassagem-registro-salvar" class="form-registro">
                       <?= $csrf ?><input type="hidden" name="id" value="<?= e($l['id']) ?>"><input type="hidden" name="rid" value="<?= e($r['id']) ?>">
-                      <div class="quatro">
+                      <div class="duas">
                         <label>Data <input type="date" name="data" required value="<?= e($r['data']) ?>"></label>
+                        <label>Hora <input type="time" name="hora" value="<?= e(brassagem_registro_hora($r)) ?>"></label>
+                      </div>
+                      <div class="quatro">
                         <label>Brix <input name="brix" inputmode="decimal" value="<?= e($r['brix'] !== '' ? dh_num($r['brix']) : '') ?>"></label>
                         <label>Pressão <input name="pressao" inputmode="decimal" value="<?= e($r['pressao'] !== '' ? dh_num($r['pressao']) : '') ?>"></label>
                         <label>Temp. <input name="temp" inputmode="decimal" value="<?= e($r['temp'] !== '' ? dh_num($r['temp']) : '') ?>"></label>
@@ -767,8 +780,11 @@ function brassagem_tela_lote(): void
           <?php if ($l['status'] !== 'finalizado'): $rp = $posted && ($_GET['acao'] ?? '') === 'brassagem-registro-salvar' && empty($_POST['rid']) ? $_POST : []; ?>
             <form method="post" action="./?acao=brassagem-registro-salvar" class="form-registro sem-impressao" id="nova-anotacao">
               <?= $csrf ?><input type="hidden" name="id" value="<?= e($l['id']) ?>">
-              <div class="quatro">
+              <div class="duas">
                 <label>Data <input type="date" name="data" required value="<?= e($rp['data'] ?? date('Y-m-d')) ?>"></label>
+                <label>Hora <input type="time" name="hora" value="<?= e($rp['hora'] ?? date('H:i')) ?>"></label>
+              </div>
+              <div class="quatro">
                 <label>Brix <small>(°Bx)</small><input name="brix" inputmode="decimal" value="<?= e($rp['brix'] ?? '') ?>"></label>
                 <label>Pressão <small>(kg)</small><input name="pressao" inputmode="decimal" value="<?= e($rp['pressao'] ?? '') ?>"></label>
                 <label>Temp. <small>(°C)</small><input name="temp" inputmode="decimal" value="<?= e($rp['temp'] ?? '') ?>"></label>

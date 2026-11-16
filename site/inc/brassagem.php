@@ -91,7 +91,8 @@ function dh_lote_registros(array $l): array
         $r[] = ['id' => '', 'data' => substr($l['finalizado_em'], 0, 10), 'brix' => '', 'pressao' => '', 'temp' => '', 'texto' => '✅ Lote finalizado: tanque liberado.',
             'por' => '', 'em' => $l['finalizado_em'], 'evento' => 'finalizado'];
     }
-    usort($r, fn($a, $b) => [$a['data'], $a['em']] <=> [$b['data'], $b['em']]);
+    // Mesmo dia: pela hora anotada (ou a hora em que foi feita)
+    usort($r, fn($a, $b) => [$a['data'], ($a['hora'] ?? '') ?: substr((string) $a['em'], 11, 5), $a['em']] <=> [$b['data'], ($b['hora'] ?? '') ?: substr((string) $b['em'], 11, 5), $b['em']]);
     return $r;
 }
 

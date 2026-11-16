@@ -933,3 +933,4 @@ h3 small { font-weight: 400; color: var(--muted); }
 .radio-linha span { font-size: 1.25rem; padding: 2px 4px; border-radius: 8px; opacity: .25; filter: grayscale(1); }
 .radio-linha input:checked + span { opacity: 1; filter: none; background: var(--verde-bg); outline: 2px solid var(--ok); }
 .radio-linha input:focus-visible + span { outline: 3px solid var(--amber); }
+.linha-hora { display: block; font-size: .85rem; color: var(--ambar-txt); }
