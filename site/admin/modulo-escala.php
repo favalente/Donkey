@@ -43,7 +43,7 @@ function escala_ler_posicoes(array &$e, array $linhas, string $dia): array
         $pos[] = ['funcao' => dh_escala_funcao_por_nome($e, $funcao), 'pessoa' => $pessoa,
             'entrada' => dh_escala_hora((string) ($l['entrada'] ?? '')) ?: (dh_escala_chegada_combinada($e, $pessoa, $dia) ?: DH_ESCALA_ENTRADA_FREELA), 'saida' => dh_escala_hora((string) ($l['saida'] ?? '')) ?: $saidaPadrao,
             'falta' => !empty($l['falta']), 'ajuste' => brassagem_num(str_replace(['−', '+'], ['-', ''], (string) ($l['ajuste'] ?? ''))),
-            'motivo' => mb_substr(trim((string) ($l['motivo'] ?? '')), 0, 80), 'pago_caixa' => brassagem_num($l['pago_caixa'] ?? ''), 'chegada' => dh_escala_hora((string) ($l['chegada'] ?? ''))];
+            'motivo' => mb_substr(trim((string) ($l['motivo'] ?? '')), 0, 80), 'pago_caixa' => brassagem_num($l['pago_caixa'] ?? ''), 'chegada' => dh_escala_hora((string) ($l['chegada'] ?? '')), 'radio' => !empty($l['radio'])];
     }
     return $pos;
 }
@@ -375,11 +375,12 @@ function escala_tela_semana(): void
                 <tbody>
                   <?php foreach (array_merge($pos, $pos ? [] : array_fill(0, 1, ['funcao' => '', 'pessoa' => '', 'entrada' => '', 'saida' => '', 'falta' => false, 'ajuste' => '', 'motivo' => ''])) as $k => $p): $pe = dh_escala_pessoa($e, $p['pessoa']); $fu = dh_escala_funcao($e, $p['funcao']); ?>
                     <tr class="<?= $p['pessoa'] === '' && $p['funcao'] !== '' ? 'vaga' : '' ?><?= !empty($p['falta']) ? ' falta' : '' ?><?= $pe && $pe['tipo'] === 'fixo' ? ' fixo' : '' ?>">
-                      <td><input name="linhas[<?= $k ?>][nome]" list="lista-pessoas" value="<?= e($pe['nome'] ?? '') ?>" placeholder="vaga" aria-label="Nome" autocomplete="off"></td>
+                      <td><input name="linhas[<?= $k ?>][nome]" list="lista-pessoas" value="<?= e($pe['nome'] ?? '') ?>" placeholder="vaga" aria-label="Nome" autocomplete="off"><?php if (!empty($p['radio'])): ?><span class="so-impressao"> 📻</span><?php endif; ?></td>
                       <td><input name="linhas[<?= $k ?>][funcao]" list="lista-funcoes" value="<?= e($fu['nome'] ?? '') ?>" placeholder="Função" aria-label="Função" autocomplete="off"></td>
                       <td><input name="linhas[<?= $k ?>][entrada]" value="<?= e($p['entrada']) ?>" inputmode="numeric" placeholder="<?= DH_ESCALA_ENTRADA_FREELA ?>" aria-label="Entrada"></td>
                       <td><input name="linhas[<?= $k ?>][saida]" value="<?= e($p['saida']) ?>" inputmode="numeric" placeholder="<?= e(DH_ESCALA_DIAS_ABERTOS[(int) date('N', strtotime($dia))] ?? '23:00') ?>" aria-label="Saída"></td>
                       <td class="sem-impressao acoes-linha">
+                        <label class="radio-linha" title="Fica com o rádio"><input type="checkbox" name="linhas[<?= $k ?>][radio]" value="1" <?= !empty($p['radio']) ? 'checked' : '' ?> aria-label="Fica com o rádio"><span>📻</span></label>
                         <button type="button" class="tirar-linha" aria-label="Tirar esta linha" title="Tirar esta linha">×</button>
                         <details class="ajuste-linha"><summary title="Chegada, falta, ajuste de valor ou pago no caixa"><?php [$atrMin, $atrDesc, $atrCasa] = dh_escala_atraso($e, $p, $dia); ?><?= $atrCasa ? '🏠' : (!empty($p['falta']) ? 'falta' : (($p['ajuste'] ?? '') !== '' ? ((float) $p['ajuste'] > 0 ? '+' : '−') . dh_num(abs((float) $p['ajuste'])) : (($p['pago_caixa'] ?? '') === '' && $atrDesc == 0 ? '⋯' : ''))) ?><?= $atrDesc > 0 ? ' ⏰−' . dh_num($atrDesc) : '' ?><?= ($p['pago_caixa'] ?? '') !== '' ? ' 💵' : '' ?></summary>
                           <label>Chegou às <small>(em branco = chegou no horário; atrasado, o desconto sai sozinho)</small><input name="linhas[<?= $k ?>][chegada]" value="<?= e($p['chegada'] ?? '') ?>" inputmode="numeric" placeholder="ex.: 17:10"></label>
@@ -450,7 +451,12 @@ function escala_tela_semana(): void
               if (i % 2 === 0) { g.fillStyle = '#261e18'; g.fillRect(pad - 20, y, W - 2 * pad + 40, linhaH); }
               var meio = y + linhaH / 2 + 12;
               g.fillStyle = '#e9a23b'; g.font = fonte(800, 30); g.fillText(l.funcao, pad, meio, 310);
-              g.fillStyle = '#f4ece1'; g.font = fonte(700, 42); g.fillText(l.nome, pad + 340, meio, W - 2 * pad - 340 - 260);
+              g.fillStyle = '#f4ece1'; g.font = fonte(700, 42); g.fillText(l.nome, pad + 340, meio, W - 2 * pad - 340 - 260 - (l.radio ? 70 : 0));
+              if (l.radio) {
+                // Rádio de comunicação ao lado do nome
+                var wn = Math.min(g.measureText(l.nome).width, W - 2 * pad - 340 - 260 - 70);
+                g.font = '44px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.fillText('📻', pad + 340 + wn + 16, meio + 4);
+              }
               g.fillStyle = '#d2c3b0'; g.font = fonte(600, 34); g.textAlign = 'right'; g.fillText(l.entrada + ' – ' + l.saida, W - pad, meio); g.textAlign = 'left';
             });
             g.fillStyle = '#8a7a68'; g.font = fonte(600, 28);
@@ -503,7 +509,7 @@ function escala_texto_dia(array $e, string $dia): string
 {
     $t = '*Escala · ' . escala_dia_nome($dia) . "*\n";
     foreach (escala_dados_imagem($e, $dia)['linhas'] as $l) {
-        $t .= $l['funcao'] . ' – ' . $l['nome'] . ' · ' . $l['entrada'] . '–' . $l['saida'] . "\n";
+        $t .= $l['funcao'] . ' – ' . $l['nome'] . ($l['radio'] ? ' 📻' : '') . ' · ' . $l['entrada'] . '–' . $l['saida'] . "\n";
     }
     return $t;
 }
@@ -517,7 +523,7 @@ function escala_dados_imagem(array $e, string $dia): array
         if (!$pe) {
             continue;
         }
-        $linhas[] = ['funcao' => dh_escala_funcao($e, $p['funcao'])['nome'] ?? '', 'nome' => $pe['nome'], 'entrada' => $p['entrada'], 'saida' => $p['saida']];
+        $linhas[] = ['funcao' => dh_escala_funcao($e, $p['funcao'])['nome'] ?? '', 'nome' => $pe['nome'], 'entrada' => $p['entrada'], 'saida' => $p['saida'], 'radio' => !empty($p['radio'])];
     }
     return ['dia' => DH_DIAS_SEMANA_ESCALA[(int) date('N', strtotime($dia))], 'data' => date('d/m', strtotime($dia)), 'especial' => !empty($e['dias'][$dia]['especial']),
         'arquivo' => 'escala-' . $dia . '.png', 'linhas' => $linhas];
