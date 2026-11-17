@@ -19,7 +19,7 @@ const DH_PROG_MAX_SEMANA = 4;     // brassagens por semana, no máximo
 
 // Classificação inicial (dá para mudar na tela): palavras do nome da receita -> categoria
 const DH_PROG_CLASSES = [
-    'fora' => ['arabica', 'cacau brownie', 'pele encarnada', 'reliz', 'west coast chocolate'],
+    'fora' => ['arabica', 'cacau brownie', 'pele encarnada', 'reliz', 'west coast chocolate', 'brut'],
     'rara' => ['dragao do mar', 'maracutaia', 'metanoia', 'pifitao', 'red hop', 'rye se lascar', 'rye timbora', 'santa stout', 'strawberry', 'strowberry'],
     'sazonal' => ['assum preto', 'quadrupel', 'tripel', 'new england', 'all my love', 'caldo de bila', 'citranela', 'azedinha', 'velas do mucuripe'],
     'essencial' => ['stigm', 'mandacar', 'soft hop', 'softhop', 'premium lager', 'lager'],
@@ -258,4 +258,21 @@ function dh_prog_semana(array $b, string $segunda): array
     $l = $b['config']['programacao']['semanas'][$segunda] ?? [];
     usort($l, fn($x, $y) => strcmp($x['dia'] . $x['nome'], $y['dia'] . $y['nome']));
     return $l;
+}
+
+// Ajustes únicos na classificação já salva (o administrador pode mudar depois na tela)
+function dh_prog_migracoes(): void
+{
+    $b = dh_brassagem();
+    if (!empty($b['config']['programacao']['migr_brut_2026'])) {
+        return;
+    }
+    // Brut de Salvin: feita uma vez por ano e não será feita em 2026 -> fora da lista
+    foreach (dh_prog_grupos($b) as $k => $g) {
+        if (preg_match('/brut/', dh_sem_acento(mb_strtolower($g['nome'] . ' ' . $k)))) {
+            $b['config']['programacao']['grupos'][$k] = ['categoria' => 'fora', 'consumo' => $g['consumo'], 'dobro' => $g['dobro']];
+        }
+    }
+    $b['config']['programacao']['migr_brut_2026'] = true;
+    dh_brassagem_salvar($b);
 }

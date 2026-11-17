@@ -20,6 +20,7 @@ function programacao_acao(string $acao): bool
     switch ($acao) {
         case 'brassagem-programacao':
             exigir('brassagem');
+            dh_prog_migracoes();
             return true;
 
         case 'programacao-salvar':
