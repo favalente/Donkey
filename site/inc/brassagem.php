@@ -66,10 +66,20 @@ function dh_tanque_lote(array $b, string $tanque): ?array
 }
 
 // Próximo número de lote: o maior número já usado + 1
+// Lote da próxima brassagem: o da última brassagem (pela data) + 1, no mesmo formato ("L105" -> "L106",
+// "099" -> "100"). Se algum lote já usado for maior (ex.: brassagem lançada fora de ordem), segue o maior.
 function dh_lote_proximo(array $b): string
 {
-    $nums = array_map(fn($l) => (int) preg_replace('/\D/', '', $l['lote']), $b['lotes']);
-    return $nums ? (string) (max($nums) + 1) : '';
+    $lotes = array_values(array_filter($b['lotes'], fn($l) => preg_match('/\d/', (string) $l['lote'])));
+    if (!$lotes) {
+        return '';
+    }
+    usort($lotes, fn($x, $y) => [$y['data'] ?? '', $y['criado_em'] ?? ''] <=> [$x['data'] ?? '', $x['criado_em'] ?? '']);
+    $ult = (string) $lotes[0]['lote'];
+    $num = fn($t) => preg_match('/(\d+)(?!.*\d)/', $t, $m) ? (int) $m[1] : 0;
+    $maior = max(array_map(fn($l) => $num((string) $l['lote']), $lotes));
+    $prox = max($num($ult), $maior) + 1;
+    return preg_replace_callback('/(\d+)(?!.*\d)/', fn($m) => str_pad((string) $prox, strlen($m[1]), '0', STR_PAD_LEFT), $ult);
 }
 
 // Dia da produção (dia 0 = dia da brassagem)
