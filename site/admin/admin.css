@@ -641,8 +641,8 @@ h3 small { font-weight: 400; color: var(--muted); }
 .colar-excel > summary { cursor: pointer; color: var(--ambar-txt); font-weight: 600; }
 .colar-excel textarea { font-family: monospace; }
 .so-impressao { display: none; }
-@media (max-width: 560px) {
-  /* No celular: nome em cima; função, entrada e saída embaixo */
+@media (max-width: 560px), (min-width: 1000px) {
+  /* No celular e no computador (dois dias lado a lado): nome em cima, inteiro; função, entrada e saída embaixo */
   .tabela-escala thead { display: none; }
   .tabela-escala tr { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, .8fr) minmax(0, .8fr) auto; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); }
   .tabela-escala td { border: 0; padding: 0; width: auto !important; }
@@ -955,3 +955,11 @@ h3 small { font-weight: 400; color: var(--muted); }
 .notif-canal span { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 2px solid var(--line); font-size: 1.3rem; opacity: .35; filter: grayscale(1); }
 .notif-canal input:checked + span { opacity: 1; filter: none; border-color: var(--ok); background: var(--verde-bg); }
 .notif-canal input:focus-visible + span { outline: 3px solid var(--amber); }
+@media (min-width: 1000px) {
+  .tabela-escala tr { grid-template-columns: minmax(0, 1.6fr) minmax(0, .7fr) minmax(0, .7fr) auto; }
+  .tabela-escala td:nth-child(1) input { font-weight: 700; }
+  .tabela-escala td.acoes-linha { flex-direction: row; gap: 6px; }
+}
+/* Escala no computador: tela mais larga, para os dois dias lado a lado caberem */
+@media (min-width: 1000px) { .conteudo:has(.dias-escala) { max-width: 1240px; } }
+.tabela-escala td:nth-child(3) input, .tabela-escala td:nth-child(4) input { min-width: 54px; text-align: center; }
