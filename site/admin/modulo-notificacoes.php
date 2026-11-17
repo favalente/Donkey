@@ -50,7 +50,7 @@ function notificacoes_acao(string $acao): bool
             header('Content-Type: application/json; charset=utf-8');
             header('Cache-Control: no-store');
             $nova = null;
-            foreach (notificacoes_minhas() as $x) {
+            foreach (dh_notificacoes_do_usuario($usuario['login'], 'pode', null, 'push') as $x) {
                 if (!$x['lida']) {
                     $nova = $x;
                     break;
@@ -65,7 +65,11 @@ function notificacoes_acao(string $acao): bool
 
         case 'notificacoes-config-salvar':
             exigir_post();
-            dh_notif_prefs_salvar($usuario['login'], array_map('strval', (array) ($_POST['tipos'] ?? [])));
+            $email = trim((string) ($_POST['email'] ?? ''));
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new RuntimeException('E-mail inválido.');
+            }
+            dh_notif_prefs_salvar($usuario['login'], (array) ($_POST['canais'] ?? []), isset($_POST['email']) ? $email : null);
             ir('./?acao=notificacoes-config', 'Preferências salvas.');
 
         case 'notificacoes-papeis-salvar':
@@ -184,7 +188,7 @@ function notificacoes_tela_config(): void
           </span>
         </div>
         <p class="dica" id="push-ios" hidden>No iPhone: toque em <b>Compartilhar → Adicionar à Tela de Início</b>, abra o painel pelo ícone e volte aqui para ativar.</p>
-        <p class="dica">Vale para este aparelho; ative também nos outros que usar. Os interruptores abaixo valem para todos os seus aparelhos e para o 🔔 do painel.</p>
+        <p class="dica">Vale para este aparelho; ative também nos outros que usar. Abaixo você escolhe, para cada aviso, se recebe no 🔔 do painel, no 📲 celular e/ou por ✉️ e-mail.</p>
       <?php endif; ?>
 
       <h2>O que você quer receber</h2>
@@ -193,19 +197,23 @@ function notificacoes_tela_config(): void
       <?php else: ?>
         <form method="post" action="./?acao=notificacoes-config-salvar" class="notif-prefs" id="notif-prefs">
           <?= $csrf ?>
+          <label class="notif-email">Seu e-mail para as notificações <small>(para as que você marcar ✉️)</small>
+            <input type="email" name="email" value="<?= e($n['emails'][$usuario['login']] ?? '') ?>" placeholder="seu@email.com" autocomplete="email"></label>
+          <div class="notif-canais-topo" aria-hidden="true"><span></span><?php foreach (DH_NOTIF_CANAIS as [$ci, $cr]): ?><span><?= $ci ?><small><?= e($cr) ?></small></span><?php endforeach; ?></div>
           <?php foreach ($tipos as $k => [$perm, $ic, $nome, $desc, $quem]): ?>
-            <label class="interruptor">
+            <div class="notif-tipo">
               <span class="int-ic"><?= $ic ?></span>
               <span class="int-txt"><strong><?= e($nome) ?></strong><small><?= e($desc) ?></small></span>
-              <input type="checkbox" name="tipos[]" value="<?= e($k) ?>" <?= dh_notif_quer($n, $usuario['login'], $k) ? 'checked' : '' ?>>
-              <span class="int-chave" aria-hidden="true"></span>
-            </label>
+              <?php foreach (DH_NOTIF_CANAIS as $canal => [$ci, $cr]): ?>
+                <label class="notif-canal" title="<?= e($cr) ?>"><input type="hidden" name="canais[<?= e($k) ?>][_]" value="1"><input type="checkbox" name="canais[<?= e($k) ?>][<?= $canal ?>]" value="1" <?= dh_notif_canal($n, $usuario['login'], $k, $canal) ? 'checked' : '' ?> aria-label="<?= e($nome . ' · ' . $cr) ?>"><span><?= $ci ?></span></label>
+              <?php endforeach; ?>
+            </div>
           <?php endforeach; ?>
-          <noscript><button class="btn primario">Salvar</button></noscript>
+          <button class="btn primario">Salvar</button>
         </form>
         <script>
-          // Salva na hora ao mexer no interruptor
-          document.querySelectorAll('#notif-prefs input[type=checkbox]').forEach(function (c) {
+          // Salva na hora ao tocar num canal
+          document.querySelectorAll('#notif-prefs input[type=checkbox], #notif-prefs input[type=email]').forEach(function (c) {
             c.addEventListener('change', function () { document.getElementById('notif-prefs').submit(); });
           });
         </script>

@@ -87,13 +87,33 @@ function dh_notif_papeis_salvar(array $papeis): void
     }
 }
 
-// O usuário quer esse tipo? (padrão: sim)
-function dh_notif_quer(array $n, string $login, string $tipo): bool
+// Por onde o usuário quer receber cada tipo: 🔔 sino, 📲 celular (push) e ✉️ e-mail.
+// Padrão: sino e celular ligados, e-mail desligado. (Preferências antigas eram só ligado/desligado.)
+const DH_NOTIF_CANAIS = ['sino' => ['🔔', 'Sino'], 'push' => ['📲', 'Celular'], 'email' => ['✉️', 'E-mail']];
+
+function dh_notif_canal(array $n, string $login, string $tipo, string $canal): bool
 {
-    return $tipo === '' || ($n['prefs'][$login][$tipo] ?? true) !== false;
+    if ($tipo === '') {
+        return $canal !== 'email';
+    }
+    $p = $n['prefs'][$login][$tipo] ?? null;
+    if (is_array($p)) {
+        return !empty($p[$canal]);
+    }
+    if ($p === false) {
+        return false;
+    }
+    return $canal !== 'email';
 }
 
-function dh_notif_prefs_salvar(string $login, array $ligados): void
+// Compatível com o uso antigo: recebe no sino?
+function dh_notif_quer(array $n, string $login, string $tipo): bool
+{
+    return dh_notif_canal($n, $login, $tipo, 'sino');
+}
+
+// $canais = [tipo => [canal => bool]]; $email = e-mail do usuário para as notificações
+function dh_notif_prefs_salvar(string $login, array $canais, ?string $email = null): void
 {
     $fp = @fopen(DH_ARQ_NOTIFICACOES . '.lock', 'c');
     if ($fp) {
@@ -101,7 +121,12 @@ function dh_notif_prefs_salvar(string $login, array $ligados): void
     }
     $n = dh_notificacoes();
     foreach (DH_NOTIF_TIPOS as $tipo => $_) {
-        $n['prefs'][$login][$tipo] = in_array($tipo, $ligados, true);
+        if (isset($canais[$tipo])) {
+            $n['prefs'][$login][$tipo] = array_map(fn($c) => !empty($canais[$tipo][$c]), array_combine(array_keys(DH_NOTIF_CANAIS), array_keys(DH_NOTIF_CANAIS)));
+        }
+    }
+    if ($email !== null) {
+        $n['emails'][$login] = $email;
     }
     dh_notificacoes_salvar($n);
     if ($fp) {
@@ -113,7 +138,7 @@ function dh_notif_prefs_salvar(string $login, array $ligados): void
 function dh_notificacoes(): array
 {
     $n = json_decode((string) @file_get_contents(DH_ARQ_NOTIFICACOES), true);
-    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => [], 'prefs' => [], 'papeis' => []];
+    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => [], 'prefs' => [], 'papeis' => [], 'emails' => []];
 }
 
 function dh_notificacoes_salvar(array $n): void
@@ -161,8 +186,36 @@ function dh_notificar(string $perm, string $icone, string $titulo, string $texto
             flock($fp, LOCK_UN);
             fclose($fp);
         }
-        // Celulares: depois que a página já foi entregue a quem fez a ação (não deixa a assinatura esperando)
-        $destino = array_values(array_filter($para ?: dh_notificacao_destinatarios($perm, $login), fn($l) => dh_notif_quer($n, $l, $tipo)));
+        // Celulares e e-mails: depois que a página já foi entregue a quem fez a ação (não deixa a assinatura esperando)
+        $todos = $para ?: dh_notificacao_destinatarios($perm, $login);
+        $destino = array_values(array_filter($todos, fn($l) => dh_notif_canal($n, $l, $tipo, 'push')));
+        $emails = [];
+        foreach ($todos as $l) {
+            if (dh_notif_canal($n, $l, $tipo, 'email') && filter_var($n['emails'][$l] ?? '', FILTER_VALIDATE_EMAIL)) {
+                $emails[] = $n['emails'][$l];
+            }
+        }
+        if ($emails) {
+            $url = dh_url_site() . 'admin/' . (str_starts_with($link, './') ? substr($link, 2) : '?acao=notificacoes');
+            $html = '<p style="font-size:18px"><b>' . e($icone . ' ' . $titulo) . '</b></p>' . ($texto !== '' ? '<p>' . nl2br(e($texto)) . '</p>' : '')
+                . '<p><a href="' . e($url) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir no painel</a></p>'
+                . '<p style="color:#777;font-size:12px">Você escolhe o que recebe por e-mail em Notificações → ⚙ Configurar.</p>';
+            $assunto = $titulo . ' · Donkey Head Cervejaria';
+            register_shutdown_function(function () use ($emails, $assunto, $html) {
+                if (session_status() === PHP_SESSION_ACTIVE) {
+                    session_write_close();
+                }
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+                foreach (array_unique($emails) as $em) {
+                    try {
+                        dh_email($em, $assunto, $html);
+                    } catch (Throwable $t) {
+                    }
+                }
+            });
+        }
         if ($destino && dh_push_inscricoes()) {
             register_shutdown_function(function () use ($destino) {
                 if (session_status() === PHP_SESSION_ACTIVE) {
@@ -184,7 +237,7 @@ function dh_notificar(string $perm, string $icone, string $titulo, string $texto
 
 // Notificações que o usuário pode ver (mais novas primeiro), cada uma com 'lida' => bool.
 // $pode: função que diz se o usuário tem a permissão.
-function dh_notificacoes_do_usuario(string $login, callable $pode, ?array $n = null): array
+function dh_notificacoes_do_usuario(string $login, callable $pode, ?array $n = null, string $canal = 'sino'): array
 {
     $n ??= dh_notificacoes();
     $ate = $n['todas_ate'][$login] ?? '';
@@ -192,7 +245,7 @@ function dh_notificacoes_do_usuario(string $login, callable $pode, ?array $n = n
     $r = [];
     foreach (array_reverse($n['itens']) as $it) {
         $visivel = (isset($it['para']) ? in_array($login, $it['para'], true) : (($it['login'] ?? '') !== $login && $pode($it['perm'])))
-            && dh_notif_quer($n, $login, (string) ($it['tipo'] ?? ''));
+            && dh_notif_canal($n, $login, (string) ($it['tipo'] ?? ''), $canal);
         if (!$visivel) {
             continue;
         }
