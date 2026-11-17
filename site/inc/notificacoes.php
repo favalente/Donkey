@@ -42,8 +42,15 @@ function dh_notif_papeis(string $tipo, ?array $n = null): array
 
 // O tipo vale para esse usuário? Pela função dele (tabela "Quem recebe") ou, automaticamente, porque a aba
 // do tipo foi liberada para ele em Usuários → Permissões (respeitando se o tipo é só da equipe ou só de administradores)
-function dh_notif_tipo_para(string $tipo, array $usuario, ?array $n = null): bool
+function dh_notif_tipo_para(string $tipo, array $usuario, ?array $n = null, ?string $login = null): bool
 {
+    // Escolha feita para essa pessoa em Notificações → ⚙ Configurar: recebe se algum canal estiver ligado
+    $login ??= (string) ($usuario['login'] ?? '');
+    $n ??= dh_notificacoes();
+    $pref = $n['prefs'][$login][$tipo] ?? null;
+    if (is_array($pref) && !empty($pref['_admin'])) {
+        return !empty($pref['sino']) || !empty($pref['push']) || !empty($pref['email']);
+    }
     [$perm, , , , $quem] = (DH_NOTIF_TIPOS[$tipo] ?? ['']) + [4 => 'todos'];
     $papel = $usuario['papel'] ?? '';
     // Aba que a função teria, mas foi tirada dessa pessoa em Permissões: não recebe pela função
@@ -63,7 +70,7 @@ function dh_notif_destinatarios_tipo(string $tipo, string $exceto = '', ?array $
     $u = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
     $r = [];
     foreach (is_array($u) ? $u : [] as $l => $x) {
-        if ((string) $l !== $exceto && dh_notif_tipo_para($tipo, $x, $n)) {
+        if ((string) $l !== $exceto && dh_notif_tipo_para($tipo, $x, $n, (string) $l)) {
             $r[] = (string) $l;
         }
     }
@@ -93,7 +100,9 @@ const DH_NOTIF_CANAIS = ['sino' => ['🔔', 'Sino'], 'push' => ['📲', 'Celular
 
 // Avisos que já chegavam por e-mail (no contato@ da Donkey): o ✉️ deles já vem ligado e o e-mail sai
 // com o conteúdo completo de antes (dh_email_equipe), para quem deixar o ✉️ ligado
-const DH_NOTIF_EMAIL_PADRAO = ['cliente_assinou', 'pedido_chope', 'orcamento_aprovado'];
+const DH_NOTIF_EMAIL_PADRAO = ['cliente_assinou', 'pedido_chope', 'orcamento_aprovado', 'contrato_assinado', 'evento_lembrete', 'brassagem_lembrete'];
+// Avisos cujo e-mail é montado pela própria parte do sistema (com o conteúdo completo): não sai o e-mail simples
+const DH_NOTIF_EMAIL_PROPRIO = ['cliente_assinou', 'pedido_chope', 'orcamento_aprovado', 'contrato_assinado', 'evento_lembrete', 'brassagem_caderno', 'brassagem_lembrete'];
 
 function dh_notif_canal(array $n, string $login, string $tipo, string $canal): bool
 {
@@ -107,7 +116,15 @@ function dh_notif_canal(array $n, string $login, string $tipo, string $canal): b
     if ($p === false) {
         return false;
     }
-    return $canal !== 'email' || in_array($tipo, DH_NOTIF_EMAIL_PADRAO, true);
+    // ✉️ já vem ligado só para administradores (quem recebia esses e-mails no contato@); a equipe escolhe
+    return $canal !== 'email' || (in_array($tipo, DH_NOTIF_EMAIL_PADRAO, true) && dh_notif_papel_de($login) === 'admin');
+}
+
+function dh_notif_papel_de(string $login): string
+{
+    static $u = null;
+    $u ??= json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
+    return (string) ($u[$login]['papel'] ?? '');
 }
 
 // E-mail de um usuário para as notificações: o que ele cadastrou ou, para o administrador, o da Donkey
@@ -131,6 +148,9 @@ function dh_notif_emails_tipo(string $tipo): array
             $r[mb_strtolower($em)] = $em;
         }
     }
+    foreach ($n['extras'][$tipo] ?? [] as $em) {
+        $r[mb_strtolower($em)] = $em;
+    }
     return array_values($r);
 }
 
@@ -141,7 +161,7 @@ function dh_notif_quer(array $n, string $login, string $tipo): bool
 }
 
 // $canais = [tipo => [canal => bool]]; $email = e-mail do usuário para as notificações
-function dh_notif_prefs_salvar(string $login, array $canais, ?string $email = null): void
+function dh_notif_prefs_salvar(string $login, array $canais, ?string $email = null, bool $peloAdmin = false): void
 {
     $fp = @fopen(DH_ARQ_NOTIFICACOES . '.lock', 'c');
     if ($fp) {
@@ -150,7 +170,8 @@ function dh_notif_prefs_salvar(string $login, array $canais, ?string $email = nu
     $n = dh_notificacoes();
     foreach (DH_NOTIF_TIPOS as $tipo => $_) {
         if (isset($canais[$tipo])) {
-            $n['prefs'][$login][$tipo] = array_map(fn($c) => !empty($canais[$tipo][$c]), array_combine(array_keys(DH_NOTIF_CANAIS), array_keys(DH_NOTIF_CANAIS)));
+            $n['prefs'][$login][$tipo] = array_map(fn($c) => !empty($canais[$tipo][$c]), array_combine(array_keys(DH_NOTIF_CANAIS), array_keys(DH_NOTIF_CANAIS)))
+                + ($peloAdmin || !empty($n['prefs'][$login][$tipo]['_admin']) ? ['_admin' => true] : []);
         }
     }
     if ($email !== null) {
@@ -163,10 +184,57 @@ function dh_notif_prefs_salvar(string $login, array $canais, ?string $email = nu
     }
 }
 
+// Tira as escolhas feitas pelo administrador para essa pessoa (volta ao padrão da função)
+function dh_notif_prefs_limpar(string $login): void
+{
+    $n = dh_notificacoes();
+    foreach ((array) ($n['prefs'][$login] ?? []) as $tipo => $p) {
+        if (is_array($p) && !empty($p['_admin'])) {
+            unset($n['prefs'][$login][$tipo]);
+        }
+    }
+    dh_notificacoes_salvar($n);
+}
+
 function dh_notificacoes(): array
 {
     $n = json_decode((string) @file_get_contents(DH_ARQ_NOTIFICACOES), true);
-    return (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => [], 'prefs' => [], 'papeis' => [], 'emails' => []];
+    $n = (is_array($n) ? $n : []) + ['itens' => [], 'lidos' => [], 'todas_ate' => [], 'vistas_ate' => [], 'prefs' => [], 'papeis' => [], 'emails' => [], 'extras' => []];
+    if (empty($n['migr_emails_2026'])) {
+        $n = dh_notif_migrar_emails($n);
+    }
+    return $n;
+}
+
+// Uma vez só: os e-mails que ficavam espalhados (lista de cópia dos contratos, alertas e lembrete da
+// brassagem) passam para "E-mails de fora" de cada notificação, aqui em Notificações
+function dh_notif_migrar_emails(array $n): array
+{
+    $n['migr_emails_2026'] = true;
+    $copia = array_values(array_filter((array) (dh_contratos()['config']['emails_copia'] ?? []), fn($e) => mb_strtolower($e) !== mb_strtolower(DH_EMPRESA['email'])));
+    $b = dh_brassagem();
+    $add = function (string $tipo, array $lista) use (&$n) {
+        $n['extras'][$tipo] = array_values(array_unique(array_merge($n['extras'][$tipo] ?? [], array_filter($lista, fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL)))));
+    };
+    $add('contrato_assinado', $copia);
+    $add('evento_lembrete', $copia);
+    if (!empty($b['config']['alerta_email_ligado'])) {
+        $add('brassagem_caderno', (array) ($b['config']['alerta_emails'] ?? []));
+    }
+    $add('brassagem_lembrete', (array) ($b['config']['lembrete']['emails'] ?? []));
+    if (is_file(DH_ARQ_NOTIFICACOES) || array_filter($n['extras'])) {
+        dh_notificacoes_salvar($n);
+    }
+    return $n;
+}
+
+function dh_notif_extras_salvar(array $extras): void
+{
+    $n = dh_notificacoes();
+    foreach (DH_NOTIF_TIPOS as $tipo => $_) {
+        $n['extras'][$tipo] = array_values(array_filter(array_map('trim', (array) ($extras[$tipo] ?? [])), fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL)));
+    }
+    dh_notificacoes_salvar($n);
 }
 
 function dh_notificacoes_salvar(array $n): void
@@ -219,7 +287,7 @@ function dh_notificar(string $perm, string $icone, string $titulo, string $texto
         $destino = array_values(array_filter($todos, fn($l) => dh_notif_canal($n, $l, $tipo, 'push')));
         $emails = [];
         // Os avisos que já tinham e-mail próprio (mais completo) saem por dh_email_equipe
-        foreach (in_array($tipo, DH_NOTIF_EMAIL_PADRAO, true) ? [] : $todos as $l) {
+        foreach (in_array($tipo, DH_NOTIF_EMAIL_PROPRIO, true) ? [] : $todos as $l) {
             if (dh_notif_canal($n, $l, $tipo, 'email') && ($em = dh_notif_email_de($n, $l)) !== '') {
                 $emails[] = $em;
             }

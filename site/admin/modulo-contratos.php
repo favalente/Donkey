@@ -529,12 +529,10 @@ function contratos_acao(string $acao): bool
             if ($nome === '' || !dh_cpf_valido($cpf)) {
                 throw new RuntimeException('Informe o nome e um CPF válido do representante.');
             }
-            $copia = dh_emails_lista((string) ($_POST['emails_copia'] ?? ''));
             $instrucoes = mb_substr(trim(str_replace("\r", '', (string) ($_POST['pagamento_instrucoes'] ?? ''))), 0, 500);
             $c = dh_contratos();
             $c['config']['representante_nome'] = $nome;
             $c['config']['representante_cpf'] = dh_so_digitos($cpf);
-            $c['config']['emails_copia'] = $copia;
             $c['config']['pagamento_instrucoes'] = $instrucoes;
             dh_contratos_salvar($c);
             // Senha do e-mail: só troca se digitou uma nova (em branco mantém a atual)
@@ -750,13 +748,11 @@ function contratos_tela_config(): void
         <?= $csrf ?>
         <label>Nome do representante <input name="representante_nome" value="<?= e($c['config']['representante_nome'] ?? 'Fábio Alan Urbano Valente') ?>" required maxlength="100"></label>
         <label>CPF do representante <input name="representante_cpf" value="<?= e(dh_cpf_formatar($c['config']['representante_cpf'] ?? '')) ?>" required inputmode="numeric" placeholder="000.000.000-00"></label>
-        <label>E-mails que recebem cópia dos contratos <small>(um por linha)</small>
-          <textarea name="emails_copia" rows="4" autocapitalize="none" spellcheck="false" placeholder="financeiro@exemplo.com.br"><?= e(implode("\n", $_POST ? (array) preg_split('/[\s,;]+/', trim((string) ($_POST['emails_copia'] ?? ''))) : ($c['config']['emails_copia'] ?? []))) ?></textarea></label>
         <label>Dados para pagamento <small>(aparecem no pedido do cliente, ex.: chave Pix e nome de quem recebe)</small>
           <textarea name="pagamento_instrucoes" rows="3" maxlength="500" placeholder="Pix (CNPJ): 00.000.000/0000-00 · Nome de quem recebe"><?= e($_POST ? (string) ($_POST['pagamento_instrucoes'] ?? '') : ($c['config']['pagamento_instrucoes'] ?? '')) ?></textarea></label>
-        <p class="dica">Além de <?= e(DH_EMPRESA['email']) ?>, esses e-mails recebem a cópia de cada contrato depois que as duas partes assinam. Os avisos do andamento (pedido preenchido, cliente assinou) vão só para <?= e(DH_EMPRESA['email']) ?>.</p>
+        <p class="dica">Quem recebe a cópia de cada contrato assinado (e os avisos de pedido e de cliente que assinou) se escolhe em <a href="./?acao=notificacoes-config">Notificações → ⚙ Configurar</a>: ✉️ em "Contrato assinado". Hoje: <?= e(implode(', ', dh_emails_equipe())) ?>.</p>
         <h2>Lembretes de evento</h2>
-        <p class="dica">Esses mesmos e-mails (e <?= e(DH_EMPRESA['email']) ?>) recebem um lembrete na véspera e outro no dia de cada evento, a partir das 7h, com os dados completos. Evento no domingo: o lembrete da véspera sai na sexta. Valem os contratos assinados e os que aguardam assinatura.</p>
+        <p class="dica">Quem tem ✉️ em "Lembrete de evento" (Notificações → ⚙ Configurar) recebe um lembrete na véspera e outro no dia de cada evento, a partir das 7h, com os dados completos. Evento no domingo: o lembrete da véspera sai na sexta. Valem os contratos assinados e os que aguardam assinatura.</p>
         <?php $prox = dh_lembretes_proximos(); ?>
         <?php if ($prox): ?>
           <ul class="lista-lembretes">

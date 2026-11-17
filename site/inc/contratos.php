@@ -775,7 +775,8 @@ function dh_contrato_enviar_copia(array $k, array $para): array
 // Quem recebe os avisos e as cópias dos contratos: o e-mail da Donkey + os extras das Configurações
 function dh_emails_equipe(): array
 {
-    return array_values(array_unique([DH_EMPRESA['email'], ...(array) (dh_contratos()['config']['emails_copia'] ?? [])]));
+    // Quem recebe "Contrato assinado" por e-mail (Notificações → ⚙ Configurar)
+    return dh_notif_emails_tipo('contrato_assinado');
 }
 
 // Avisos do andamento (pedido preenchido, cliente assinou, orçamento aprovado): para quem deixou o ✉️

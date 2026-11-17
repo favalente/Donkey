@@ -32,7 +32,7 @@ function brassagem_alertar(?array $l, string $oQue): void
         './?acao=' . ($l ? 'brassagem-lote&id=' . rawurlencode($l['id']) : 'brassagem'), $usuario['login'], [], 'brassagem_caderno');
     // O aviso vai pelo 🔔 e pelo celular; e-mail só se estiver ligado em ⚙ Tanques (desligado por padrão).
     // O que o administrador muda não vira e-mail (ele já sabe).
-    if ($usuario['papel'] === 'admin' || empty($b['config']['alerta_email_ligado'])) {
+    if ($usuario['papel'] === 'admin') {
         return;
     }
     $link = dh_url_site() . 'admin/?acao=' . ($l && dh_brassagem_indice($b['lotes'], $l['id']) !== null ? 'brassagem-lote&id=' . rawurlencode($l['id']) : 'brassagem');
@@ -40,8 +40,8 @@ function brassagem_alertar(?array $l, string $oQue): void
         . '<p><a href="' . e($link) . '" style="display:inline-block;background:#e9a23b;color:#1a120a;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Abrir o caderno</a></p>'
         . ($l ? brassagem_email_caderno($l, $t) : '');
     $assunto = 'Brassagem: ' . $titulo . ' · ' . mb_strimwidth(strtok($oQue, "\n"), 0, 60, '…');
-    $para = $b['config']['alerta_emails'] ?? [];
-    foreach ($para ?: [DH_EMPRESA['email']] as $email) {
+    // Quem deixou o ✉️ ligado em "Caderno de brassagem atualizado" (Notificações → ⚙ Configurar)
+    foreach (dh_notif_emails_tipo('brassagem_caderno') as $email) {
         dh_email($email, $assunto, $html);
     }
 }
@@ -845,22 +845,15 @@ function brassagem_tela_config(): void
       <?php $form(['id' => '', 'nome' => 'Tanque ' . (count($b['tanques']) + 1), 'capacidade' => '', 'litros_cm' => '', 'ativo' => true]); ?>
       <?php if (pode('usuarios')): ?>
         <h2>Alertas de caderno atualizado</h2>
-        <p class="dica">A cada lote novo, anotação, mudança de situação ou caderno alterado, chega o aviso no 🔔 e no celular (Notificações → ⚙ Configurar). O e-mail é opcional: alterações feitas por administradores não geram e-mail; sem nenhum endereço, vai para <?= e(DH_EMPRESA['email']) ?>.</p>
-        <form method="post" action="./?acao=brassagem-alertas-config" class="form-cerveja">
-          <?= $csrf ?>
-          <label class="check"><input type="checkbox" name="alerta_email_ligado" value="1" <?= !empty($b['config']['alerta_email_ligado']) ? 'checked' : '' ?>> Também mandar cada alteração por e-mail</label>
-          <label>E-mails que recebem os alertas <small>(um por linha)</small><textarea name="alerta_emails" rows="2"><?= e(implode("\n", $b['config']['alerta_emails'] ?? [])) ?></textarea></label>
-          <button class="btn primario">Salvar</button>
-        </form>
+        <p class="dica">A cada lote novo, anotação, mudança de situação ou caderno alterado, sai o aviso "Caderno de brassagem atualizado". Quem recebe e por onde (🔔, 📲, ✉️) se escolhe num lugar só: <a href="./?acao=notificacoes-config">Notificações → ⚙ Configurar</a>. Alterações feitas por administradores não geram e-mail.</p>
       <?php endif; ?>
       <?php if (pode('usuarios')): $lc = dh_brassagem_lembrete_config($b); $quem = dh_brassagem_lembrete_logins(); ?>
         <h2>Lembrete diário dos cadernos</h2>
-        <p class="dica">Todo dia, a partir da hora escolhida, a equipe da cervejaria recebe um lembrete para atualizar os cadernos, com os tanques que têm cerveja e a última anotação de cada um (em vermelho os que estão sem anotação hoje). No 🔔 e no celular: <?= $quem ? '<b>' . e(implode(', ', $quem)) . '</b>' : '<b>nenhum usuário</b> (crie um usuário com a função Cervejaria)' ?>. Por e-mail: os endereços abaixo. Sem tanque com cerveja, não sai lembrete.</p>
+        <p class="dica">Todo dia, a partir da hora escolhida, a equipe da cervejaria recebe um lembrete para atualizar os cadernos, com os tanques que têm cerveja e a última anotação de cada um (em vermelho os que estão sem anotação hoje). No 🔔 e no celular: <?= $quem ? '<b>' . e(implode(', ', $quem)) . '</b>' : '<b>nenhum usuário</b> (crie um usuário com a função Cervejaria)' ?>. Por e-mail e para outras pessoas: <a href="./?acao=notificacoes-config">Notificações → ⚙ Configurar</a> ("Lembrete dos cadernos de brassagem"). Sem tanque com cerveja, não sai lembrete.</p>
         <form method="post" action="./?acao=brassagem-lembrete-config" class="form-cerveja">
           <?= $csrf ?>
           <label class="check"><input type="checkbox" name="ativo" value="1" <?= !empty($lc['ativo']) ? 'checked' : '' ?>> Enviar o lembrete todos os dias</label>
           <label>A partir de que horas <select name="hora"><?php for ($h = 6; $h <= 22; $h++): ?><option value="<?= $h ?>" <?= (int) $lc['hora'] === $h ? 'selected' : '' ?>><?= $h ?>h</option><?php endfor; ?></select></label>
-          <label>E-mails da equipe da cervejaria <small>(um por linha)</small><textarea name="emails" rows="2"><?= e(implode("\n", $lc['emails'])) ?></textarea></label>
           <button class="btn primario">Salvar</button>
         </form>
       <?php endif; ?>

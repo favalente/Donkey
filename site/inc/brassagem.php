@@ -211,7 +211,7 @@ function dh_brassagem_lembrete_rodar(array $enviados): ?string
     if ($logins) {
         dh_notificar('brassagem', '📓', 'Lembrete: atualize os cadernos de brassagem', $resumo . '.', './?acao=brassagem', '', [], 'brassagem_lembrete');
     }
-    $emails = $cfg['emails'] ?? [];
+    $emails = dh_notif_emails_tipo('brassagem_lembrete');
     if ($emails) {
         $td = 'style="padding:6px 8px;border-bottom:1px solid #e3d9cc"';
         $html = '<p>Bom dia! Hora de atualizar os cadernos de brassagem de hoje (' . date('d/m/Y') . ').</p>'

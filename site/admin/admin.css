@@ -950,6 +950,10 @@ h3 small { font-weight: 400; color: var(--muted); }
 .notif-canais-topo span:first-child { grid-column: 1 / 3; }
 .notif-tipo { padding: 12px 10px; margin-bottom: 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
 .notif-tipo .int-txt small { display: block; color: var(--muted); font-size: .85rem; }
+.notif-tipo.fora { opacity: .55; }
+.notif-tipo.fora:hover, .notif-tipo.fora:focus-within { opacity: 1; }
+.emails-fora label small { display: block; color: var(--muted); font-size: .82rem; margin-top: 2px; overflow-wrap: anywhere; }
+.emails-fora textarea { min-height: 42px; }
 .notif-canal { display: grid; place-items: center; margin: 0; cursor: pointer; }
 .notif-canal input[type=checkbox] { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .notif-canal span { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 2px solid var(--line); font-size: 1.3rem; opacity: .35; filter: grayscale(1); }

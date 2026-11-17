@@ -1,5 +1,5 @@
 <?php
-// Lembretes de evento por e-mail para quem recebe a cópia dos contratos (dh_emails_equipe): um na véspera
+// Lembretes de evento por e-mail para quem tem ✉️ em "Lembrete de evento" (Notificações): um na véspera
 // e outro no dia. A expedição só trabalha de segunda a sexta: evento no domingo tem o lembrete da véspera
 // na sexta (os eventos do fim de semana são preparados na sexta). Valem os contratos assinados e os que
 // aguardam assinatura; o dia do evento é a entrega do chope (comodato) ou a data do evento.
@@ -88,7 +88,7 @@ function dh_lembretes_rodar(): array
             continue;
         }
         [$assunto, $html] = dh_lembrete_email($k, $tipo, $data);
-        foreach (dh_emails_equipe() as $email) {
+        foreach (dh_notif_emails_tipo('evento_lembrete') as $email) {
             dh_email($email, $assunto, $html);
         }
         // Também no 🔔 e no celular, para as funções escolhidas (Notificações → ⚙ Configurar)

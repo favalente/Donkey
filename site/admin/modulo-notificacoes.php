@@ -64,13 +64,39 @@ function notificacoes_acao(string $acao): bool
             return true;
 
         case 'notificacoes-config-salvar':
+            // O próprio usuário ou, para o administrador, qualquer usuário (escolhido no topo, como em Permissões)
             exigir_post();
+            global $usuarios;
+            $alvo = (string) ($_POST['login'] ?? $usuario['login']);
+            $admin = pode('usuarios');
+            if ($alvo !== $usuario['login'] && (!$admin || !isset($usuarios[$alvo]))) {
+                throw new RuntimeException('Usuário não encontrado.');
+            }
             $email = trim((string) ($_POST['email'] ?? ''));
             if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 throw new RuntimeException('E-mail inválido.');
             }
-            dh_notif_prefs_salvar($usuario['login'], (array) ($_POST['canais'] ?? []), isset($_POST['email']) ? $email : null);
-            ir('./?acao=notificacoes-config', 'Preferências salvas.');
+            dh_notif_prefs_salvar($alvo, (array) ($_POST['canais'] ?? []), isset($_POST['email']) ? $email : null, $admin);
+            ir('./?acao=notificacoes-config' . ($alvo !== $usuario['login'] ? '&login=' . rawurlencode($alvo) : ''), 'Notificações de ' . ($usuarios[$alvo]['nome'] ?? $alvo) . ' salvas.');
+
+        case 'notificacoes-usuario-padrao':
+            // Volta a pessoa ao padrão da função (tabela "Quem recebe")
+            exigir_post();
+            exigir('usuarios');
+            $alvo = (string) ($_POST['login'] ?? '');
+            dh_notif_prefs_limpar($alvo);
+            ir('./?acao=notificacoes-config&login=' . rawurlencode($alvo), 'Voltou ao padrão da função.');
+
+        case 'notificacoes-extras-salvar':
+            exigir_post();
+            exigir('usuarios');
+            $extras = [];
+            foreach ((array) ($_POST['extras'] ?? []) as $tipo => $txt) {
+                $lista = dh_emails_lista((string) $txt);
+                $extras[$tipo] = $lista;
+            }
+            dh_notif_extras_salvar($extras);
+            ir('./?acao=notificacoes-config#emails-fora', 'E-mails de fora salvos.');
 
         case 'notificacoes-papeis-salvar':
             exigir_post();
@@ -166,15 +192,26 @@ function notificacoes_abas(string $atual): void
 // Configurar: ativar no aparelho (geral) e um interruptor para cada tipo de notificação
 function notificacoes_tela_config(): void
 {
-    global $csrf, $usuario;
+    global $csrf, $usuario, $usuarios;
     $n = dh_notificacoes();
     $chaves = dh_push_chaves();
-    $tipos = array_filter(DH_NOTIF_TIPOS, fn($t, $k) => dh_notif_tipo_para($k, $usuario, $n), ARRAY_FILTER_USE_BOTH);
+    $admin = pode('usuarios');
+    $login = $admin ? (string) ($_GET['login'] ?? $usuario['login']) : $usuario['login'];
+    $alvo = $login === $usuario['login'] ? $usuario : ($usuarios[$login] ?? null);
+    if (!$alvo) {
+        $login = $usuario['login'];
+        $alvo = $usuario;
+    }
+    $proprio = $login === $usuario['login'];
+    // Administrador vê todos os tipos (pode ligar um aviso para quem a função não daria); os outros, só os seus
+    $recebe = fn($k) => dh_notif_tipo_para($k, $alvo, $n, $login);
+    $tipos = $admin ? DH_NOTIF_TIPOS : array_filter(DH_NOTIF_TIPOS, fn($t, $k) => $recebe($k), ARRAY_FILTER_USE_BOTH);
+    $personalizado = (bool) array_filter((array) ($n['prefs'][$login] ?? []), fn($p) => is_array($p) && !empty($p['_admin']));
     ?>
       <h1>🔔 Notificações</h1>
       <?php notificacoes_abas('notificacoes-config'); ?>
 
-      <?php if ($chaves): ?>
+      <?php if ($chaves && $proprio): ?>
         <h2>Notificação no celular</h2>
         <div class="push-caixa" id="push-caixa" data-chave="<?= e($chaves['publica']) ?>" data-csrf="<?= e($_SESSION['csrf']) ?>" hidden>
           <div>
@@ -191,27 +228,44 @@ function notificacoes_tela_config(): void
         <p class="dica">Vale para este aparelho; ative também nos outros que usar. Abaixo você escolhe, para cada aviso, se recebe no 🔔 do painel, no 📲 celular e/ou por ✉️ e-mail.</p>
       <?php endif; ?>
 
-      <h2>O que você quer receber</h2>
+      <?php if ($admin): ?>
+        <h2 id="por-pessoa">Quem recebe o quê</h2>
+        <p class="dica">Escolha a pessoa e marque, em cada aviso, se ela recebe no 🔔 sino, no 📲 celular e/ou por ✉️ e-mail — como em 🔐 Permissões. Tudo desmarcado = não recebe aquele aviso. Os e-mails de contratos, lembretes de evento e cadernos de brassagem também saem daqui.</p>
+        <form method="get" class="form-cerveja escolher-usuario">
+          <input type="hidden" name="acao" value="notificacoes-config">
+          <label>Usuário
+            <select name="login" onchange="this.form.submit()">
+              <?php foreach ($usuarios as $x): ?><option value="<?= e($x['login']) ?>" <?= $x['login'] === $login ? 'selected' : '' ?>><?= e($x['nome']) ?> (<?= e($x['login']) ?>) · <?= e(DH_PAPEIS[$x['papel']] ?? $x['papel']) ?><?= $x['login'] === $usuario['login'] ? ' · você' : '' ?></option><?php endforeach; ?>
+            </select>
+          </label>
+          <noscript><button class="btn secundario">Abrir</button></noscript>
+        </form>
+      <?php else: ?>
+        <h2>O que você quer receber</h2>
+      <?php endif; ?>
       <?php if (!$tipos): ?>
         <p class="dica">Nenhuma notificação para as abas que o seu usuário vê.</p>
       <?php else: ?>
+        <?php if ($admin): ?><p class="dica"><?= $personalizado ? 'Avisos escolhidos para ' . e($alvo['nome'] ?? $login) . '.' : 'Usando o padrão da função ' . e(DH_PAPEIS[$alvo['papel']] ?? '') . ' (tabela no fim da página). Os avisos esmaecidos ela não recebe hoje; marque um canal para ela passar a receber.' ?></p><?php endif; ?>
         <form method="post" action="./?acao=notificacoes-config-salvar" class="notif-prefs" id="notif-prefs">
-          <?= $csrf ?>
-          <label class="notif-email">Seu e-mail para as notificações <small>(para as que você marcar ✉️<?= $usuario['papel'] === 'admin' ? '; em branco, vão para ' . e(DH_EMPRESA['email']) : '' ?>)</small>
-            <input type="email" name="email" value="<?= e($n['emails'][$usuario['login']] ?? '') ?>" placeholder="<?= $usuario['papel'] === 'admin' ? e(DH_EMPRESA['email']) : 'seu@email.com' ?>" autocomplete="email"></label>
+          <?= $csrf ?><input type="hidden" name="login" value="<?= e($login) ?>">
+          <label class="notif-email"><?= $proprio ? 'Seu e-mail para as notificações' : 'E-mail de ' . e($alvo['nome'] ?? $login) . ' para as notificações' ?> <small>(para as marcadas com ✉️<?= ($alvo['papel'] ?? '') === 'admin' ? '; em branco, vão para ' . e(DH_EMPRESA['email']) : '' ?>)</small>
+            <input type="email" name="email" value="<?= e($n['emails'][$login] ?? '') ?>" placeholder="<?= ($alvo['papel'] ?? '') === 'admin' ? e(DH_EMPRESA['email']) : 'email@exemplo.com' ?>" autocomplete="<?= $proprio ? 'email' : 'off' ?>"></label>
           <div class="notif-canais-topo" aria-hidden="true"><span></span><?php foreach (DH_NOTIF_CANAIS as [$ci, $cr]): ?><span><?= $ci ?><small><?= e($cr) ?></small></span><?php endforeach; ?></div>
-          <?php foreach ($tipos as $k => [$perm, $ic, $nome, $desc, $quem]): ?>
-            <div class="notif-tipo">
+          <?php foreach ($tipos as $k => [$perm, $ic, $nome, $desc, $quem]): $vale = $recebe($k); ?>
+            <div class="notif-tipo<?= $vale ? '' : ' fora' ?>">
               <span class="int-ic"><?= $ic ?></span>
               <span class="int-txt"><strong><?= e($nome) ?></strong><small><?= e($desc) ?></small></span>
               <?php foreach (DH_NOTIF_CANAIS as $canal => [$ci, $cr]): ?>
-                <label class="notif-canal" title="<?= e($cr) ?>"><input type="hidden" name="canais[<?= e($k) ?>][_]" value="1"><input type="checkbox" name="canais[<?= e($k) ?>][<?= $canal ?>]" value="1" <?= dh_notif_canal($n, $usuario['login'], $k, $canal) ? 'checked' : '' ?> aria-label="<?= e($nome . ' · ' . $cr) ?>"><span><?= $ci ?></span></label>
+                <label class="notif-canal" title="<?= e($cr) ?>"><input type="hidden" name="canais[<?= e($k) ?>][_]" value="1"><input type="checkbox" name="canais[<?= e($k) ?>][<?= $canal ?>]" value="1" <?= $vale && dh_notif_canal($n, $login, $k, $canal) ? 'checked' : '' ?> aria-label="<?= e($nome . ' · ' . $cr) ?>"><span><?= $ci ?></span></label>
               <?php endforeach; ?>
             </div>
           <?php endforeach; ?>
           <button class="btn primario">Salvar</button>
-          <p class="dica">Outros e-mails continuam com a configuração deles: a cópia do contrato assinado e o lembrete de evento vão para a lista de cópia (Contratos → ⚙ Configurações); o lembrete diário e as alterações dos cadernos, para os e-mails em Brassagem → ⚙ Configurar.</p>
         </form>
+        <?php if ($admin && $personalizado): ?>
+          <form method="post" action="./?acao=notificacoes-usuario-padrao" onsubmit="return confirm('Voltar <?= e(addslashes($alvo['nome'] ?? $login)) ?> ao padrão da função?');"><?= $csrf ?><input type="hidden" name="login" value="<?= e($login) ?>"><button class="link">Voltar ao padrão da função <?= e(DH_PAPEIS[$alvo['papel']] ?? '') ?></button></form>
+        <?php endif; ?>
         <script>
           // Salva na hora ao tocar num canal
           document.querySelectorAll('#notif-prefs input[type=checkbox], #notif-prefs input[type=email]').forEach(function (c) {
@@ -220,9 +274,23 @@ function notificacoes_tela_config(): void
         </script>
       <?php endif; ?>
 
+      <?php if ($admin): ?>
+        <h2 id="emails-fora">✉️ E-mails de fora (sem login no painel)</h2>
+        <p class="dica">Para quem não tem usuário (ex.: contador, financeiro, fornecedor): recebe só o e-mail daquele aviso. Um por linha. Em "Hoje vai para" estão todos os endereços que recebem cada e-mail agora (usuários com ✉️ + os de fora).</p>
+        <form method="post" action="./?acao=notificacoes-extras-salvar" class="form-cerveja emails-fora">
+          <?= $csrf ?>
+          <?php foreach (DH_NOTIF_TIPOS as $k => [$perm, $ic, $nome]): $hoje = dh_notif_emails_tipo($k); ?>
+            <label><?= $ic ?> <?= e($nome) ?>
+              <textarea name="extras[<?= e($k) ?>]" rows="1" autocapitalize="none" spellcheck="false" placeholder="email@exemplo.com"><?= e(implode("\n", $n['extras'][$k] ?? [])) ?></textarea>
+              <small>Hoje vai para: <?= $hoje ? e(implode(', ', $hoje)) : 'ninguém' ?></small></label>
+          <?php endforeach; ?>
+          <button class="btn primario">Salvar e-mails de fora</button>
+        </form>
+      <?php endif; ?>
+
       <?php if (pode('usuarios')): ?>
-        <h2 id="quem-recebe">Quem recebe cada notificação</h2>
-        <p class="dica">Quem tem a aba liberada em Usuários → 🔐 Permissões já recebe as notificações dela, sozinho. Aqui você marca as <b>funções</b> que recebem cada tipo (no 🔔 e no celular), inclusive quem não tem a aba (ex.: lembrete de evento para a Cervejaria; o aviso aparece, mas o contrato não abre). Cada pessoa ainda pode desligar as suas nos interruptores acima.</p>
+        <h2 id="quem-recebe">Padrão por função</h2>
+        <p class="dica">Vale para quem não foi personalizado acima. Quem tem a aba liberada em Usuários → 🔐 Permissões já recebe as notificações dela, sozinho. Aqui você marca as <b>funções</b> que recebem cada tipo, inclusive quem não tem a aba (ex.: lembrete de evento para a Cervejaria; o aviso aparece, mas o contrato não abre). Cada pessoa ainda pode desligar as suas em ⚙ Configurar.</p>
         <form method="post" action="./?acao=notificacoes-papeis-salvar" class="form-cerveja">
           <?= $csrf ?>
           <div class="tabela-rolar">
