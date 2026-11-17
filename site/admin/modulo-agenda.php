@@ -1010,8 +1010,9 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
       </div>
       <dialog class="cal-menu" id="cal-menu">
         <p class="cal-menu-quando"></p>
-        <h3 class="cal-menu-banda"></h3>
-        <p class="cal-menu-tributo"></p>
+        <div class="cal-copiar"><h3 class="cal-menu-banda"></h3><button type="button" class="btn-copiar" data-copiar=".cal-menu-banda" title="Copiar o nome da banda">📋 Copiar</button></div>
+        <div class="cal-copiar"><p class="cal-menu-tributo"></p><button type="button" class="btn-copiar" data-copiar=".cal-menu-tributo" title="Copiar o tributo">📋 Copiar</button></div>
+        <p class="cal-menu-insta"></p>
         <p class="cal-menu-situacao"></p>
         <div class="cal-menu-imagem">
           <img alt="" width="64" height="64" hidden>
@@ -1083,7 +1084,8 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
               link('fotos', i.fotos ? './?acao=banda-zip&id=' + encodeURIComponent(i.banda_id) : '');
               link('drive', i.drive ? 'https://drive.google.com/drive/folders/' + encodeURIComponent(i.drive) : '');
               link('banda', './?acao=banda&id=' + encodeURIComponent(i.banda_id));
-              if (!editar) menu.querySelector('.cal-menu-tributo').textContent = (i.tributo || i.tributos_banda || 'Sem tributo cadastrado') + (i.instagram ? ' · @' + i.instagram : '');
+              if (!editar) menu.querySelector('.cal-menu-tributo').textContent = i.tributo || i.tributos_banda || 'Sem tributo cadastrado';
+              menu.querySelector('.cal-menu-insta').textContent = !editar && i.instagram ? '@' + i.instagram : '';
               var pago = menu.querySelector('.cal-menu-pago');
               if (pago) {
                 pago.querySelector('[name=id]').value = bt.dataset.show;
@@ -1119,7 +1121,22 @@ function agenda_calendario(array $a, string $mes, string $un, bool $escolher, st
             else { var t = document.createElement('textarea'); t.value = chave; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); ok(); }
           });
           dhArrastarMes(cal.querySelector('.calendario'), cal.querySelector('[data-mes=anterior]'), cal.querySelector('[data-mes=proximo]'));
-          menu.addEventListener('click', function (e) { if (e.target === menu) menu.close(); });
+          // Fecha só com clique fora da janela (selecionar texto arrastando não fecha mais)
+          var desceu = null;
+          menu.addEventListener('mousedown', function (e) { desceu = e.target; });
+          menu.addEventListener('click', function (e) {
+            var r = menu.getBoundingClientRect(), fora = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+            if (e.target === menu && desceu === menu && fora) menu.close();
+          });
+          // Copiar nome da banda e tributo (para a arte)
+          menu.querySelectorAll('[data-copiar]').forEach(function (b) {
+            b.addEventListener('click', function () {
+              var t = (menu.querySelector(b.dataset.copiar).textContent || '').trim();
+              var ok = function () { var o = b.textContent; b.textContent = '✓ Copiado'; setTimeout(function () { b.textContent = o; }, 1500); };
+              if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(ok);
+              else { var a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); ok(); }
+            });
+          });
         })();
       </script>
     <?php

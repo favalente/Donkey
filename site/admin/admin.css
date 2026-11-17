@@ -934,3 +934,9 @@ h3 small { font-weight: 400; color: var(--muted); }
 .radio-linha input:checked + span { opacity: 1; filter: none; background: var(--verde-bg); outline: 2px solid var(--ok); }
 .radio-linha input:focus-visible + span { outline: 3px solid var(--amber); }
 .linha-hora { display: block; font-size: .85rem; color: var(--ambar-txt); }
+.cal-copiar { display: flex; align-items: flex-start; gap: 8px; }
+.cal-copiar > :first-child { flex: 1; min-width: 0; user-select: text; }
+.btn-copiar { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ambar-txt); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; white-space: nowrap; margin-top: 4px; }
+.btn-copiar:hover { background: var(--hover); }
+.cal-menu-insta { margin: 0 0 6px; color: var(--muted); font-size: .9rem; }
+.cal-menu-insta:empty { display: none; }
