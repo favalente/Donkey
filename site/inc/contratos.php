@@ -778,11 +778,14 @@ function dh_emails_equipe(): array
     return array_values(array_unique([DH_EMPRESA['email'], ...(array) (dh_contratos()['config']['emails_copia'] ?? [])]));
 }
 
-// Avisos do andamento (pedido preenchido, cliente assinou): só para o e-mail da Donkey.
+// Avisos do andamento (pedido preenchido, cliente assinou, orçamento aprovado): para quem deixou o ✉️
+// ligado nesse aviso em Notificações → ⚙ Configurar (padrão: administradores, no e-mail da Donkey).
 // A lista de cópia recebe apenas o contrato final, assinado pelas duas partes.
-function dh_email_equipe(string $assunto, string $html): void
+function dh_email_equipe(string $assunto, string $html, string $tipo = ''): void
 {
-    dh_email(DH_EMPRESA['email'], $assunto, $html);
+    foreach ($tipo !== '' ? dh_notif_emails_tipo($tipo) : [DH_EMPRESA['email']] as $em) {
+        dh_email($em, $assunto, $html);
+    }
 }
 
 // Lista de e-mails digitada no painel (um por linha, ou separados por vírgula)

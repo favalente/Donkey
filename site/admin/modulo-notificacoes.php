@@ -197,8 +197,8 @@ function notificacoes_tela_config(): void
       <?php else: ?>
         <form method="post" action="./?acao=notificacoes-config-salvar" class="notif-prefs" id="notif-prefs">
           <?= $csrf ?>
-          <label class="notif-email">Seu e-mail para as notificações <small>(para as que você marcar ✉️)</small>
-            <input type="email" name="email" value="<?= e($n['emails'][$usuario['login']] ?? '') ?>" placeholder="seu@email.com" autocomplete="email"></label>
+          <label class="notif-email">Seu e-mail para as notificações <small>(para as que você marcar ✉️<?= $usuario['papel'] === 'admin' ? '; em branco, vão para ' . e(DH_EMPRESA['email']) : '' ?>)</small>
+            <input type="email" name="email" value="<?= e($n['emails'][$usuario['login']] ?? '') ?>" placeholder="<?= $usuario['papel'] === 'admin' ? e(DH_EMPRESA['email']) : 'seu@email.com' ?>" autocomplete="email"></label>
           <div class="notif-canais-topo" aria-hidden="true"><span></span><?php foreach (DH_NOTIF_CANAIS as [$ci, $cr]): ?><span><?= $ci ?><small><?= e($cr) ?></small></span><?php endforeach; ?></div>
           <?php foreach ($tipos as $k => [$perm, $ic, $nome, $desc, $quem]): ?>
             <div class="notif-tipo">
@@ -210,6 +210,7 @@ function notificacoes_tela_config(): void
             </div>
           <?php endforeach; ?>
           <button class="btn primario">Salvar</button>
+          <p class="dica">Outros e-mails continuam com a configuração deles: a cópia do contrato assinado e o lembrete de evento vão para a lista de cópia (Contratos → ⚙ Configurações); o lembrete diário e as alterações dos cadernos, para os e-mails em Brassagem → ⚙ Configurar.</p>
         </form>
         <script>
           // Salva na hora ao tocar num canal

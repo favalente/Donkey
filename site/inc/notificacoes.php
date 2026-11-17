@@ -91,6 +91,10 @@ function dh_notif_papeis_salvar(array $papeis): void
 // Padrão: sino e celular ligados, e-mail desligado. (Preferências antigas eram só ligado/desligado.)
 const DH_NOTIF_CANAIS = ['sino' => ['🔔', 'Sino'], 'push' => ['📲', 'Celular'], 'email' => ['✉️', 'E-mail']];
 
+// Avisos que já chegavam por e-mail (no contato@ da Donkey): o ✉️ deles já vem ligado e o e-mail sai
+// com o conteúdo completo de antes (dh_email_equipe), para quem deixar o ✉️ ligado
+const DH_NOTIF_EMAIL_PADRAO = ['cliente_assinou', 'pedido_chope', 'orcamento_aprovado'];
+
 function dh_notif_canal(array $n, string $login, string $tipo, string $canal): bool
 {
     if ($tipo === '') {
@@ -103,7 +107,31 @@ function dh_notif_canal(array $n, string $login, string $tipo, string $canal): b
     if ($p === false) {
         return false;
     }
-    return $canal !== 'email';
+    return $canal !== 'email' || in_array($tipo, DH_NOTIF_EMAIL_PADRAO, true);
+}
+
+// E-mail de um usuário para as notificações: o que ele cadastrou ou, para o administrador, o da Donkey
+function dh_notif_email_de(array $n, string $login): string
+{
+    $em = (string) ($n['emails'][$login] ?? '');
+    if ($em === '') {
+        $u = json_decode((string) @file_get_contents(DH_ARQ_USUARIOS), true);
+        $em = (($u[$login]['papel'] ?? '') === 'admin') ? DH_EMPRESA['email'] : '';
+    }
+    return filter_var($em, FILTER_VALIDATE_EMAIL) ? $em : '';
+}
+
+// Endereços que recebem um tipo por e-mail (quem recebe o tipo e deixou o ✉️ ligado), sem repetir
+function dh_notif_emails_tipo(string $tipo): array
+{
+    $n = dh_notificacoes();
+    $r = [];
+    foreach (dh_notif_destinatarios_tipo($tipo, '', $n) as $l) {
+        if (dh_notif_canal($n, $l, $tipo, 'email') && ($em = dh_notif_email_de($n, $l)) !== '') {
+            $r[mb_strtolower($em)] = $em;
+        }
+    }
+    return array_values($r);
 }
 
 // Compatível com o uso antigo: recebe no sino?
@@ -190,9 +218,10 @@ function dh_notificar(string $perm, string $icone, string $titulo, string $texto
         $todos = $para ?: dh_notificacao_destinatarios($perm, $login);
         $destino = array_values(array_filter($todos, fn($l) => dh_notif_canal($n, $l, $tipo, 'push')));
         $emails = [];
-        foreach ($todos as $l) {
-            if (dh_notif_canal($n, $l, $tipo, 'email') && filter_var($n['emails'][$l] ?? '', FILTER_VALIDATE_EMAIL)) {
-                $emails[] = $n['emails'][$l];
+        // Os avisos que já tinham e-mail próprio (mais completo) saem por dh_email_equipe
+        foreach (in_array($tipo, DH_NOTIF_EMAIL_PADRAO, true) ? [] : $todos as $l) {
+            if (dh_notif_canal($n, $l, $tipo, 'email') && ($em = dh_notif_email_de($n, $l)) !== '') {
+                $emails[] = $em;
             }
         }
         if ($emails) {

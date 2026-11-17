@@ -280,7 +280,7 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') 
             . ($f['extras'] ? ', ' . implode(', ', array_map(fn($x) => $x['qtd'] . ' × ' . $x['descricao'], $f['extras'])) : '')
             . (($f['cupom'] ?? '') !== '' ? ', com o cupom ' . e($f['cupom']) . ' (− ' . e(dh_moeda($f['desconto'])) . ')' : '') . ($foraDeFortaleza && !$freteTravado ? ', frete combinado de ' . e(dh_moeda($f['frete'])) : '') . ').</p>'
             . '<p><a href="' . e(dh_url_site() . 'admin/?acao=contrato-comprovante&id=' . $k['id']) . '">Ver o comprovante de pagamento</a> (entre no painel) e confira se o valor caiu.</p>'
-            . '<p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>');
+            . '<p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>', 'pedido_chope');
         $_SESSION['contrato_aviso'] = 'Pedido registrado! Confira o contrato abaixo e assine no final da página.';
         header('Location: ./?t=' . $token . '#assinar', true, 303);
         exit;
@@ -355,7 +355,7 @@ if ($podeAssinar && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$fechou) {
                 dh_notificar('contratos', '✍️', 'Cliente assinou o contrato nº ' . $k['numero'], $pend['nome'] . ' assinou. Falta a assinatura da Donkey Head Cervejaria.', './?acao=contrato&id=' . $k['id'], '', [], 'cliente_assinou');
                 dh_email_equipe('Cliente assinou o contrato nº ' . $k['numero'],
-                    '<p>' . e($pend['nome']) . ' assinou o contrato nº <b>' . e($k['numero']) . '</b>. Falta a assinatura da Donkey Head Cervejaria no painel.</p>');
+                    '<p>' . e($pend['nome']) . ' assinou o contrato nº <b>' . e($k['numero']) . '</b>. Falta a assinatura da Donkey Head Cervejaria no painel.</p>', 'cliente_assinou');
             }
             unset($_SESSION['contrato_codigo']);
             $_SESSION['contrato_aviso'] = $fechou ? 'Contrato assinado! Uma cópia foi enviada para o seu e-mail.' : 'Assinatura registrada! Assim que a Donkey Head Cervejaria assinar, você recebe a cópia por e-mail.';
