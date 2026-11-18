@@ -68,9 +68,10 @@ function dh_tanque_lote(array $b, string $tanque): ?array
 // Próximo número de lote: o maior número já usado + 1
 // Lote da próxima brassagem: o da última brassagem (pela data) + 1, no mesmo formato ("L105" -> "L106",
 // "099" -> "100"). Se algum lote já usado for maior (ex.: brassagem lançada fora de ordem), segue o maior.
-function dh_lote_proximo(array $b): string
+// Cada cerveja tem a sua sequência de lotes: com $cerveja (id do cadastro ou nome), conta só os lotes dela.
+function dh_lote_proximo(array $b, ?string $cerveja = null): string
 {
-    $lotes = array_values(array_filter($b['lotes'], fn($l) => preg_match('/\d/', (string) $l['lote'])));
+    $lotes = array_values(array_filter($b['lotes'], fn($l) => preg_match('/\d/', (string) $l['lote']) && ($cerveja === null || dh_lote_mesma_cerveja($l, $cerveja))));
     if (!$lotes) {
         return '';
     }
@@ -80,6 +81,15 @@ function dh_lote_proximo(array $b): string
     $maior = max(array_map(fn($l) => $num((string) $l['lote']), $lotes));
     $prox = max($num($ult), $maior) + 1;
     return preg_replace_callback('/(\d+)(?!.*\d)/', fn($m) => str_pad((string) $prox, strlen($m[1]), '0', STR_PAD_LEFT), $ult);
+}
+
+// O lote é dessa cerveja? ($cerveja = id do cadastro ou nome)
+function dh_lote_mesma_cerveja(array $l, string $cerveja): bool
+{
+    static $nomes = null;
+    $nomes ??= array_column(dh_brassagem_cervejas(), 'nome', 'id');
+    $nome = mb_strtolower($nomes[$cerveja] ?? $cerveja);
+    return (($l['cerveja_id'] ?? '') !== '' && $l['cerveja_id'] === $cerveja) || mb_strtolower((string) $l['cerveja']) === $nome;
 }
 
 // Dia da produção (dia 0 = dia da brassagem)

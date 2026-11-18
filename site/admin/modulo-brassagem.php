@@ -209,7 +209,7 @@ function brassagem_acao(string $acao): bool
                 throw new RuntimeException('Escolha o tanque.');
             }
             foreach ($b['lotes'] as $j => $x) {
-                if ($j !== $i && mb_strtolower($x['lote']) === mb_strtolower($l['lote'])) {
+                if ($j !== $i && mb_strtolower($x['lote']) === mb_strtolower($l['lote']) && dh_lote_mesma_cerveja($x, $l['cerveja_id'] !== '' ? $l['cerveja_id'] : $l['cerveja'])) {
                     throw new RuntimeException('Já existe o lote ' . $x['lote'] . ' (' . $x['cerveja'] . '). Confira o número.');
                 }
             }
@@ -614,7 +614,7 @@ function brassagem_tela_lote(): void
     $b = dh_brassagem();
     $i = dh_brassagem_indice($b['lotes'], (string) ($_GET['id'] ?? $_POST['id'] ?? ''));
     $novo = $i === null;
-    $l = $novo ? ['id' => '', 'cerveja' => '', 'lote' => dh_lote_proximo($b), 'levedura' => '', 'data' => date('Y-m-d'), 'tanque' => (string) ($_GET['tanque'] ?? ''),
+    $l = $novo ? ['id' => '', 'cerveja' => '', 'lote' => '', 'levedura' => '', 'data' => date('Y-m-d'), 'tanque' => (string) ($_GET['tanque'] ?? ''),
         'pf_brix' => '', 'pf_cm' => '', 'og_brix' => '', 'og_cm' => '', 'obs' => '', 'status' => 'fermentando', 'registros' => []] : $b['lotes'][$i];
     $l += ['unidade' => ''];
     $posted = $erro && $_SERVER['REQUEST_METHOD'] === 'POST';
@@ -694,7 +694,7 @@ function brassagem_tela_lote(): void
               <label>Cerveja <small>(do cadastro de Cervejas)</small>
                 <select name="cerveja_id" id="cerveja-id" required>
                   <option value="">Escolha a cerveja</option>
-                  <?php foreach ($cervejas as $c): $rc = dh_receita_da_cerveja($receitas, $c['id']); ?><option value="<?= e($c['id']) ?>" data-levedura="<?= e($rc['levedura'] ?? '') ?>" <?= $c['id'] === $cidSel ? 'selected' : '' ?>><?= e($c['nome']) ?><?= ($c['estilo'] ?? '') !== '' ? ' · ' . e($c['estilo']) : '' ?><?= $rc ? ' · 📖 receita' : '' ?></option><?php endforeach; ?>
+                  <?php foreach ($cervejas as $c): $rc = dh_receita_da_cerveja($receitas, $c['id']); ?><option value="<?= e($c['id']) ?>" data-lote="<?= $novo ? e(dh_lote_proximo($b, $c['id']) ?: '1') : '' ?>" data-levedura="<?= e($rc['levedura'] ?? '') ?>" <?= $c['id'] === $cidSel ? 'selected' : '' ?>><?= e($c['nome']) ?><?= ($c['estilo'] ?? '') !== '' ? ' · ' . e($c['estilo']) : '' ?><?= $rc ? ' · 📖 receita' : '' ?></option><?php endforeach; ?>
                   <option value="outra" <?= $cidSel === 'outra' ? 'selected' : '' ?>>Outra (ainda não cadastrada)…</option>
                 </select>
               </label>
@@ -709,9 +709,13 @@ function brassagem_tela_lote(): void
                 s.addEventListener('change', function () {
                   var lev = document.querySelector('[name=levedura]'), op = s.selectedOptions[0];
                   if (lev && !lev.value && op && op.dataset.levedura) lev.value = op.dataset.levedura;
+                  // Lote: o próximo da sequência dessa cerveja (se ninguém digitou outro)
+                  var lt = document.querySelector('[name=lote]');
+                  if (lt && op && op.dataset.lote && (!lt.value || lt.dataset.auto === lt.value)) { lt.value = op.dataset.lote; lt.dataset.auto = lt.value; }
                   ver();
                 });
                 ver();
+                if (s.value && !document.querySelector('[name=lote]').value) s.dispatchEvent(new Event('change'));
               })();
             </script>
             <div class="duas">
