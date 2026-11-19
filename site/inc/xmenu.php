@@ -166,6 +166,9 @@ function dh_xmenu_taplist(string $unidade, array $cervejas): ?array
                     $cervejas[] = $c;
                 }
             }
+            if ($c && ($c['origem'] ?? '') === 'xmenu' && $c['id']) {
+                $c = dh_xmenu_completar($c, dh_xmenu_ficha($base, $p['descricao']));
+            }
             if (!$c) {
                 // Cerveja ainda não cadastrada no painel: usa o que vier do xMenu
                 $c = dh_xmenu_ficha($base, $p['descricao']) + ['id' => null, 'imagem' => 'assets/img/rotulo-padrao.png'];
@@ -180,22 +183,60 @@ function dh_xmenu_taplist(string $unidade, array $cervejas): ?array
     return array_values($itens);
 }
 
+// Cerveja cadastrada sozinha pelo xMenu com estilo/ABV/IBU/descrição em branco: completa com o que o
+// xMenu tiver agora (grava no catálogo uma vez; o que foi preenchido no painel nunca é trocado)
+function dh_xmenu_completar(array $c, array $ficha): array
+{
+    $faltam = array_filter(['estilo', 'abv', 'ibu', 'descricao'], fn($k) => trim((string) ($c[$k] ?? '')) === '' && $ficha[$k] !== '');
+    if (!$faltam) {
+        return $c;
+    }
+    foreach ($faltam as $k) {
+        $c[$k] = $ficha[$k];
+    }
+    try {
+        $dados = dh_carregar();
+        foreach ($dados['cervejas'] as &$x) {
+            if ($x['id'] === $c['id']) {
+                foreach ($faltam as $k) {
+                    if (trim((string) ($x[$k] ?? '')) === '') {
+                        $x[$k] = $ficha[$k];
+                    }
+                }
+            }
+        }
+        unset($x);
+        dh_salvar($dados);
+    } catch (Throwable $e) {
+        // só não grava; a TV mostra os dados do xMenu mesmo assim
+    }
+    return $c;
+}
+
 // Nome, estilo, ABV, IBU e descrição a partir do texto do xMenu
 // ("Estilo: Catharina Sour | ABV: 4% | IBU: 3" ou um campo por linha)
 function dh_xmenu_ficha(string $base, string $desc): array
 {
-    preg_match('/Estilo:\s*([^|\n]+)/iu', $desc, $mE);
-    preg_match('/ABV:\s*([\d.,]+)/iu', $desc, $mA);
-    preg_match('/IBU:\s*([\d.,]+)/iu', $desc, $mI);
+    // Aceita também sem dois-pontos: "CACAU APA | ABV 5,3% | IBU 44"
+    preg_match('/Estilo\s*:\s*([^|\n]+)/iu', $desc, $mE);
+    preg_match('/\bABV\s*:?\s*([\d.,]+)/iu', $desc, $mA);
+    preg_match('/\bIBU\s*:?\s*([\d.,]+)/iu', $desc, $mI);
+    $estilo = trim($mE[1] ?? '');
+    if ($estilo === '' && preg_match('/\b(?i:é\s+)?(?i:uma?)\s+(?!Cerveja\b)((?:(?:[A-Z][\p{L}\-]*|IPA|APA|NEIPA)\s*){1,4})/u', $desc, $mS)) {
+        // Sem "Estilo:", o estilo citado no texto ("Uma American Pale Ale que…")
+        $estilo = trim($mS[1]);
+    }
     $texto = preg_replace('/^\s*(Estilo|ABV|IBU|SRM|EBC)\s*:.*$/imu', '', $desc);
+    // Linha de cabeçalho "NOME | ABV 5,3% | IBU 44" sai da descrição
+    $texto = preg_replace('/^[^\n]*\|\s*(ABV|IBU)\b[^\n]*$/imu', '', $texto);
     $texto = trim(preg_replace("/\n{3,}/", "\n\n", str_replace("\r", '', $texto)));
     // Nome todo em maiúsculas no xMenu vira "Primeira Letra Maiúscula"
     $nome = $base === mb_strtoupper($base, 'UTF-8') ? mb_convert_case(mb_strtolower($base, 'UTF-8'), MB_CASE_TITLE, 'UTF-8') : $base;
     return [
         'nome' => $nome,
-        'estilo' => trim($mE[1] ?? ''),
-        'abv' => str_replace(',', '.', $mA[1] ?? ''),
-        'ibu' => $mI[1] ?? '',
+        'estilo' => $estilo,
+        'abv' => rtrim(str_replace(',', '.', $mA[1] ?? ''), '.'),
+        'ibu' => rtrim($mI[1] ?? '', '.,'),
         'descricao' => $texto,
     ];
 }
