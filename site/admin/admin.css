@@ -526,6 +526,8 @@ h3 small { font-weight: 400; color: var(--muted); }
 .chips-comparar { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips-comparar a { padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-weight: 600; font-size: .92rem; }
 .chips-comparar small { color: var(--muted); font-weight: 400; margin-left: 2px; }
+.filtro-lotes a.ativo { background: var(--accent, #e9a23b); border-color: transparent; color: #1a120a; }
+.filtro-lotes a.ativo small { color: inherit; }
 .grafico-brix { margin: 12px 0 18px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
 .grafico-brix svg { width: 100%; max-width: 620px; height: auto; display: block; }
 .legenda-brix { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .88rem; margin-bottom: 6px; color: var(--text); }

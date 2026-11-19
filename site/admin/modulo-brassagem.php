@@ -131,6 +131,7 @@ function brassagem_acao(string $acao): bool
         case 'brassagem-lote':
         case 'brassagem-tanques':
         case 'brassagem-comparar':
+        case 'brassagem-historico':
             exigir('brassagem');
             // Abriu o caderno por uma notificação: só ela vira lida
             if ($acao === 'brassagem-lote' && preg_match('/^a[0-9a-f]{8,}$/', (string) ($_GET['alerta'] ?? ''))) {
@@ -445,6 +446,7 @@ function brassagem_abas(string $ativa): void
 {
     $abas = [
         'brassagem' => ['🛢️', 'Tanques'],
+        'brassagem-historico' => ['📚', 'Lotes anteriores'],
         'brassagem-programacao' => ['📅', 'Programação'],
         'brassagem-tanques' => ['⚙️', 'Configurar'],
     ];
@@ -477,6 +479,10 @@ function brassagem_tela(string $tela): bool
     }
     if ($tela === 'brassagem-tanques') {
         brassagem_tela_config();
+        return true;
+    }
+    if ($tela === 'brassagem-historico') {
+        brassagem_tela_historico();
         return true;
     }
     if ($tela === 'brassagem-comparar') {
@@ -575,36 +581,60 @@ function brassagem_tela_tanques(): void
         </div>
       <?php endif; ?>
 
-      <?php
-        $hist = array_reverse($b['lotes']);
-        usort($hist, fn($x, $y) => $y['data'] <=> $x['data']);
-        if ($busca !== '') {
-            $hist = array_filter($hist, fn($l) => str_contains(mb_strtolower($l['cerveja'] . ' ' . $l['lote'] . ' ' . $l['levedura']), $busca));
-        }
-        $hist = array_slice($hist, 0, $busca !== '' ? 200 : 40);
-      ?>
       <?php if ($b['lotes']): ?>
-        <?php
-          $grupos = [];
-          foreach ($b['lotes'] as $x) {
-              $g = brassagem_chave_cerveja($x);
-              $grupos[$g] = ['nome' => $x['cerveja'], 'n' => ($grupos[$g]['n'] ?? 0) + 1];
-          }
-          uasort($grupos, fn($p, $q) => strnatcasecmp($p['nome'], $q['nome']));
-        ?>
-        <h2>Comparar lotes por cerveja</h2>
-        <p class="chips-comparar"><?php foreach ($grupos as $g => $x): ?><a href="./?acao=brassagem-comparar&amp;cerveja=<?= e(rawurlencode($g)) ?>">📈 <?= e($x['nome']) ?> <small><?= $x['n'] ?></small></a><?php endforeach; ?></p>
-        <h2>Cadernos (lotes)</h2>
-        <form method="get" class="busca-lotes"><input type="hidden" name="acao" value="brassagem"><input type="search" name="q" value="<?= e($_GET['q'] ?? '') ?>" placeholder="Buscar por cerveja, lote ou levedura"><button class="btn secundario">Buscar</button></form>
-        <ul class="lista-lotes">
-          <?php foreach ($hist as $l): $t = dh_tanque($b, $l['tanque']); ?>
-            <li><a href="./?acao=brassagem-lote&amp;id=<?= e($l['id']) ?>"><strong>Lote <?= e($l['lote']) ?> · <?= e($l['cerveja']) ?></strong>
-              <span><?= e(dh_data_br($l['data'])) ?> · <?= e($t['nome'] ?? '?') ?><?= !empty($l['unidade']) ? ' · ' . e(DH_UNIDADES[$l['unidade']]) : '' ?> · <?= count($l['registros'] ?? []) ?> anotações</span>
-              <em class="tag <?= $l['status'] === 'finalizado' ? 'ct-ok' : ($l['status'] === 'maturando' ? 'ct-enviado' : 'ct-preenchimento') ?>"><?= e(DH_LOTE_STATUS[$l['status']]) ?></em></a></li>
-          <?php endforeach; ?>
-          <?php if (!$hist): ?><li class="dica">Nenhum lote encontrado.</li><?php endif; ?>
-        </ul>
+        <p class="novo-contrato"><a class="btn secundario largo" href="./?acao=brassagem-historico">📚 Lotes anteriores (<?= count($b['lotes']) ?>)</a></p>
       <?php endif; ?>
+    <?php
+}
+
+// 📚 Lotes anteriores: todos os cadernos, com filtro por cerveja, situação e busca
+function brassagem_tela_historico(): void
+{
+    $b = dh_brassagem();
+    $busca = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
+    $filtroCv = (string) ($_GET['cerveja'] ?? '');
+    $filtroSt = (string) ($_GET['st'] ?? '');
+    $grupos = [];
+    foreach ($b['lotes'] as $x) {
+        $g = brassagem_chave_cerveja($x);
+        $grupos[$g] = ['nome' => $x['cerveja'], 'n' => ($grupos[$g]['n'] ?? 0) + 1];
+    }
+    uasort($grupos, fn($p, $q) => strnatcasecmp($p['nome'], $q['nome']));
+    $hist = $b['lotes'];
+    usort($hist, fn($x, $y) => [$y['data'], $y['criado_em'] ?? ''] <=> [$x['data'], $x['criado_em'] ?? '']);
+    $hist = array_filter($hist, fn($l) => ($filtroCv === '' || brassagem_chave_cerveja($l) === $filtroCv)
+        && ($filtroSt === '' || ($filtroSt === 'andamento' ? $l['status'] !== 'finalizado' : $l['status'] === 'finalizado'))
+        && ($busca === '' || str_contains(mb_strtolower($l['cerveja'] . ' ' . $l['lote'] . ' ' . $l['levedura']), $busca)));
+    $total = count($hist);
+    $hist = array_slice($hist, 0, 300);
+    $url = fn($mais) => './?' . http_build_query(array_filter(array_merge(['acao' => 'brassagem-historico', 'q' => $_GET['q'] ?? '', 'cerveja' => $filtroCv, 'st' => $filtroSt], $mais), fn($v) => $v !== ''));
+    ?>
+      <h1>Brassagem</h1>
+      <?php brassagem_abas('brassagem-historico'); ?>
+      <?php if (!$b['lotes']): ?><p class="dica">Nenhum lote ainda. Os cadernos aparecem aqui assim que você lançar uma brassagem.</p><?php return; endif; ?>
+      <form method="get" class="busca-lotes">
+        <input type="hidden" name="acao" value="brassagem-historico">
+        <?php if ($filtroCv !== ''): ?><input type="hidden" name="cerveja" value="<?= e($filtroCv) ?>"><?php endif; ?>
+        <?php if ($filtroSt !== ''): ?><input type="hidden" name="st" value="<?= e($filtroSt) ?>"><?php endif; ?>
+        <input type="search" name="q" value="<?= e($_GET['q'] ?? '') ?>" placeholder="Buscar por cerveja, lote ou levedura"><button class="btn secundario">Buscar</button>
+      </form>
+      <p class="chips-comparar filtro-lotes">
+        <a href="<?= e($url(['cerveja' => ''])) ?>" class="<?= $filtroCv === '' ? 'ativo' : '' ?>">Todas <small><?= count($b['lotes']) ?></small></a>
+        <?php foreach ($grupos as $g => $x): ?><a href="<?= e($url(['cerveja' => $g])) ?>" class="<?= $filtroCv === $g ? 'ativo' : '' ?>"><?= e($x['nome']) ?> <small><?= $x['n'] ?></small></a><?php endforeach; ?>
+      </p>
+      <p class="chips-comparar filtro-lotes">
+        <?php foreach (['' => 'Todos', 'andamento' => 'No tanque', 'finalizado' => 'Finalizados'] as $k => $rot): ?><a href="<?= e($url(['st' => $k])) ?>" class="<?= $filtroSt === $k ? 'ativo' : '' ?>"><?= $rot ?></a><?php endforeach; ?>
+        <?php if ($filtroCv !== '' && ($grupos[$filtroCv]['n'] ?? 0) > 1): ?><a href="./?acao=brassagem-comparar&amp;cerveja=<?= e(rawurlencode($filtroCv)) ?>">📈 Comparar os lotes de <?= e($grupos[$filtroCv]['nome']) ?></a><?php endif; ?>
+      </p>
+      <p class="dica"><?= $total ?> lote<?= $total === 1 ? '' : 's' ?><?= $total > 300 ? ' (mostrando os 300 mais novos)' : '' ?>.</p>
+      <ul class="lista-lotes">
+        <?php foreach ($hist as $l): $t = dh_tanque($b, $l['tanque']); $fim = $l['status'] === 'finalizado' && !empty($l['finalizado_em']) ? substr($l['finalizado_em'], 0, 10) : null; ?>
+          <li><a href="./?acao=brassagem-lote&amp;id=<?= e($l['id']) ?>"><strong>Lote <?= e($l['lote']) ?> · <?= e($l['cerveja']) ?></strong>
+            <span><?= e(dh_data_br($l['data'])) ?><?= $fim ? ' → ' . e(dh_data_br($fim)) . ' (' . dh_lote_dia($l, $fim) . ' dias)' : ' · dia ' . dh_lote_dia($l) ?> · <?= e($t['nome'] ?? '?') ?><?= !empty($l['unidade']) ? ' · ' . e(DH_UNIDADES[$l['unidade']]) : '' ?><?= $l['levedura'] !== '' ? ' · ' . e($l['levedura']) : '' ?> · <?= count($l['registros'] ?? []) ?> anotações</span>
+            <em class="tag <?= $l['status'] === 'finalizado' ? 'ct-ok' : ($l['status'] === 'maturando' ? 'ct-enviado' : 'ct-preenchimento') ?>"><?= e(DH_LOTE_STATUS[$l['status']]) ?></em></a></li>
+        <?php endforeach; ?>
+        <?php if (!$hist): ?><li class="dica">Nenhum lote encontrado.</li><?php endif; ?>
+      </ul>
     <?php
 }
 
