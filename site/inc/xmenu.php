@@ -103,7 +103,9 @@ function dh_xmenu_atualizar(string $unidade): ?array
     $produtos = array_map(fn($p) => [
         'nome' => (string) $p['Nome'],
         'descricao' => (string) ($p['Descricao'] ?? ''),
-        'preco' => (float) ($p['PrecoVenda'] ?? 0),
+        // Em promoção (happy hour), o xMenu manda o preço do happy hour: na TV e no site vale o preço cheio
+        'preco' => !empty($p['Promocao']) && (float) ($p['PrecoVendaOriginal'] ?? 0) > (float) ($p['PrecoVenda'] ?? 0)
+            ? (float) $p['PrecoVendaOriginal'] : (float) ($p['PrecoVenda'] ?? 0),
         'foto' => (string) ($p['httpFoto'] ?? ''),
     ], $produtos);
     if (!is_dir(dirname($cache))) {
