@@ -60,6 +60,43 @@ function programacao_acao(string $acao): bool
             dh_brassagem_salvar($b);
             ir('./?acao=brassagem-programacao&semana=' . $semana . '#programadas', 'Tirado da programação.');
 
+        case 'programacao-editar':
+            // ✏️ Reprogramar: outro dia (até em outra semana), tanque ou observação
+            exigir_post();
+            exigir('brassagem');
+            if (!prog_admin()) {
+                throw new RuntimeException('Só o administrador muda a programação.');
+            }
+            $b = dh_brassagem();
+            $semana = prog_semana_param();
+            $id = (string) ($_POST['id'] ?? '');
+            $dia = (string) ($_POST['dia'] ?? '');
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dia) || !strtotime($dia)) {
+                throw new RuntimeException('Escolha o novo dia.');
+            }
+            $tq = (string) ($_POST['tanque'] ?? '');
+            if ($tq !== '' && !dh_tanque($b, $tq)) {
+                $tq = '';
+            }
+            $item = null;
+            foreach ($b['config']['programacao']['semanas'][$semana] ?? [] as $j => $x) {
+                if ($x['id'] === $id) {
+                    $item = $x;
+                    unset($b['config']['programacao']['semanas'][$semana][$j]);
+                    $b['config']['programacao']['semanas'][$semana] = array_values($b['config']['programacao']['semanas'][$semana]);
+                }
+            }
+            if (!$item) {
+                throw new RuntimeException('Item da programação não encontrado.');
+            }
+            $item['dia'] = $dia;
+            $item['tanque'] = $tq;
+            $item['obs'] = mb_strimwidth(trim((string) ($_POST['obs'] ?? '')), 0, 120);
+            $nova = dh_semana_inicio($dia);
+            $b['config']['programacao']['semanas'][$nova][] = $item;
+            dh_brassagem_salvar($b);
+            ir('./?acao=brassagem-programacao&semana=' . $nova . '#programadas', $item['nome'] . ' reprogramada para ' . DH_DIAS_SEMANA[(int) date('w', strtotime($dia))] . ', ' . date('d/m', strtotime($dia)) . '.');
+
         case 'programacao-feita':
             // ✓ Feita: sai do "Programado" e vai para "Brassadas" (a equipe também marca). Desfazer volta.
             exigir_post();
@@ -161,10 +198,36 @@ function prog_itens(array $b, string $semana, array $lista, bool $podeTirar, boo
             <span class="lr-info"><strong><?= e($x['nome']) ?></strong><small><?= $t ? e($t['nome']) : 'Tanque a definir' ?><?= $x['obs'] !== '' ? ' · ' . e($x['obs']) : '' ?><?= $feitas ? ' · ✅ ' . e(date('d/m H:i', strtotime($x['feita_em']))) . ' · ' . e($x['feita_por']) : '' ?></small>
               <?php if ($x['receita'] !== ''): ?><a href="./?acao=receita&amp;id=<?= e($x['receita']) ?>">📖 Ver receita</a><?php endif; ?></span>
             <form method="post" action="./?acao=programacao-feita"><?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><?php if ($feitas): ?><input type="hidden" name="desfazer" value="1"><button class="btn-acao" title="Voltar para o Programado">↩ Desfazer</button><?php else: ?><button class="btn-feita">✓ Feita</button><?php endif; ?></form>
+            <?php if ($podeTirar && !$feitas): ?><button type="button" class="btn-acao prog-editar" data-id="<?= e($x['id']) ?>" data-nome="<?= e($x['nome']) ?>" data-dia="<?= e($x['dia']) ?>" data-tanque="<?= e($x['tanque']) ?>" data-obs="<?= e($x['obs']) ?>" aria-label="Editar">✏️</button><?php endif; ?>
             <?php if ($podeTirar && !$feitas): ?><form method="post" action="./?acao=programacao-tirar" onsubmit="return confirm('Tirar <?= e(addslashes($x['nome'])) ?> da programação?');"><?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="ct-tirar" aria-label="Tirar">×</button></form><?php endif; ?>
           </li>
         <?php endforeach; ?>
       </ul>
+      <?php if ($podeTirar && !$feitas): ?>
+        <dialog class="dup-modal" id="prog-editar">
+          <form method="post" action="./?acao=programacao-editar" class="form-cerveja">
+            <div class="dup-topo"><div><strong>✏️ Reprogramar</strong><small id="pe-nome"></small></div><button type="button" class="dup-fechar" aria-label="Fechar" onclick="this.closest('dialog').close()">×</button></div>
+            <?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id">
+            <label>Novo dia <small>(pode ser em outra semana)</small><input type="date" name="dia" required></label>
+            <label>Tanque <select name="tanque"><option value="">Tanque a definir</option><?php foreach ($b['tanques'] as $t): if (!($t['ativo'] ?? true)) continue; $oc = dh_tanque_lote($b, $t['id']); ?><option value="<?= e($t['id']) ?>"><?= e($t['nome']) ?><?= $oc ? ' (ocupado: ' . e($oc['cerveja']) . ')' : '' ?></option><?php endforeach; ?></select></label>
+            <label>Observação <input name="obs" maxlength="120" placeholder="Ex.: faltou malte, passou para a próxima semana"></label>
+            <div class="barra-salvar"><button class="btn primario largo">Salvar</button></div>
+          </form>
+        </dialog>
+        <script>
+        (function () {
+          var d = document.getElementById('prog-editar'); if (!d) return;
+          document.querySelectorAll('.prog-editar').forEach(function (bt) {
+            bt.addEventListener('click', function () {
+              var f = d.querySelector('form');
+              f.elements['id'].value = bt.dataset.id; f.elements['dia'].value = bt.dataset.dia; f.tanque.value = bt.dataset.tanque; f.obs.value = bt.dataset.obs;
+              document.getElementById('pe-nome').textContent = bt.dataset.nome;
+              d.showModal();
+            });
+          });
+        })();
+        </script>
+      <?php endif; ?>
     <?php
 }
 
