@@ -60,6 +60,31 @@ function programacao_acao(string $acao): bool
             dh_brassagem_salvar($b);
             ir('./?acao=brassagem-programacao&semana=' . $semana . '#programadas', 'Tirado da programação.');
 
+        case 'programacao-feita':
+            // ✓ Feita: sai do "Programado" e vai para "Brassadas" (a equipe também marca). Desfazer volta.
+            exigir_post();
+            exigir('brassagem');
+            $b = dh_brassagem();
+            $semana = prog_semana_param();
+            $id = (string) ($_POST['id'] ?? '');
+            $desfazer = !empty($_POST['desfazer']);
+            $nome = '';
+            foreach ($b['config']['programacao']['semanas'][$semana] ?? [] as $j => $x) {
+                if ($x['id'] === $id) {
+                    $nome = $x['nome'];
+                    if ($desfazer) {
+                        unset($b['config']['programacao']['semanas'][$semana][$j]['feita'], $b['config']['programacao']['semanas'][$semana][$j]['feita_em'], $b['config']['programacao']['semanas'][$semana][$j]['feita_por']);
+                    } else {
+                        $b['config']['programacao']['semanas'][$semana][$j] += ['feita' => true, 'feita_em' => date('Y-m-d H:i:s'), 'feita_por' => $usuario['nome']];
+                    }
+                }
+            }
+            if ($nome === '') {
+                throw new RuntimeException('Item da programação não encontrado.');
+            }
+            dh_brassagem_salvar($b);
+            ir('./?acao=brassagem-programacao&semana=' . $semana . ($desfazer ? '#programadas' : '#brassadas'), $desfazer ? $nome . ' voltou para o Programado.' : '✅ ' . $nome . ' marcada como brassada.');
+
         case 'programacao-config':
             // Categoria e consumo por semana de cada cerveja
             exigir_post();
@@ -85,19 +110,58 @@ function programacao_acao(string $acao): bool
 function prog_lista_semana(array $b, string $semana, bool $podeTirar): void
 {
     global $csrf;
-    $lista = dh_prog_semana($b, $semana);
+    $todas = dh_prog_semana($b, $semana);
+    $lista = array_filter($todas, fn($x) => empty($x['feita']));
+    $feitas = array_filter($todas, fn($x) => !empty($x['feita']));
+    ?>
+      <div class="abas">
+        <a href="#programadas" class="ativo" data-prog-aba="programadas">📅 Programado <small><?= count($lista) ?></small></a>
+        <a href="#brassadas" data-prog-aba="brassadas">✅ Brassadas <small><?= count($feitas) ?></small></a>
+      </div>
+      <div data-prog-painel="programadas">
+    <?php
     if (!$lista) {
-        echo '<p class="dica">Nada programado para esta semana.</p>';
-        return;
+        echo '<p class="dica">' . ($feitas ? 'Tudo o que foi programado nesta semana já foi brassado.' : 'Nada programado para esta semana.') . '</p>';
+    } else {
+        prog_itens($b, $semana, $lista, $podeTirar, false);
     }
+    ?>
+      </div>
+      <div data-prog-painel="brassadas" hidden>
+    <?php
+    if (!$feitas) {
+        echo '<p class="dica">Nenhuma brassagem marcada como feita nesta semana. Toque em <b>✓ Feita</b> no Programado.</p>';
+    } else {
+        prog_itens($b, $semana, $feitas, $podeTirar, true);
+    }
+    ?>
+      </div>
+      <script>
+      (function () {
+        var abas = document.querySelectorAll('[data-prog-aba]');
+        function abrir(q) {
+          abas.forEach(function (a) { a.classList.toggle('ativo', a.dataset.progAba === q); });
+          document.querySelectorAll('[data-prog-painel]').forEach(function (p) { p.hidden = p.dataset.progPainel !== q; });
+        }
+        abas.forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); abrir(a.dataset.progAba); history.replaceState(null, '', '#' + a.dataset.progAba); }); });
+        if (location.hash === '#brassadas') abrir('brassadas');
+      })();
+      </script>
+    <?php
+}
+
+function prog_itens(array $b, string $semana, array $lista, bool $podeTirar, bool $feitas): void
+{
+    global $csrf;
     ?>
       <ul class="prog-lista">
         <?php foreach ($lista as $x): $t = dh_tanque($b, $x['tanque']); ?>
           <li>
             <span class="lr-data"><strong><?= date('d', strtotime($x['dia'])) ?></strong><?= e(mb_substr(DH_DIAS_SEMANA[(int) date('w', strtotime($x['dia']))], 0, 3)) ?></span>
-            <span class="lr-info"><strong><?= e($x['nome']) ?></strong><small><?= $t ? e($t['nome']) : 'Tanque a definir' ?><?= $x['obs'] !== '' ? ' · ' . e($x['obs']) : '' ?></small>
+            <span class="lr-info"><strong><?= e($x['nome']) ?></strong><small><?= $t ? e($t['nome']) : 'Tanque a definir' ?><?= $x['obs'] !== '' ? ' · ' . e($x['obs']) : '' ?><?= $feitas ? ' · ✅ ' . e(date('d/m H:i', strtotime($x['feita_em']))) . ' · ' . e($x['feita_por']) : '' ?></small>
               <?php if ($x['receita'] !== ''): ?><a href="./?acao=receita&amp;id=<?= e($x['receita']) ?>">📖 Ver receita</a><?php endif; ?></span>
-            <?php if ($podeTirar): ?><form method="post" action="./?acao=programacao-tirar" onsubmit="return confirm('Tirar <?= e(addslashes($x['nome'])) ?> da programação?');"><?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="ct-tirar" aria-label="Tirar">×</button></form><?php endif; ?>
+            <form method="post" action="./?acao=programacao-feita"><?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><?php if ($feitas): ?><input type="hidden" name="desfazer" value="1"><button class="btn-acao" title="Voltar para o Programado">↩ Desfazer</button><?php else: ?><button class="btn-feita">✓ Feita</button><?php endif; ?></form>
+            <?php if ($podeTirar && !$feitas): ?><form method="post" action="./?acao=programacao-tirar" onsubmit="return confirm('Tirar <?= e(addslashes($x['nome'])) ?> da programação?');"><?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="ct-tirar" aria-label="Tirar">×</button></form><?php endif; ?>
           </li>
         <?php endforeach; ?>
       </ul>
@@ -123,7 +187,7 @@ function programacao_tela(string $tela): bool
         <a class="semana-seta" href="./?acao=brassagem-programacao&amp;semana=<?= date('Y-m-d', strtotime($semana . ' +7 days')) ?>" aria-label="Próxima semana">›</a>
       </div>
 
-      <h2 id="programadas">Programado</h2>
+      <h2 id="programadas">Programação da semana</h2><span id="brassadas"></span>
       <?php prog_lista_semana($b, $semana, $admin); ?>
 
       <?php if ($admin):
