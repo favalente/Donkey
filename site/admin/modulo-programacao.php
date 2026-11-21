@@ -35,7 +35,22 @@ function programacao_acao(string $acao): bool
             $grupos = dh_prog_grupos($b);
             $lista = $b['config']['programacao']['semanas'][$semana] ?? [];
             foreach ((array) ($_POST['itens'] ?? []) as $k => $it) {
-                if (empty($it['marcar']) || !isset($grupos[$k])) {
+                if (empty($it['marcar'])) {
+                    continue;
+                }
+                if (str_starts_with((string) $k, 'cv:')) {
+                    // Cerveja do cadastro fora das sugestões (achada pela busca)
+                    $cv = array_column(dh_brassagem_cervejas(), null, 'id')[substr((string) $k, 3)] ?? null;
+                    if (!$cv) {
+                        continue;
+                    }
+                    $rc = dh_receita_da_cerveja(dh_receitas(), $cv['id']);
+                    $dia = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($it['dia'] ?? '')) ? $it['dia'] : $semana;
+                    $lista[] = ['id' => dh_id_novo('p'), 'grupo' => (string) $k, 'nome' => $cv['nome'], 'receita' => $rc['id'] ?? '',
+                        'dia' => $dia, 'tanque' => (string) ($it['tanque'] ?? ''), 'obs' => '', 'por' => $usuario['nome']];
+                    continue;
+                }
+                if (!isset($grupos[$k])) {
                     continue;
                 }
                 $dia = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($it['dia'] ?? '')) ? $it['dia'] : $semana;
@@ -280,11 +295,13 @@ function programacao_tela(string $tela): bool
           q.addEventListener('input', function () {
             var t = tira(q.value.trim()), achou = 0, outras = document.querySelector('.prog-outras');
             document.querySelectorAll('.prog-form .prog-item').forEach(function (it) {
-              var ok = !t || tira(it.querySelector('strong').textContent).indexOf(t) >= 0;
+              var ok = tira(it.querySelector('strong').textContent).indexOf(t) >= 0;
+              ok = it.classList.contains('prog-extra') ? (!!t && ok) || it.querySelector('input:checked') !== null : (!t || ok);
               it.hidden = !ok; if (ok) achou++;
             });
             if (outras) { if (t) outras.open = true; outras.hidden = t && !outras.querySelector('.prog-item:not([hidden])'); }
             nada.hidden = !t || achou > 0;
+            nada.textContent = 'Nenhuma cerveja com esse nome no cadastro de Cervejas.';
           });
         })();
         </script>
@@ -302,6 +319,30 @@ function programacao_tela(string $tela): bool
               </div>
             </div>
           <?php endforeach; if ($mostrou) echo '</details>'; ?>
+          <?php
+            // Para a busca: todas as cervejas do cadastro que não estão na lista acima (sem receita, "fora", etc.)
+            $naLista = array_column($s['linhas'], 'chave');
+            $receitas = dh_receitas();
+            $extras = [];
+            foreach (dh_brassagem_cervejas() as $c) {
+                $g = dh_prog_achar_grupo($c['nome'], $gruposT, (string) $c['id']);
+                if ($g !== null && (in_array($g, $naLista, true) || in_array($g, $jaProg, true))) {
+                    continue;
+                }
+                $k = $g ?? 'cv:' . $c['id'];
+                $extras[$k] ??= ['nome' => $c['nome'], 'info' => $g !== null ? 'Marcada como fora da programação' : (dh_receita_da_cerveja($receitas, $c['id']) ? 'Fora das sugestões' : 'Sem receita cadastrada')];
+            }
+          ?>
+          <?php foreach ($extras as $k => $x): ?>
+            <div class="prog-item prog-extra" hidden>
+              <label class="prog-marcar"><input type="checkbox" name="itens[<?= e($k) ?>][marcar]" value="1">
+                <span><strong><?= e($x['nome']) ?></strong> <em class="tag cinza"><?= e($x['info']) ?></em></span></label>
+              <div class="prog-quando">
+                <select name="itens[<?= e($k) ?>][dia]" aria-label="Dia"><?php foreach ($dias as $d): ?><option value="<?= $d ?>"><?= e(DH_DIAS_SEMANA[(int) date('w', strtotime($d))] . ' ' . date('d/m', strtotime($d))) ?></option><?php endforeach; ?></select>
+                <select name="itens[<?= e($k) ?>][tanque]" aria-label="Tanque"><option value="">Tanque a definir</option><?php foreach ($livres as $t): ?><option value="<?= e($t['id']) ?>"><?= e($t['nome']) ?></option><?php endforeach; ?></select>
+              </div>
+            </div>
+          <?php endforeach; ?>
           <div class="barra-salvar"><button class="btn primario largo">📅 Programar as marcadas</button></div>
         </form>
 
