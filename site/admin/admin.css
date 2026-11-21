@@ -920,6 +920,9 @@ h3 small { font-weight: 400; color: var(--muted); }
 .prog-quando select { margin: 0 !important; }
 .prog-outras { margin: 10px 0; }
 .prog-outras summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+.prog-busca { width: 100%; margin: 6px 0 12px; }
+.prog-item[hidden], .prog-outras[hidden] { display: none; }
+@media (max-width: 560px) { .prog-lista li { flex-wrap: wrap; } .prog-lista .lr-info { flex: 1 1 calc(100% - 70px); } .prog-lista li > form:first-of-type { margin-left: 62px; } }
 .prog-cfg-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
 .prog-cfg-linha strong, .prog-cfg-linha small { grid-column: 1 / -1; }
 .prog-cfg-linha small { color: var(--muted); margin-top: -4px; }

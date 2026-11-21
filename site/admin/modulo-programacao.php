@@ -271,6 +271,23 @@ function programacao_tela(string $tela): bool
         <h2>Sugestões</h2>
         <?php if ($semReceita): ?><p class="aviso">Nos tanques, sem receita reconhecida (não entram na conta): <?= e(implode(', ', $semReceita)) ?>. Confira se a receita existe em Receitas com um nome parecido.</p><?php endif; ?>
         <p class="dica"><?= $s['livres'] ?> tanque<?= $s['livres'] !== 1 ? 's' : '' ?> livre<?= $s['livres'] !== 1 ? 's' : '' ?> agora. Conta o estoque da última contagem (fábrica e casas, em barris de 50 L; mexido conta a parte que sobra), o que está nos tanques e o consumo por semana de cada cerveja. Sem dry hop o lote leva <?= DH_PROG_DIAS_SEM_DRYHOP ?> dias; com dry hop, <?= DH_PROG_DIAS_COM_DRYHOP ?>. Marque o que vai brassar e toque em <b>Programar</b>; a equipe vê só o que for programado.</p>
+        <input type="search" id="prog-busca" class="prog-busca" placeholder="🔎 Buscar cerveja para programar" autocomplete="off">
+        <p class="dica" id="prog-busca-nada" hidden>Nenhuma cerveja com esse nome. Confira se ela tem receita em Receitas (ou se está como "fora" em ⚙ Cervejas da programação).</p>
+        <script>
+        (function () {
+          var q = document.getElementById('prog-busca'), nada = document.getElementById('prog-busca-nada');
+          var tira = function (t) { return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); };
+          q.addEventListener('input', function () {
+            var t = tira(q.value.trim()), achou = 0, outras = document.querySelector('.prog-outras');
+            document.querySelectorAll('.prog-form .prog-item').forEach(function (it) {
+              var ok = !t || tira(it.querySelector('strong').textContent).indexOf(t) >= 0;
+              it.hidden = !ok; if (ok) achou++;
+            });
+            if (outras) { if (t) outras.open = true; outras.hidden = t && !outras.querySelector('.prog-item:not([hidden])'); }
+            nada.hidden = !t || achou > 0;
+          });
+        })();
+        </script>
         <form method="post" action="./?acao=programacao-salvar" class="prog-form">
           <?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>">
           <?php $mostrou = false; foreach ($s['linhas'] as $l): if (in_array($l['chave'], $jaProg, true)) continue; $destaque = $l['sugerir'] || !empty($l['espera']); if (!$destaque && $mostrou === false) { $mostrou = true; echo '<details class="prog-outras"><summary>Outras cervejas (sem urgência)</summary>'; } ?>
