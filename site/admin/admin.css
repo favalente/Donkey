@@ -893,6 +893,7 @@ h3 small { font-weight: 400; color: var(--muted); }
 .ct-saca label { display: flex; align-items: center; gap: 6px; font-size: .85rem; line-height: 1.1; }
 .ct-saca label input { width: 72px; flex: none; }
 .ct-saca[hidden] { display: none; }
+.ct-sk-txt { color: var(--muted); font-size: .9rem; }
 .ct-num { white-space: normal; }
 .sede-escolha:has(> :nth-child(3)) { grid-template-columns: repeat(3, 1fr); }
 .u-fabrica { --cor: #b08968; }

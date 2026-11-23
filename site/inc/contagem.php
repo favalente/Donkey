@@ -22,7 +22,7 @@ function dh_contagem_casa_nome(string $casa): string
 }
 const DH_CONTAGEM_LITROS = ['50', '30'];
 // Malte: sacas fechadas (de 25 kg) + os quilos que sobram na saca aberta
-const DH_CONTAGEM_SACA_KG = ['25', '50'];
+const DH_CONTAGEM_SACA_KG = ['25']; // as sacas da Donkey Head são sempre de 25 kg
 
 // Total do item para comparar com a contagem anterior: saca vira quilos; o resto, a quantidade
 function dh_contagem_total(array $l): ?float

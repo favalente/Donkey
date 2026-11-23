@@ -283,7 +283,7 @@ function contagem_tela_editar(): void
               <div class="ct-barris"><?php foreach ($l['unidade'] === 'barril' ? dh_contagem_barris($l) : [] as $n => $st): ?><label>Barril <?= $n + 1 ?> <select class="ct-st"><?php foreach (DH_CONTAGEM_STATUS as $k => $rot): ?><option value="<?= $k ?>" <?= (string) $st === (string) $k ? 'selected' : '' ?>><?= e($rot) ?></option><?php endforeach; ?></select></label><?php endforeach; ?></div>
             </div>
             <div class="ct-saca"<?= $l['unidade'] !== 'saca' ? ' hidden' : '' ?>>
-              <select class="ct-sk" aria-label="Peso da saca"><?php foreach (DH_CONTAGEM_SACA_KG as $sk): ?><option value="<?= $sk ?>" <?= (string) ($l['saca_kg'] ?? '25') === $sk ? 'selected' : '' ?>>saca de <?= $sk ?> kg</option><?php endforeach; ?></select>
+              <span class="ct-sk-txt">saca de 25 kg</span>
               <label>+ kg na aberta <input class="ct-ak" inputmode="decimal" value="<?= !empty($l['aberta_kg']) ? e(dh_num($l['aberta_kg'])) : '' ?>" placeholder="0"></label>
             </div>
             <input class="ct-o" value="<?= e($l['obs']) ?>" placeholder="obs." aria-label="Observação">
@@ -389,7 +389,7 @@ function contagem_tela_editar(): void
               var u = it.querySelector('.ct-u').value;
               linhas.push({ local: local, nome: nome, qtd: q, unidade: u, obs: it.querySelector('.ct-o').value.trim(),
                 litros: u === 'barril' ? it.querySelector('.ct-l').value : '',
-                saca_kg: u === 'saca' ? it.querySelector('.ct-sk').value : '', aberta_kg: u === 'saca' ? it.querySelector('.ct-ak').value.trim() : '',
+                saca_kg: u === 'saca' ? '25' : '', aberta_kg: u === 'saca' ? it.querySelector('.ct-ak').value.trim() : '',
                 barris: u === 'barril' ? [].map.call(it.querySelectorAll('.ct-st'), function (x) { return x.value; }) : [] });
             });
           });
