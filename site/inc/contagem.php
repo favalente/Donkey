@@ -6,7 +6,7 @@
 declare(strict_types=1);
 
 const DH_ARQ_CONTAGEM = DH_RAIZ . '/dados/contagem.json';
-const DH_CONTAGEM_UNIDADES = ['barril', 'un', 'fardo', 'caixa', 'garrafa', 'lata', 'kg', 'L', 'pacote'];
+const DH_CONTAGEM_UNIDADES = ['barril', 'saca', 'un', 'fardo', 'caixa', 'garrafa', 'lata', 'kg', 'L', 'pacote'];
 // Onde se conta: as duas casas e a fábrica (com os lugares de cada uma)
 const DH_CONTAGEM_CASAS = ['aldeota' => 'Aldeota', 'maraponga' => 'Maraponga', 'fabrica' => 'Fábrica'];
 const DH_CONTAGEM_LOCAIS_CASA = ['fabrica' => ['Câmara produção', 'Câmara estoque', 'Maltes', 'Lúpulos', 'Leveduras'], '*' => ['Câmara produção', 'Câmara estoque', 'Estoque seco', 'Estoque frio']];
@@ -21,6 +21,20 @@ function dh_contagem_casa_nome(string $casa): string
     return DH_CONTAGEM_CASAS[$casa] ?? (DH_UNIDADES[$casa] ?? $casa);
 }
 const DH_CONTAGEM_LITROS = ['50', '30'];
+// Malte: sacas fechadas (de 25 kg) + os quilos que sobram na saca aberta
+const DH_CONTAGEM_SACA_KG = ['25', '50'];
+
+// Total do item para comparar com a contagem anterior: saca vira quilos; o resto, a quantidade
+function dh_contagem_total(array $l): ?float
+{
+    if ($l['qtd'] === null) {
+        return null;
+    }
+    if ($l['unidade'] === 'saca') {
+        return round($l['qtd'] * (float) ($l['saca_kg'] ?? 25) + (float) ($l['aberta_kg'] ?? 0), 2);
+    }
+    return (float) $l['qtd'];
+}
 // Situação de cada barril: na câmara de produção já vem "mexido", na de estoque "cheio"
 const DH_CONTAGEM_STATUS = ['100' => 'Cheio (100%)', '80' => 'Mexido 80%', '50' => 'Mexido 50%', '20' => 'Mexido 20%'];
 const DH_CONTAGEM_ABERTO = ['' => '', 'cheio' => 'Cheio (100%)', '90' => 'Mexido 90%', '60' => 'Mexido 60%', '30' => 'Mexido 30%']; // contagens antigas
@@ -45,6 +59,11 @@ function dh_contagem_barris(array $l): array
 // "2 barris de 50 L (1 cheio, 1 mexido 50%)"
 function dh_contagem_detalhe_barril(array $l): string
 {
+    if ($l['unidade'] === 'saca') {
+        // "3 sacas de 25 kg + 8 kg na aberta = 83 kg"
+        $ab = (float) ($l['aberta_kg'] ?? 0);
+        return ' de ' . ($l['saca_kg'] ?? '25') . ' kg' . ($ab > 0 ? ' + ' . dh_num($ab) . ' kg na aberta' : '') . ($l['qtd'] !== null ? ' = ' . dh_num(dh_contagem_total($l)) . ' kg' : '');
+    }
     if ($l['unidade'] !== 'barril') {
         return '';
     }
@@ -119,7 +138,7 @@ function dh_qtd_txt(?float $q): string
 
 function dh_contagem_unidade_txt(string $u, ?float $q): string
 {
-    $plural = ['barril' => 'barris', 'un' => 'un', 'fardo' => 'fardos', 'caixa' => 'caixas', 'garrafa' => 'garrafas', 'lata' => 'latas', 'pacote' => 'pacotes'];
+    $plural = ['barril' => 'barris', 'un' => 'un', 'fardo' => 'fardos', 'caixa' => 'caixas', 'garrafa' => 'garrafas', 'lata' => 'latas', 'pacote' => 'pacotes', 'saca' => 'sacas'];
     return $q !== null && $q > 1 ? ($plural[$u] ?? $u) : $u;
 }
 
@@ -160,7 +179,7 @@ function dh_contagem_do_texto(string $txt): array
 {
     $unidades = ['barris' => 'barril', 'barril' => 'barril', 'fardos' => 'fardo', 'fardo' => 'fardo', 'unidades' => 'un', 'unidade' => 'un', 'un' => 'un',
         'caixas' => 'caixa', 'caixa' => 'caixa', 'cx' => 'caixa', 'garrafas' => 'garrafa', 'garrafa' => 'garrafa', 'latas' => 'lata', 'lata' => 'lata',
-        'pacotes' => 'pacote', 'pacote' => 'pacote', 'kg' => 'kg', 'l' => 'L'];
+        'pacotes' => 'pacote', 'pacote' => 'pacote', 'sacas' => 'saca', 'saca' => 'saca', 'sacos' => 'saca', 'saco' => 'saca', 'kg' => 'kg', 'l' => 'L'];
     $uRe = implode('|', array_keys($unidades));
     $num = '(\d+\/\d+|\d+(?:\s*[.,]\s*\d+)?(?:\s*\+\s*\d+\/\d+)?)';
     $local = 'Estoque';
