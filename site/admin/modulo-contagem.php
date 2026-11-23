@@ -190,7 +190,7 @@ function contagem_tela_lista(): void
           <button class="ct-nova"><span>🍺</span><strong>Começar pelas cervejas engatadas</strong><small><?= $casa === 'fabrica' ? 'A câmara de produção vem com o chope engatado nas duas casas; adicione o resto.' : 'A câmara de produção vem com o chope que está na tap list; adicione o resto.' ?></small></button></form>
         <?php else: ?>
         <form method="post" action="./?acao=contagem-nova"><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="vazia">
-          <button class="ct-nova"><span>🏭</span><strong>Começar uma contagem vazia</strong><small>Câmara produção e câmara estoque, para adicionar as cervejas dos tanques.</small></button></form>
+          <button class="ct-nova"><span>🏭</span><strong>Começar uma contagem vazia</strong><small>Câmaras de produção e estoque, maltes, lúpulos e leveduras.</small></button></form>
         <?php endif; ?>
         <button type="button" class="ct-nova" onclick="var f=document.getElementById('ct-colar-form'); f.hidden=!f.hidden; if(!f.hidden) f.querySelector('textarea').focus();"><span>📝</span><strong>Colar a contagem do WhatsApp</strong><small>Para aproveitar a última contagem que foi mandada em texto.</small></button>
         <form method="post" action="./?acao=contagem-nova" id="ct-colar-form" class="ct-colar-form" hidden><?= $csrf ?><input type="hidden" name="casa" value="<?= e($casa) ?>"><input type="hidden" name="modo" value="texto">
@@ -309,6 +309,9 @@ function contagem_tela_editar(): void
             var novo = modelo.content.firstElementChild.cloneNode(true), lista = b.closest('.ct-local').querySelector('.ct-itens'), ult = lista.querySelector('.ct-item:last-child .ct-u');
             var camara = /c[aâ]mara/i.test(b.closest('.ct-local').querySelector('.ct-local-nome').value || '');
             if (camara) { novo.querySelector('.ct-u').value = 'barril'; novo.querySelector('.ct-q').value = '1'; } // câmara: barril, 1 unidade
+            var setor = b.closest('.ct-local').querySelector('.ct-local-nome').value || '';
+            if (/malte|l[uú]pulo/i.test(setor)) novo.querySelector('.ct-u').value = 'kg'; // insumos: kg
+            if (/levedura/i.test(setor)) novo.querySelector('.ct-u').value = 'pacote';
             else if (ult) novo.querySelector('.ct-u').value = ult.value; // mesma unidade do item de cima
             lista.appendChild(novo);
             barris(novo);
