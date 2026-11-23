@@ -14,6 +14,39 @@ function prog_semana_param(): string
     return preg_match('/^\d{4}-\d{2}-\d{2}$/', $s) ? dh_semana_inicio($s) : dh_semana_inicio(date('Y-m-d'));
 }
 
+// Cervejas que dá para escolher ao editar um item: as da programação (New England: cada receita) e as
+// do cadastro sem receita. valor => [rótulo, grupo, nome, receita]
+function prog_opcoes(array $b): array
+{
+    $grupos = dh_prog_grupos($b);
+    $r = [];
+    foreach ($grupos as $k => $g) {
+        $rcs = $k === 'newengland' ? $g['receitas'] : array_slice($g['receitas'], 0, 1);
+        foreach ($rcs as $rc) {
+            $nome = $k === 'newengland' ? $rc['nome'] : $g['nome'];
+            $r['g:' . $k . ($k === 'newengland' ? ':' . $rc['id'] : '')] = [$nome, $k, $nome, $rc['id'] ?? ''];
+        }
+    }
+    $receitas = dh_receitas();
+    foreach (dh_brassagem_cervejas() as $c) {
+        if (dh_prog_achar_grupo($c['nome'], $grupos, (string) $c['id']) === null) {
+            $rc = dh_receita_da_cerveja($receitas, $c['id']);
+            $r['cv:' . $c['id']] = [$c['nome'], 'cv:' . $c['id'], $c['nome'], $rc['id'] ?? ''];
+        }
+    }
+    uasort($r, fn($x, $y) => strnatcasecmp($x[0], $y[0]));
+    return $r;
+}
+
+// Valor do item na lista de cervejas da edição
+function prog_opcao_do_item(array $x): string
+{
+    if (str_starts_with($x['grupo'], 'cv:')) {
+        return $x['grupo'];
+    }
+    return 'g:' . $x['grupo'] . ($x['grupo'] === 'newengland' ? ':' . $x['receita'] : '');
+}
+
 function programacao_acao(string $acao): bool
 {
     global $usuario;
@@ -103,6 +136,10 @@ function programacao_acao(string $acao): bool
             }
             if (!$item) {
                 throw new RuntimeException('Item da programação não encontrado.');
+            }
+            $op = (string) ($_POST['cerveja'] ?? '');
+            if ($op !== '' && $op !== prog_opcao_do_item($item) && ($o = prog_opcoes($b)[$op] ?? null)) {
+                [, $item['grupo'], $item['nome'], $item['receita']] = $o;
             }
             $item['dia'] = $dia;
             $item['tanque'] = $tq;
@@ -213,7 +250,7 @@ function prog_itens(array $b, string $semana, array $lista, bool $podeTirar, boo
             <span class="lr-info"><strong><?= e($x['nome']) ?></strong><small><?= $t ? e($t['nome']) : 'Tanque a definir' ?><?= $x['obs'] !== '' ? ' · ' . e($x['obs']) : '' ?><?= $feitas ? ' · ✅ ' . e(date('d/m H:i', strtotime($x['feita_em']))) . ' · ' . e($x['feita_por']) : '' ?></small>
               <?php if ($x['receita'] !== ''): ?><a href="./?acao=receita&amp;id=<?= e($x['receita']) ?>">📖 Ver receita</a><?php endif; ?></span>
             <form method="post" action="./?acao=programacao-feita"><?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><?php if ($feitas): ?><input type="hidden" name="desfazer" value="1"><button class="btn-acao" title="Voltar para o Programado">↩ Desfazer</button><?php else: ?><button class="btn-feita">✓ Feita</button><?php endif; ?></form>
-            <?php if ($podeTirar && !$feitas): ?><button type="button" class="btn-acao prog-editar" data-id="<?= e($x['id']) ?>" data-nome="<?= e($x['nome']) ?>" data-dia="<?= e($x['dia']) ?>" data-tanque="<?= e($x['tanque']) ?>" data-obs="<?= e($x['obs']) ?>" aria-label="Editar">✏️</button><?php endif; ?>
+            <?php if ($podeTirar && !$feitas): ?><button type="button" class="btn-acao prog-editar" data-id="<?= e($x['id']) ?>" data-nome="<?= e($x['nome']) ?>" data-cerveja="<?= e(prog_opcao_do_item($x)) ?>" data-dia="<?= e($x['dia']) ?>" data-tanque="<?= e($x['tanque']) ?>" data-obs="<?= e($x['obs']) ?>" aria-label="Editar">✏️</button><?php endif; ?>
             <?php if ($podeTirar && !$feitas): ?><form method="post" action="./?acao=programacao-tirar" onsubmit="return confirm('Tirar <?= e(addslashes($x['nome'])) ?> da programação?');"><?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="ct-tirar" aria-label="Tirar">×</button></form><?php endif; ?>
           </li>
         <?php endforeach; ?>
@@ -221,8 +258,9 @@ function prog_itens(array $b, string $semana, array $lista, bool $podeTirar, boo
       <?php if ($podeTirar && !$feitas): ?>
         <dialog class="dup-modal" id="prog-editar">
           <form method="post" action="./?acao=programacao-editar" class="form-cerveja">
-            <div class="dup-topo"><div><strong>✏️ Reprogramar</strong><small id="pe-nome"></small></div><button type="button" class="dup-fechar" aria-label="Fechar" onclick="this.closest('dialog').close()">×</button></div>
+            <div class="dup-topo"><div><strong>✏️ Editar programação</strong><small id="pe-nome"></small></div><button type="button" class="dup-fechar" aria-label="Fechar" onclick="this.closest('dialog').close()">×</button></div>
             <?= $csrf ?><input type="hidden" name="semana" value="<?= e($semana) ?>"><input type="hidden" name="id">
+            <label>Cerveja <select name="cerveja"><?php foreach (prog_opcoes($b) as $v => [$rot]): ?><option value="<?= e($v) ?>"><?= e($rot) ?></option><?php endforeach; ?></select></label>
             <label>Novo dia <small>(pode ser em outra semana)</small><input type="date" name="dia" required></label>
             <label>Tanque <select name="tanque"><option value="">Tanque a definir</option><?php foreach ($b['tanques'] as $t): if (!($t['ativo'] ?? true)) continue; $oc = dh_tanque_lote($b, $t['id']); ?><option value="<?= e($t['id']) ?>"><?= e($t['nome']) ?><?= $oc ? ' (ocupado: ' . e($oc['cerveja']) . ')' : '' ?></option><?php endforeach; ?></select></label>
             <label>Observação <input name="obs" maxlength="120" placeholder="Ex.: faltou malte, passou para a próxima semana"></label>
@@ -235,7 +273,8 @@ function prog_itens(array $b, string $semana, array $lista, bool $podeTirar, boo
           document.querySelectorAll('.prog-editar').forEach(function (bt) {
             bt.addEventListener('click', function () {
               var f = d.querySelector('form');
-              f.elements['id'].value = bt.dataset.id; f.elements['dia'].value = bt.dataset.dia; f.tanque.value = bt.dataset.tanque; f.obs.value = bt.dataset.obs;
+              f.elements['id'].value = bt.dataset.id; f.elements['dia'].value = bt.dataset.dia; f.tanque.value = bt.dataset.tanque; var vz = f.elements['cerveja'].querySelector('option[value=""]'); if (vz) vz.remove(); f.elements['cerveja'].value = bt.dataset.cerveja;
+              if (f.elements['cerveja'].value !== bt.dataset.cerveja) { var o = new Option(bt.dataset.nome, ''); f.elements['cerveja'].add(o, 0); f.elements['cerveja'].value = ''; } f.obs.value = bt.dataset.obs;
               document.getElementById('pe-nome').textContent = bt.dataset.nome;
               d.showModal();
             });
