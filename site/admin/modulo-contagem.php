@@ -229,8 +229,9 @@ function contagem_tela_lista(): void
         <?php foreach (array_slice($daCasa, 0, 30) as $x): ?>
           <li><a class="ct-hist" href="./?acao=<?= $x['status'] === 'enviada' ? 'contagem-ver' : 'contagem-editar' ?>&amp;id=<?= e($x['id']) ?>">
             <span class="lr-data"><strong><?= date('d', strtotime($x['data'])) ?></strong><?= e(mb_substr(DH_MESES[(int) date('n', strtotime($x['data']))], 0, 3)) ?></span>
-            <span class="lr-info"><strong><?= count($x['linhas']) ?> itens<?= $x['status'] === 'rascunho' ? ' · <em class="tag cinza">rascunho</em>' : '' ?></strong><small>por <?= e($x['por']) ?></small></span>
-          </a></li>
+            <span class="lr-info"><strong><?= count($x['linhas']) ?> ite<?= count($x['linhas']) === 1 ? 'm' : 'ns' ?><?= $x['status'] === 'rascunho' ? ' · <em class="tag cinza">rascunho</em>' : '' ?></strong><small>por <?= e($x['por']) ?> · <?= e(date('H:i', strtotime($x['em']))) ?></small></span>
+          </a>
+          <form method="post" action="./?acao=contagem-excluir" class="ct-hist-apagar" onsubmit="return confirm('Apagar a contagem de <?= e(date('d/m', strtotime($x['data']))) ?> (<?= count($x['linhas']) ?> itens, <?= e(date('H:i', strtotime($x['em']))) ?>)?');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button aria-label="Apagar contagem" title="Apagar">🗑</button></form></li>
         <?php endforeach; ?>
       </ul>
     <?php
@@ -429,6 +430,7 @@ function contagem_tela_ver(): void
         <button type="button" class="btn secundario" onclick="window.print()">🖨 Imprimir</button>
         <a class="btn secundario" href="./?acao=contagem-editar&amp;id=<?= e($x['id']) ?>">✏️ Corrigir</a>
       </p>
+      <form method="post" action="./?acao=contagem-excluir" class="botoes-link" onsubmit="return confirm('Apagar esta contagem? Não dá para desfazer.');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="btn perigo">🗑 Apagar contagem</button></form>
       <?php foreach (dh_contagem_por_local($x['linhas']) as $local => $ls): ?>
         <h2><?= e($local) ?></h2>
         <table class="ct-tabela">

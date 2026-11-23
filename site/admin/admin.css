@@ -865,6 +865,10 @@ h3 small { font-weight: 400; color: var(--muted); }
 .ct-colar summary::-webkit-details-marker { display: none; }
 .ct-colar form { grid-column: 1 / -1; margin-top: 10px; }
 .ct-hist { display: flex; gap: 14px; align-items: center; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; }
+.lista-reservas li:has(.ct-hist) { display: flex; gap: 8px; align-items: stretch; }
+.lista-reservas li .ct-hist { flex: 1; }
+.ct-hist-apagar { margin: 0; }
+.lista-reservas .ct-hist-apagar button { width: 48px; height: 100%; justify-content: center; padding: 0; font-size: 1.2rem; }
 .ct-local { margin: 16px 0; padding: 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); }
 .ct-local h2 { margin: 0 0 8px; }
 .ct-local-nome { font-size: 1.15rem !important; font-weight: 800; border: 0 !important; background: transparent !important; padding: 4px 0 !important; min-height: 0 !important; margin: 0 !important; }
