@@ -921,6 +921,8 @@ h3 small { font-weight: 400; color: var(--muted); }
 .prog-outras { margin: 10px 0; }
 .prog-outras summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
 .prog-busca { width: 100%; margin: 6px 0 12px; }
+.ct-outra { margin: 14px 0; }
+.ct-outra > summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
 .prog-item[hidden], .prog-outras[hidden] { display: none; }
 @media (max-width: 560px) { .prog-lista li { flex-wrap: wrap; } .prog-lista .lr-info { flex: 1 1 calc(100% - 70px); } .prog-lista li > form:first-of-type { margin-left: 62px; } }
 .prog-cfg-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }

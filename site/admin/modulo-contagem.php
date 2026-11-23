@@ -51,6 +51,10 @@ function contagem_acao(string $acao): bool
             $linhas = [];
             if ($modo === 'copiar') {
                 $ant = dh_contagem_anterior($c, $casa);
+                if ($ant && $ant['data'] === date('Y-m-d')) {
+                    // A de hoje já existe: corrige ela em vez de criar outra igual
+                    ir('./?acao=contagem-editar&id=' . $ant['id'], 'A contagem de hoje já existe: é só corrigir.');
+                }
                 foreach ($ant['linhas'] ?? [] as $l) {
                     $linhas[] = $l; // mesmas quantidades: só corrige o que mudou
                 }
@@ -66,7 +70,7 @@ function contagem_acao(string $acao): bool
                 }
             }
             // Ainda não grava: a contagem só é guardada ao tocar em Salvar ou Enviar
-            $_SESSION['contagem_nova'] = ['id' => '', 'casa' => $casa, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => $linhas];
+            $_SESSION['contagem_nova'] = ['id' => '', 'token' => bin2hex(random_bytes(8)), 'casa' => $casa, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => $linhas];
             ir('./?acao=contagem-editar&nova=1');
 
         case 'contagem-salvar':
@@ -74,12 +78,20 @@ function contagem_acao(string $acao): bool
             exigir('contagem');
             $c = dh_contagem();
             $id = (string) ($_POST['id'] ?? '');
+            $token = (string) ($_POST['token'] ?? '');
+            if ($id === '' && $token !== '' && isset($_SESSION['contagem_criadas'][$token])) {
+                // Mesmo formulário enviado de novo (dois toques, voltar e reenviar): atualiza a que já foi criada
+                $id = $_SESSION['contagem_criadas'][$token];
+            }
             if ($id === '') {
                 // Primeira vez que essa contagem é salva
                 $nova = $_SESSION['contagem_nova'] ?? null;
                 $casaN = isset(DH_CONTAGEM_CASAS[$_POST['casa'] ?? '']) ? $_POST['casa'] : ($nova['casa'] ?? contagem_casa());
                 $c['contagens'][] = ['id' => dh_id_novo('k'), 'casa' => $casaN, 'data' => date('Y-m-d'), 'status' => 'rascunho', 'por' => $usuario['nome'], 'em' => date('Y-m-d H:i:s'), 'linhas' => []];
                 $i = count($c['contagens']) - 1;
+                if ($token !== '') {
+                    $_SESSION['contagem_criadas'][$token] = $c['contagens'][$i]['id'];
+                }
                 unset($_SESSION['contagem_nova']);
             } else {
                 $i = contagem_indice($c, $id);
@@ -179,6 +191,12 @@ function contagem_tela_lista(): void
         <p class="dica centro">Contagem começada e ainda não enviada.</p>
       <?php endif; ?>
 
+      <?php $hoje = array_values(array_filter($daCasa, fn($x) => $x['data'] === date('Y-m-d') && $x['status'] === 'enviada'))[0] ?? null; ?>
+      <?php if ($hoje): ?>
+        <a class="btn primario largo" href="./?acao=contagem-editar&amp;id=<?= e($hoje['id']) ?>">✏️ Corrigir a contagem de hoje</a>
+        <p class="dica centro">A contagem de hoje já foi enviada. Para mudar alguma coisa, corrija ela (não comece outra).</p>
+        <details class="ct-outra"><summary>Começar outra contagem mesmo assim</summary>
+      <?php endif; ?>
       <h2>Nova contagem</h2>
       <div class="ct-novas">
         <?php if ($ant): ?>
@@ -198,6 +216,7 @@ function contagem_tela_lista(): void
           <button class="btn primario largo">Ler o texto</button>
         </form>
       </div>
+      <?php if ($hoje): ?></details><?php endif; ?>
 
       <h2>Contagens</h2>
       <?php if (!$daCasa): ?><p class="dica">Nenhuma contagem ainda.</p><?php endif; ?>
@@ -269,7 +288,7 @@ function contagem_tela_editar(): void
       <p class="dica">Digite a quantidade de cada item (meio fardo: <b>0,5</b> ou <b>1/2</b>). Os botões − e + mudam de 1 em 1. Toque em <b>Salvar</b> para continuar depois, e em <b>Enviar</b> quando terminar.</p>
       <datalist id="ct-nomes"><?php foreach (array_keys($nomes) as $n): ?><option value="<?= e($n) ?>"><?php endforeach; ?></datalist>
       <form method="post" action="./?acao=contagem-salvar" id="ct-form" class="ct-form">
-        <?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><input type="hidden" name="casa" value="<?= e($x['casa']) ?>"><input type="hidden" name="json" id="ct-json"><input type="hidden" name="enviar" id="ct-enviar" value="">
+        <?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><input type="hidden" name="token" value="<?= e($x['token'] ?? '') ?>"><input type="hidden" name="casa" value="<?= e($x['casa']) ?>"><input type="hidden" name="json" id="ct-json"><input type="hidden" name="enviar" id="ct-enviar" value="">
         <label>Data da contagem <input type="date" name="data" value="<?= e($x['data']) ?>"></label>
         <div id="ct-locais">
           <?php foreach ($locais as $lc): ?>
@@ -364,6 +383,10 @@ function contagem_tela_editar(): void
           });
           if (document.getElementById('ct-enviar').value === '1' && vazios && !confirm(vazios + ' ' + (vazios > 1 ? 'itens estão' : 'item está') + ' sem quantidade. Enviar mesmo assim?')) { e.preventDefault(); return; }
           document.getElementById('ct-json').value = JSON.stringify(linhas);
+          // Um toque só: evita salvar duas vezes enquanto a internet está lenta
+          if (form.dataset.enviando) { e.preventDefault(); return; }
+          form.dataset.enviando = '1';
+          form.querySelectorAll('[data-enviar]').forEach(function (b) { b.style.opacity = '.6'; });
         });
       })();
       </script>
