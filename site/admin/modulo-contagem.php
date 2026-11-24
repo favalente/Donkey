@@ -184,7 +184,7 @@ function contagem_tela_lista(): void
     $rascunho = array_values(array_filter($daCasa, fn($x) => $x['status'] === 'rascunho'))[0] ?? null;
     $ant = dh_contagem_anterior($c, $casa);
     ?>
-      <h1>📦 Contagem de estoque</h1>
+      <h1>📦 Inventário / Contagem</h1>
       <nav class="sede-escolha" aria-label="Contagem de qual casa">
         <?php foreach (DH_CONTAGEM_CASAS as $u => $nomeU): ?>
           <a class="sede-opcao u-<?= $u ?><?= $casa === $u ? ' ativa' : '' ?>" href="./?acao=contagem&amp;casa=<?= $u ?>"><?= $casa === $u ? '✓ ' : '' ?><?= e($nomeU) ?></a>
