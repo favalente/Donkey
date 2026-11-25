@@ -27,11 +27,11 @@ const DH_CONTAGEM_SACA_KG = ['25']; // as sacas da Donkey Head são sempre de 25
 // Total do item para comparar com a contagem anterior: saca vira quilos; o resto, a quantidade
 function dh_contagem_total(array $l): ?float
 {
+    if ($l['unidade'] === 'saca' && ($l['qtd'] !== null || (float) ($l['aberta_kg'] ?? 0) > 0)) {
+        return round((float) $l['qtd'] * (float) ($l['saca_kg'] ?? 25) + (float) ($l['aberta_kg'] ?? 0), 2);
+    }
     if ($l['qtd'] === null) {
         return null;
-    }
-    if ($l['unidade'] === 'saca') {
-        return round($l['qtd'] * (float) ($l['saca_kg'] ?? 25) + (float) ($l['aberta_kg'] ?? 0), 2);
     }
     return (float) $l['qtd'];
 }
@@ -54,6 +54,15 @@ function dh_contagem_barris(array $l): array
         $b[] = dh_contagem_status_padrao($l['local'] ?? '');
     }
     return $b;
+}
+
+// Quantidade para mostrar: [número em destaque, resto]. Malte sem saca fechada: só os kg da aberta.
+function dh_contagem_qtd_partes(array $l): array
+{
+    if ($l['unidade'] === 'saca' && (float) $l['qtd'] <= 0 && (float) ($l['aberta_kg'] ?? 0) > 0) {
+        return [dh_num((float) $l['aberta_kg']), 'kg (saca aberta)'];
+    }
+    return [dh_qtd_txt($l['qtd']), dh_contagem_unidade_txt($l['unidade'], $l['qtd']) . dh_contagem_detalhe_barril($l)];
 }
 
 // "2 barris de 50 L (1 cheio, 1 mexido 50%)"
@@ -241,7 +250,7 @@ function dh_contagem_texto(array $x): string
     foreach (dh_contagem_por_local($x['linhas']) as $local => $ls) {
         $t .= "\n*" . $local . "*\n";
         foreach ($ls as $l) {
-            $t .= $l['nome'] . ': ' . dh_qtd_txt($l['qtd']) . ' ' . dh_contagem_unidade_txt($l['unidade'], $l['qtd']) . dh_contagem_detalhe_barril($l) . ($l['obs'] !== '' ? ' (' . $l['obs'] . ')' : '') . "\n";
+            $t .= $l['nome'] . ': ' . implode(' ', dh_contagem_qtd_partes($l)) . ($l['obs'] !== '' ? ' (' . $l['obs'] . ')' : '') . "\n";
         }
     }
     return $t . "\nContado por " . ($x['por'] ?? '');

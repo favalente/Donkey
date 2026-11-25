@@ -386,8 +386,8 @@ function contagem_tela_editar(): void
             s.querySelectorAll('.ct-item').forEach(function (it) {
               var nome = it.querySelector('.ct-n').value.trim(), q = it.querySelector('.ct-q').value.trim();
               if (!nome) return;
-              if (!q) vazios++;
               var u = it.querySelector('.ct-u').value;
+              if (!q && !(u === 'saca' && it.querySelector('.ct-ak').value.trim())) vazios++; // malte só com a saca aberta: ok
               linhas.push({ local: local, nome: nome, qtd: q, unidade: u, obs: it.querySelector('.ct-o').value.trim(),
                 litros: u === 'barril' ? it.querySelector('.ct-l').value : '',
                 saca_kg: u === 'saca' ? '25' : '', aberta_kg: u === 'saca' ? it.querySelector('.ct-ak').value.trim() : '',
@@ -434,10 +434,10 @@ function contagem_tela_ver(): void
       <?php foreach (dh_contagem_por_local($x['linhas']) as $local => $ls): ?>
         <h2><?= e($local) ?></h2>
         <table class="ct-tabela">
-          <?php foreach ($ls as $l): $k = dh_contagem_chave($l); $tinha = array_key_exists($k, $antes) ? $antes[$k] : false; $dif = $tinha !== false && $tinha !== null && $l['qtd'] !== null ? round(dh_contagem_total($l) - $tinha, 2) : null; ?>
+          <?php foreach ($ls as $l): $k = dh_contagem_chave($l); $tinha = array_key_exists($k, $antes) ? $antes[$k] : false; $dif = $tinha !== false && $tinha !== null && dh_contagem_total($l) !== null ? round(dh_contagem_total($l) - $tinha, 2) : null; ?>
             <tr>
               <td><?= e($l['nome']) ?><?= $l['obs'] !== '' ? ' <small>(' . e($l['obs']) . ')</small>' : '' ?></td>
-              <td class="ct-num"><b><?= e(dh_qtd_txt($l['qtd'])) ?></b> <?= e(dh_contagem_unidade_txt($l['unidade'], $l['qtd']) . dh_contagem_detalhe_barril($l)) ?></td>
+              <td class="ct-num"><?php [$qn, $qr] = dh_contagem_qtd_partes($l); ?><b><?= e($qn) ?></b> <?= e($qr) ?></td>
               <td class="ct-dif"><?php if ($ant && $tinha === false): ?><em class="tag ct-novo">novo</em><?php elseif ($dif): ?><span class="<?= $dif < 0 ? 'ct-baixou' : 'ct-subiu' ?>"><?= $dif > 0 ? '+' : '−' ?><?= e($l['unidade'] === 'saca' ? dh_num(abs($dif)) . ' kg' : dh_qtd_txt(abs($dif))) ?></span><?php endif; ?></td>
             </tr>
           <?php endforeach; ?>
