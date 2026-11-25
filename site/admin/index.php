@@ -329,7 +329,9 @@ if (!$usuarios) {
             if (!empty($_POST['lembrar'])) {
                 lembrar_criar($usuarios[$login]);
             }
-            ir('./');
+            // Veio tocando numa notificação do celular: depois de entrar, abre o que ela fala
+            $nid = (string) ($_GET['id'] ?? '');
+            ir(($_GET['acao'] ?? '') === 'notificacao-ir' && preg_match('/^[\w-]{1,40}$/', $nid) ? './?acao=notificacao-ir&id=' . rawurlencode($nid) : './');
         } else {
             registrar_falha();
             sleep(1);

@@ -23,11 +23,17 @@ function notificacoes_acao(string $acao): bool
             }
             return true;
 
+        case 'notificacao-ir':
         case 'notificacao-abrir':
-            exigir_post();
-            $id = (string) ($_POST['id'] ?? '');
+            // Toque na notificação (no painel ou no celular): marca como lida e abre direto o que ela fala
+            // (o caderno do tanque, o contrato…). Procura também nas que só chegam no celular.
+            if ($acao === 'notificacao-abrir') {
+                exigir_post();
+            }
+            $id = (string) ($_POST['id'] ?? $_GET['id'] ?? '');
             $link = './?acao=notificacoes';
-            foreach (notificacoes_minhas() as $x) {
+            $todas = array_merge(notificacoes_minhas(), dh_notificacoes_do_usuario($usuario['login'], 'pode', null, 'push'));
+            foreach ($todas as $x) {
                 if ($x['id'] === $id) {
                     dh_notificacoes_marcar($usuario['login'], [$id]);
                     if (str_starts_with($x['link'], './?') && ($x['perm'] === '' || pode($x['perm']))) {
@@ -57,7 +63,7 @@ function notificacoes_acao(string $acao): bool
                 }
             }
             echo json_encode($nova ? ['id' => $nova['id'], 'titulo' => $nova['icone'] . ' ' . $nova['titulo'], 'texto' => $nova['texto'],
-                'url' => './?acao=notificacoes&abrir=' . rawurlencode($nova['id'])] : new stdClass(), JSON_UNESCAPED_UNICODE);
+                'url' => './?acao=notificacao-ir&id=' . rawurlencode($nova['id'])] : new stdClass(), JSON_UNESCAPED_UNICODE);
             exit;
 
         case 'notificacoes-config':
