@@ -457,7 +457,7 @@ $f = $k['campos'] ?? [];
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <title><?= $preencher ? 'Pedido de chope · ' : ($k && $k['numero'] !== '' ? 'Contrato nº ' . e($k['numero']) . ' · ' : '') ?>Donkey Head Cervejaria</title>
+  <title><?= $preencher ? ($k['tipo'] === 'evento' ? 'Evento corporativo no pub · ' : 'Pedido de chope · ') : ($k && $k['numero'] !== '' ? 'Contrato nº ' . e($k['numero']) . ' · ' : '') ?>Donkey Head Cervejaria</title>
   <link rel="icon" href="../favicon.ico">
   <link rel="stylesheet" href="contrato.css?v=13">
 </head>
