@@ -132,6 +132,87 @@ if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && !$_POST && (int) ($_S
     $erro = 'O comprovante é grande demais. Envie um print ou o PDF do comprovante.';
 }
 
+// Evento corporativo: o cliente completa os dados, a data, o horário, os convidados e os adicionais
+if ($preencher && $k['tipo'] === 'evento' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'preencher_evento') {
+    try {
+        if (!hash_equals($_SESSION['csrf'], (string) ($_POST['csrf'] ?? ''))) {
+            throw new RuntimeException('A página ficou aberta muito tempo. Tente de novo.');
+        }
+        $txt = fn($n, $max = 200) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string) ($_POST[$n] ?? ''))), 0, $max);
+        $f = $k['campos'];
+        $f['contratante_nome'] = $txt('nome', 200);
+        $f['contratante_doc'] = dh_so_digitos((string) ($_POST['cpf'] ?? ''));
+        $f['contratante_telefone'] = $txt('celular', 30);
+        $f['contratante_email'] = trim((string) ($_POST['email'] ?? ''));
+        $f['contratante_endereco'] = $txt('endereco', 250);
+        $f['data'] = (string) ($_POST['data'] ?? '');
+        $f['hora_inicio'] = (string) ($_POST['hora_inicio'] ?? '');
+        $f['hora_fim'] = (string) ($_POST['hora_fim'] ?? '');
+        $f['convidados'] = (string) max(0, (int) ($_POST['convidados'] ?? 0)) ?: '';
+        $f['adicionais'] = array_fill_keys(array_values(array_intersect(array_keys(DH_EVENTO_ADICIONAIS), (array) ($_POST['adicionais'] ?? []))), true);
+        $f['responsavel_nome'] = $txt('responsavel_nome', 120) ?: $f['contratante_nome'];
+        $f['responsavel_telefone'] = $txt('responsavel_telefone', 30) ?: $f['contratante_telefone'];
+        $f['responsavel_email'] = trim((string) ($_POST['responsavel_email'] ?? '')) ?: $f['contratante_email'];
+        $f['total'] = '';
+        if (mb_strlen($f['contratante_nome']) < 5 || strpos($f['contratante_nome'], ' ') === false) {
+            throw new RuntimeException('Escreva o nome completo (ou a razão social da empresa).');
+        }
+        if (!dh_cpf_valido($f['contratante_doc']) && !dh_cnpj_valido($f['contratante_doc'])) {
+            throw new RuntimeException('CPF ou CNPJ inválido. Confira os números.');
+        }
+        if (strlen(dh_so_digitos($f['contratante_telefone'])) < 10) {
+            throw new RuntimeException('Informe o celular com DDD.');
+        }
+        if (!filter_var($f['contratante_email'], FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('E-mail inválido.');
+        }
+        if ($f['contratante_endereco'] === '') {
+            throw new RuntimeException('Informe o endereço (da pessoa ou da empresa).');
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $f['data']) || $f['data'] < date('Y-m-d')) {
+            throw new RuntimeException('Escolha a data do evento (a partir de hoje).');
+        }
+        if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $f['hora_inicio']) || !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $f['hora_fim'])) {
+            throw new RuntimeException('Informe o horário de início e de término.');
+        }
+        if ((int) $f['convidados'] < 1) {
+            throw new RuntimeException('Informe a quantidade de convidados.');
+        }
+        if ($f['max_participantes'] !== '' && (int) $f['convidados'] > (int) $f['max_participantes']) {
+            throw new RuntimeException('O espaço comporta até ' . $f['max_participantes'] . ' participantes. Para mais pessoas, fale com a Donkey Head Cervejaria.');
+        }
+        if ($f['responsavel_email'] !== '' && !filter_var($f['responsavel_email'], FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('E-mail do responsável inválido.');
+        }
+        $c = dh_contratos();
+        $i = dh_contrato_por_token($c, $token);
+        if ($c['contratos'][$i]['status'] !== 'preenchimento') {
+            throw new RuntimeException('Este evento já foi preenchido.');
+        }
+        if (empty($c['config']['representante_cpf'])) {
+            throw new RuntimeException('Não foi possível gerar o contrato agora. Fale com a Donkey Head Cervejaria.');
+        }
+        $k = $c['contratos'][$i];
+        $k['campos'] = $f;
+        dh_cliente_registrar($k);
+        $k['numero'] = dh_contrato_numero($c);
+        dh_contrato_congelar($k, $c['config']);
+        $c['contratos'][$i] = $k;
+        dh_contratos_salvar($c);
+        $vals = dh_evento_valores($f);
+        $resumo = $f['contratante_nome'] . ' · ' . dh_data_br($f['data']) . ', ' . $f['hora_inicio'] . ' às ' . $f['hora_fim'] . ' · ' . $f['convidados'] . ' convidados · ' . dh_moeda($vals['total']);
+        dh_notificar('contratos', '🎉', 'Evento preenchido nº ' . $k['numero'], $resumo . '.', './?acao=contrato&id=' . $k['id'], '', [], 'evento_preenchido');
+        dh_email_equipe('Evento corporativo preenchido nº ' . $k['numero'],
+            '<p>' . e($f['contratante_nome']) . ' preencheu o evento corporativo nº <b>' . e($k['numero']) . '</b>: ' . e(dh_data_br($f['data'])) . ', das ' . e($f['hora_inicio']) . ' às ' . e($f['hora_fim'])
+            . ', ' . e($f['convidados']) . ' convidados, total ' . e(dh_moeda($vals['total'])) . '.</p><p>Quando o cliente assinar, falta a assinatura da Donkey Head Cervejaria no painel.</p>', 'evento_preenchido');
+        $_SESSION['contrato_aviso'] = 'Dados registrados! Confira o contrato abaixo e assine no final da página.';
+        header('Location: ./?t=' . $token . '#assinar', true, 303);
+        exit;
+    } catch (RuntimeException $e) {
+        $erro = $e->getMessage();
+    }
+}
+
 // Pedido de chope: o cliente preenche os dados do cabeçalho, escolhe rótulos e litragem e o contrato é gerado
 if ($preencher && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'preencher') {
     try {
@@ -396,7 +477,7 @@ $f = $k['campos'] ?? [];
       <?php if ($aviso): ?><p class="msg ok no-print"><?= e($aviso) ?></p><?php endif; ?>
       <?php if ($erro): ?><p class="msg erro no-print"><?= e($erro) ?></p><?php endif; ?>
       <?php if ($preencher): ?>
-        <?php include __DIR__ . '/pedido-form.php'; ?>
+        <?php include __DIR__ . ($k['tipo'] === 'evento' ? '/evento-form.php' : '/pedido-form.php'); ?>
       <?php elseif ($consulta): ?>
         <div class="papel">
           <h1>Pedido recebido</h1>

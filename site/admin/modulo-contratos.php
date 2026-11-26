@@ -298,6 +298,31 @@ function contratos_acao(string $acao): bool
             if (($k['campos']['desconto'] ?? '') === '') {
                 $k['campos']['cupom'] = '';
             }
+            if (($_POST['op'] ?? '') === 'cliente' && $k['tipo'] === 'evento') {
+                // Evento que o cliente preenche: você define o pacote; ele completa os dados, a data e os convidados
+                $faltam = [];
+                foreach (['espaco' => 'espaço', 'valor_pessoa' => 'valor do pacote por pessoa'] as $cp => $rot) {
+                    if ($k['campos'][$cp] === '') {
+                        $faltam[] = $rot;
+                    }
+                }
+                if ($faltam) {
+                    throw new RuntimeException('Para mandar ao cliente, preencha: ' . implode(', ', $faltam) . '.');
+                }
+                if (empty($c['config']['representante_cpf'])) {
+                    throw new RuntimeException('Antes, preencha o nome e o CPF de quem assina pela Donkey em Contratos → Configurações.');
+                }
+                $k['status'] = 'preenchimento';
+                $k['campos']['total'] = '';
+                $k['referencia'] = $k['referencia'] ?? mb_substr(trim((string) ($_POST['referencia'] ?? '')), 0, 80);
+                if ($i === null) {
+                    $c['contratos'][] = $k;
+                } else {
+                    $c['contratos'][$i] = $k;
+                }
+                dh_contratos_salvar($c);
+                ir('./?acao=contrato&id=' . $k['id'], 'Link criado. Envie para o cliente preencher e assinar.');
+            }
             $enviar = ($_POST['op'] ?? '') === 'enviar';
             if ($enviar) {
                 $faltam = dh_contrato_pendencias($k);
@@ -616,7 +641,7 @@ function contratos_card(array $k): void
           <?php if ($k['status'] === 'rascunho'): ?>
             <a class="btn primario" href="<?= e($abrir) ?>">✏️ <?= $k['numero'] !== '' ? 'Continuar editando' : 'Editar rascunho' ?></a>
           <?php elseif ($k['status'] === 'preenchimento'): ?>
-            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\n" . (!empty($k['campos']['travado']) ? "Para fechar o pedido de chope do orçamento, preencha os seus dados, anexe o comprovante do Pix e assine o contrato por este link:\n" : "Para fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n") . $link)) ?>">📲 Enviar link</a>
+            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\n" . ($k['tipo'] === 'evento' ? "Para o seu evento corporativo na Donkey Head, preencha os seus dados, a data, o horário e a quantidade de convidados, e assine o contrato por este link:\n" : (!empty($k['campos']['travado']) ? "Para fechar o pedido de chope do orçamento, preencha os seus dados, anexe o comprovante do Pix e assine o contrato por este link:\n" : "Para fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n")) . $link)) ?>">📲 Enviar link</a>
             <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($link) ?>').then(function(){ alert('Link copiado!'); })">🔗 Copiar link</button>
           <?php elseif ($k['status'] === 'consulta'): ?>
             <a class="btn primario" href="<?= e($abrir) ?>">🚚 Definir frete</a>
@@ -664,6 +689,7 @@ function contratos_tela_lista(): void
       <?php contratos_calendario($c); ?>
       <div class="novo-contrato">
         <a class="btn primario largo" href="./?acao=contrato&tipo=pedido">+ Pedido de chope <small>(o cliente preenche)</small></a>
+        <a class="btn primario largo" href="./?acao=contrato&tipo=evento&cliente=1">+ Evento corporativo no pub <small>(o cliente preenche)</small></a>
         <?php foreach (DH_CONTRATO_TIPOS as $t => $rot): ?>
           <a class="btn secundario largo" href="./?acao=contrato&tipo=<?= $t ?>">+ <?= e($rot) ?> <small>(eu preencho)</small></a>
         <?php endforeach; ?>
@@ -1030,17 +1056,25 @@ function contratos_tela_contrato(): void
               <li>Frete: <?= $f['frete'] !== '' ? e(dh_moeda($f['frete'])) : 'o cliente escolhe (Fortaleza ' . e(dh_moeda(dh_frete_fortaleza())) . ')' ?></li>
               <li>Total: <strong><?= e(dh_moeda(dh_comodato_total($f))) ?></strong><?= $f['frete'] === '' ? ' + frete' : '' ?></li>
             </ul>
+          <?php elseif ($k['tipo'] === 'evento'): $f = $k['campos']; ?>
+            <p class="dica">O cliente abre o link, preenche os dados dele (CPF/CNPJ, contato, endereço), a data, o horário, a quantidade de convidados, os adicionais e o responsável pelo evento, e já assina. Você recebe a notificação quando ele terminar; depois é só assinar pela Donkey aqui.</p>
+            <ul class="resumo-pedido">
+              <li>Espaço: <strong><?= e($f['espaco']) ?></strong></li>
+              <li>Pacote: <strong><?= e(dh_moeda($f['valor_pessoa'])) ?></strong> por pessoa<?= $f['max_participantes'] !== '' ? ' · até ' . e($f['max_participantes']) . ' participantes' : '' ?></li>
+              <?php if ($f['data'] !== ''): ?><li>Data sugerida: <?= e(dh_data_br($f['data'])) ?><?= $f['hora_inicio'] !== '' ? ', ' . e($f['hora_inicio']) . ($f['hora_fim'] !== '' ? ' às ' . e($f['hora_fim']) : '') : '' ?> (o cliente pode mudar)</li><?php endif; ?>
+              <?php if ($f['atracao'] !== ''): ?><li>Atração: <?= e($f['atracao']) ?></li><?php endif; ?>
+            </ul>
           <?php else: ?>
           <p class="dica">O cliente abre o link, escolhe os rótulos e a litragem, preenche os dados dele e já assina. Você recebe um e-mail quando ele terminar; depois é só assinar pela Donkey aqui.</p>
           <?php endif; ?>
           <?php if (!empty($k['referencia'])): ?><p>Referência: <strong><?= e($k['referencia']) ?></strong></p><?php endif; ?>
-          <?php if (empty($k['campos']['travado'])): ?>
+          <?php if (empty($k['campos']['travado']) && $k['tipo'] !== 'evento'): ?>
           <p>Pagamento: <strong><?= e(DH_PAGAMENTOS[$k['campos']['pagamento']] ?? '') ?></strong> · Frete: <strong><?= e(dh_moeda(dh_frete_fortaleza())) ?> em Fortaleza</strong>; em outras cidades, o cliente digita o valor combinado com o vendedor. O cliente anexa o comprovante de pagamento no pedido.</p>
           <?php endif; ?>
           <h2>Enviar ao cliente</h2>
           <input class="link-banda" value="<?= e($link) ?>" readonly onclick="this.select()">
           <p class="botoes-link">
-            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\n" . (!empty($k['campos']['travado']) ? "Para fechar o pedido de chope do orçamento, preencha os seus dados, anexe o comprovante do Pix e assine o contrato por este link:\n" : "Para fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n") . $link)) ?>">Enviar pelo WhatsApp</a>
+            <a class="btn primario" target="_blank" rel="noopener" href="https://wa.me/?text=<?= e(rawurlencode("Olá! Aqui é a Donkey Head Cervejaria.\n\n" . ($k['tipo'] === 'evento' ? "Para o seu evento corporativo na Donkey Head, preencha os seus dados, a data, o horário e a quantidade de convidados, e assine o contrato por este link:\n" : (!empty($k['campos']['travado']) ? "Para fechar o pedido de chope do orçamento, preencha os seus dados, anexe o comprovante do Pix e assine o contrato por este link:\n" : "Para fazer o seu pedido de chope, escolha os rótulos e a quantidade, preencha os seus dados e assine o contrato por este link:\n")) . $link)) ?>">Enviar pelo WhatsApp</a>
             <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText('<?= e($link) ?>').then(function(){ alert('Link copiado!'); })">Copiar link</button>
           </p>
           <form method="post" action="./?acao=contrato-cancelar" class="excluir" onsubmit="return confirm('Excluir este pedido? O link deixa de funcionar.');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><button class="btn perigo">Excluir pedido</button></form>
@@ -1142,7 +1176,10 @@ function contratos_form(array $k): void
     $f = $k['campos'];
     $v = fn($x) => e(is_numeric($x) && strpos((string) $x, '.') !== false ? dh_num($x) : $x);
     ?>
-      <form method="post" action="./?acao=contrato-salvar" class="form-cerveja form-contrato" enctype="multipart/form-data">
+      <?php if ($k['tipo'] === 'evento' && !empty($_GET['cliente'])): ?>
+        <p class="aviso">🔗 <b>O cliente preenche:</b> defina aqui o pacote (espaço, valor por pessoa, máximo de participantes, atração e menu). Se já souber, pode sugerir a data e o horário. Os dados do cliente podem ficar em branco. No fim, toque em <b>🔗 Cliente preenche</b> e mande o link: ele completa os dados, a data, os convidados e os adicionais, e assina.</p>
+      <?php endif; ?>
+      <form method="post" action="./?acao=contrato-salvar<?= !empty($_GET['cliente']) ? '&amp;cliente=1' : '' ?>" class="form-cerveja form-contrato" enctype="multipart/form-data">
         <?= $csrf ?><input type="hidden" name="id" value="<?= e($k['id']) ?>"><input type="hidden" name="tipo" value="<?= e($k['tipo']) ?>">
         <h2>Contratante</h2>
         <?= contratos_campo_cliente('', 'Puxar cliente da base', 'Preenche os campos abaixo com os dados do cliente') ?>
@@ -1257,7 +1294,8 @@ function contratos_form(array $k): void
 
         <div class="barra-salvar barra-dupla">
           <button class="btn secundario" name="op" value="salvar">Salvar rascunho</button>
-          <button class="btn primario" name="op" value="enviar" onclick="return confirm('Gerar o contrato para assinatura? Depois disso o texto não pode mais ser alterado.');">Gerar para assinatura</button>
+          <?php if ($k['tipo'] === 'evento' && $k['numero'] === ''): ?><button class="btn <?= !empty($_GET['cliente']) ? 'primario' : 'secundario' ?>" name="op" value="cliente" onclick="return confirm('Criar o link para o cliente preencher? Ele completa os dados dele, a data, o horário e os convidados, e assina.');">🔗 Cliente preenche</button><?php endif; ?>
+          <button class="btn <?= !empty($_GET['cliente']) ? 'secundario' : 'primario' ?>" name="op" value="enviar" onclick="return confirm('Gerar o contrato para assinatura? Depois disso o texto não pode mais ser alterado.');">Gerar para assinatura</button>
         </div>
       </form>
       <script>

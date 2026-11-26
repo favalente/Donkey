@@ -12,6 +12,7 @@ const DH_NOTIF_TIPOS = [
     'contrato_assinado' => ['contratos', '✅', 'Contrato assinado', 'Quando o contrato fica assinado pelas duas partes', 'admin'],
     'cliente_assinou' => ['contratos', '✍️', 'Cliente assinou', 'Quando o cliente assina e falta a assinatura da Donkey', 'admin'],
     'pedido_chope' => ['contratos', '🍺', 'Pedido de chope preenchido', 'Quando o cliente preenche o pedido de chope', 'admin'],
+    'evento_preenchido' => ['contratos', '🎉', 'Evento preenchido pelo cliente', 'Quando o cliente preenche o evento corporativo pelo link', 'admin'],
     'donkey_assinou' => ['contratos', '🖊️', 'Contrato assinado pela Donkey', 'Quando a Donkey Head Cervejaria assina um contrato ou pedido', 'equipe'],
     'orcamento_aprovado' => ['orcamentos', '👍', 'Orçamento aprovado', 'Quando o cliente aprova um orçamento', 'todos'],
     'brassagem_caderno' => ['brassagem', '🧪', 'Caderno de brassagem atualizado', 'Lote novo, anotação ou mudança de situação feita por outra pessoa', 'todos'],
@@ -100,9 +101,9 @@ const DH_NOTIF_CANAIS = ['sino' => ['🔔', 'Sino'], 'push' => ['📲', 'Celular
 
 // Avisos que já chegavam por e-mail (no contato@ da Donkey): o ✉️ deles já vem ligado e o e-mail sai
 // com o conteúdo completo de antes (dh_email_equipe), para quem deixar o ✉️ ligado
-const DH_NOTIF_EMAIL_PADRAO = ['cliente_assinou', 'pedido_chope', 'orcamento_aprovado', 'contrato_assinado', 'evento_lembrete', 'brassagem_lembrete'];
+const DH_NOTIF_EMAIL_PADRAO = ['cliente_assinou', 'pedido_chope', 'evento_preenchido', 'orcamento_aprovado', 'contrato_assinado', 'evento_lembrete', 'brassagem_lembrete'];
 // Avisos cujo e-mail é montado pela própria parte do sistema (com o conteúdo completo): não sai o e-mail simples
-const DH_NOTIF_EMAIL_PROPRIO = ['cliente_assinou', 'pedido_chope', 'orcamento_aprovado', 'contrato_assinado', 'evento_lembrete', 'brassagem_caderno', 'brassagem_lembrete'];
+const DH_NOTIF_EMAIL_PROPRIO = ['cliente_assinou', 'pedido_chope', 'evento_preenchido', 'orcamento_aprovado', 'contrato_assinado', 'evento_lembrete', 'brassagem_caderno', 'brassagem_lembrete'];
 
 function dh_notif_canal(array $n, string $login, string $tipo, string $canal): bool
 {
