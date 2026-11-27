@@ -489,6 +489,7 @@ require_once __DIR__ . '/notificacoes.php';
 require_once __DIR__ . '/reservas.php';
 require_once __DIR__ . '/contagem.php';
 require_once __DIR__ . '/programacao.php';
+require_once __DIR__ . '/insumos.php';
 require_once __DIR__ . '/lembretes.php';
 
 // Lembretes de evento por e-mail: verifica no fim deste acesso, se estiver na hora

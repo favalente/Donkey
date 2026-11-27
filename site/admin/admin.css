@@ -986,3 +986,11 @@ h3 small { font-weight: 400; color: var(--muted); }
 /* Escala no computador: tela mais larga, para os dois dias lado a lado caberem */
 @media (min-width: 1000px) { .conteudo:has(.dias-escala) { max-width: 1240px; } }
 .tabela-escala td:nth-child(3) input, .tabela-escala td:nth-child(4) input { min-width: 54px; text-align: center; }
+.ped-bras { display: grid; gap: 6px; margin-bottom: 10px; }
+.ped-linha { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 0 !important; }
+.ped-linha span { font-weight: 600; }
+.ped-linha small { display: block; font-weight: 400; color: var(--muted); font-size: .82rem; }
+.ped-linha input { width: 70px !important; margin: 0 !important; text-align: center; }
+.ped-fora summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
+.ped-tabela th { text-align: left; font-size: .85rem; color: var(--muted); }
+.ped-tabela tr.ped-pedir td:last-child b { color: var(--erro); }

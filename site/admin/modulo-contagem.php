@@ -41,6 +41,13 @@ function contagem_acao(string $acao): bool
             exigir('contagem');
             return true;
 
+        case 'contagem-pedido':
+            exigir('contagem');
+            if (!pode('usuarios')) {
+                throw new RuntimeException('Só o administrador vê a sugestão de pedido.');
+            }
+            return true;
+
         case 'contagem-nova':
             exigir_post();
             exigir('contagem');
@@ -170,6 +177,9 @@ function contagem_tela(string $tela): bool
         case 'contagem-ver':
             contagem_tela_ver();
             return true;
+        case 'contagem-pedido':
+            contagem_tela_pedido();
+            return true;
     }
     return false;
 }
@@ -223,6 +233,7 @@ function contagem_tela_lista(): void
       </div>
       <?php if ($hoje): ?></details><?php endif; ?>
 
+      <?php if (pode('usuarios')): ?><p><a class="btn secundario largo" href="./?acao=contagem-pedido">🧾 Sugestão de pedido de malte e lúpulo</a></p><?php endif; ?>
       <h2>Contagens</h2>
       <?php if (!$daCasa): ?><p class="dica">Nenhuma contagem ainda.</p><?php endif; ?>
       <ul class="lista-reservas">
@@ -449,5 +460,72 @@ function contagem_tela_ver(): void
           <p class="dica">Estavam na contagem de <?= e(date('d/m', strtotime($ant['data']))) ?>: <?= e(implode(', ', array_map(fn($l) => $l['nome'] . ' (' . dh_qtd_txt($l['qtd']) . ' ' . dh_contagem_unidade_txt($l['unidade'], $l['qtd']) . ')', $sumiram))) ?>.</p>
         <?php endif; ?>
       <?php endif; ?>
+    <?php
+}
+
+// 🧾 Sugestão de pedido de malte e lúpulo: brassagens previstas × receitas − estoque da fábrica
+function contagem_tela_pedido(): void
+{
+    $b = dh_brassagem();
+    $grupos = dh_prog_grupos($b);
+    $ritmo = dh_insumos_ritmo($b, $grupos);
+    $semanas = in_array((int) ($_GET['semanas'] ?? 4), [2, 3, 4, 6, 8], true) ? (int) ($_GET['semanas'] ?? 4) : 4;
+    $mudou = isset($_GET['b']) && is_array($_GET['b']);
+    $bras = [];
+    foreach ($grupos as $k => $g) {
+        $bras[$k] = $mudou ? max(0, min(40, (int) ($_GET['b'][$k] ?? 0))) : (int) round(($ritmo['por_semana'][$k] ?? 0) * $semanas);
+    }
+    $ped = dh_insumos_pedido($b, $grupos, $bras, $ritmo['ultima_ne']);
+    $kg = fn($x) => dh_num(round($x, 1)) . ' kg';
+    $saca = fn($x) => $x >= DH_SACA_KG ? floor($x / DH_SACA_KG + 1e-9) . ' sc' . (fmod($x, DH_SACA_KG) > 0.05 ? ' + ' . dh_num(round(fmod($x, DH_SACA_KG), 1)) . ' kg' : '') : $kg($x);
+    $txt = "*Pedido de malte e lúpulo · Donkey Head Cervejaria*\n";
+    $mal = array_filter($ped['malte'], fn($l) => $l['pedir'] > 0);
+    $lup = array_filter($ped['lupulo'], fn($l) => $l['pedir'] > 0);
+    if ($mal) {
+        $txt .= "\n*Malte*\n" . implode("\n", array_map(fn($l) => $l['nome'] . ': ' . $l['pedir'] . ' saca' . ($l['pedir'] > 1 ? 's' : ''), $mal)) . "\n";
+    }
+    if ($lup) {
+        $txt .= "\n*Lúpulo*\n" . implode("\n", array_map(fn($l) => $l['nome'] . ': ' . dh_num($l['pedir']) . ' kg', $lup)) . "\n";
+    }
+    $ativos = array_filter($grupos, fn($g) => $g['categoria'] !== 'fora');
+    $fora = array_filter($grupos, fn($g) => $g['categoria'] === 'fora');
+    ?>
+      <p><a class="voltar" href="./?acao=contagem">‹ Inventário / Contagem</a></p>
+      <h1>🧾 Sugestão de pedido</h1>
+      <p class="dica">Malte e lúpulo que vão ser usados nas próximas semanas (brassagens × receita), menos o estoque da última contagem da fábrica<?= $ped['estoque_data'] !== '' ? ' (' . e(date('d/m', strtotime($ped['estoque_data']))) . ')' : '' ?>. Malte em sacas de <?= DH_SACA_KG ?> kg. As brassagens começam pelo ritmo das últimas 12 semanas; mude os números e toque em <b>Recalcular</b>.</p>
+      <?php if ($ped['estoque_data'] === ''): ?><p class="aviso">Ainda não tem contagem enviada da Fábrica: o estoque conta como zero.</p><?php endif; ?>
+      <form method="get" class="form-cerveja ped-form">
+        <input type="hidden" name="acao" value="contagem-pedido">
+        <label>Período <select name="semanas" onchange="this.form.querySelectorAll('.ped-n').forEach(function (x) { x.disabled = true; }); this.form.submit()"><?php foreach ([2, 3, 4, 6, 8] as $s): ?><option value="<?= $s ?>" <?= $s === $semanas ? 'selected' : '' ?>>Próximas <?= $s ?> semanas</option><?php endforeach; ?></select></label>
+        <h2>Brassagens no período</h2>
+        <div class="ped-bras">
+          <?php foreach ([$ativos, $fora] as $n => $lista): if (!$lista) continue; if ($n === 1): ?><details class="ped-fora"<?= array_filter(array_intersect_key($bras, $fora)) ? ' open' : '' ?>><summary>Fora de linha</summary><?php endif; ?>
+            <?php foreach ($lista as $k => $g): ?>
+              <label class="ped-linha"><span><?= e($k === 'newengland' ? 'New England (alternando)' : $g['nome']) ?><small><?= isset($ritmo['por_semana'][$k]) ? dh_num(round($ritmo['por_semana'][$k] * 4, 1)) . ' por mês nas últimas 12 semanas' : 'sem brassagem nas últimas 12 semanas' ?></small></span>
+                <input class="ped-n" type="number" min="0" max="40" name="b[<?= e($k) ?>]" value="<?= $bras[$k] ?>" inputmode="numeric"></label>
+            <?php endforeach; ?>
+          <?php if ($n === 1): ?></details><?php endif; endforeach; ?>
+        </div>
+        <?php if ($ped['ne']): ?><p class="dica">New England, na ordem: <?= e(implode(' → ', array_map(fn($x) => (['all my love' => 'All My Love', 'caldo de bila' => 'Caldo de Bila', 'citranela' => 'Citranela'][$x] ?? $x) . ' (' . DH_NE_RODIZIO[$x] . ' ' . DH_NE_LUPULO_KG . ' kg)', $ped['ne']))) ?>.</p><?php endif; ?>
+        <button class="btn primario">Recalcular</button>
+      </form>
+
+      <?php foreach (['malte' => '🌾 Malte', 'lupulo' => '🌿 Lúpulo'] as $t => $tit): ?>
+        <h2><?= $tit ?></h2>
+        <?php if (!$ped[$t]): ?><p class="dica">Nada no período.</p><?php continue; endif; ?>
+        <div class="tabela-rolar"><table class="ct-tabela ped-tabela">
+          <tr><th></th><th>Vai usar</th><th>Estoque</th><th>Pedir</th></tr>
+          <?php foreach ($ped[$t] as $l): ?>
+            <tr class="<?= $l['pedir'] > 0 ? 'ped-pedir' : '' ?>"><td><?= e($l['nome']) ?></td><td><?= e($t === 'malte' ? $saca($l['precisa']) : $kg($l['precisa'])) ?></td><td><?= e($t === 'malte' ? $saca($l['estoque']) : $kg($l['estoque'])) ?></td>
+              <td><b><?= $l['pedir'] > 0 ? ($t === 'malte' ? $l['pedir'] . ' saca' . ($l['pedir'] > 1 ? 's' : '') : e(dh_num($l['pedir'])) . ' kg') : '—' ?></b></td></tr>
+          <?php endforeach; ?>
+        </table></div>
+      <?php endforeach; ?>
+      <?php if ($ped['sem']): ?><p class="aviso">Sem equivalência com os maltes da contagem (entram pelo nome da receita): <?= e(implode(', ', $ped['sem'])) ?>.</p><?php endif; ?>
+      <?php if ($ped['sem_receita']): ?><p class="aviso">Sem receita em Receitas (entra só o lúpulo): <?= e(implode(', ', $ped['sem_receita'])) ?>.</p><?php endif; ?>
+      <?php if ($mal || $lup): ?>
+        <p class="botoes-link"><a class="btn primario" href="https://wa.me/?text=<?= e(rawurlencode($txt)) ?>" target="_blank" rel="noopener">Enviar o pedido no WhatsApp</a>
+          <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText(<?= e(json_encode($txt, JSON_UNESCAPED_UNICODE)) ?>).then(function () { alert('Pedido copiado!'); })">Copiar</button></p>
+      <?php else: ?><p class="dica">O estoque dá conta do período: nada a pedir.</p><?php endif; ?>
     <?php
 }
