@@ -32,6 +32,9 @@ const DH_ARQ_INSUMOS = DH_RAIZ . '/dados/insumos.json';
 const DH_LUPULO_NOMES = ['collumbus' => 'Columbus', 'columbus' => 'Columbus', 'ctz' => 'Columbus', 'herkules' => 'Herkules', 'hercules' => 'Herkules',
     'magnun' => 'Magnum', 'idaho7' => 'Idaho 7', 'idaho 7' => 'Idaho 7', 'sorache ace' => 'Sorachi Ace', 'sorachi ace' => 'Sorachi Ace', 'el dorado' => 'El Dorado'];
 // Colunas da planilha -> cerveja (o "4 X Lager" é dividido por 4)
+// Lúpulos de amargor: um substitui o outro (compra só um, o mais barato do dia)
+const DH_LUPULOS_AMARGOR = ['Herkules', 'Pahto', 'Magnum'];
+const DH_AMARGOR_NOME = 'Amargor (Herkules, Pahto ou Magnum)';
 const DH_PLANILHA_CERVEJAS = ['velas' => 'Velas do Mucuripe', 'apa' => 'StigmAPA', 'ipa' => 'MandacarIPA', 'soft' => 'Soft Hop', 'asa' => 'Asa Branca', 'miolo' => 'Miolo de Pote', 'lager' => 'Premium Lager'];
 
 function dh_insumos_cfg(): array
@@ -275,6 +278,21 @@ function dh_insumos_pedido(array $b, array $grupos, array $brassagens, ?string $
         $sem = array_merge($sem, $ins['sem']);
     }
     $est = dh_insumos_estoque();
+    // Amargor: soma o que vai usar e o que tem de qualquer um dos três, numa linha só
+    foreach (['precisa', 'est'] as $qual) {
+        $arr = $qual === 'precisa' ? $precisa['lupulo'] : $est['lupulo'];
+        foreach (DH_LUPULOS_AMARGOR as $h) {
+            if (isset($arr[$h])) {
+                $arr[DH_AMARGOR_NOME] = ($arr[DH_AMARGOR_NOME] ?? 0) + $arr[$h];
+                unset($arr[$h]);
+            }
+        }
+        if ($qual === 'precisa') {
+            $precisa['lupulo'] = $arr;
+        } else {
+            $est['lupulo'] = $arr;
+        }
+    }
     $linhas = [];
     foreach (['malte', 'lupulo'] as $t) {
         $linhas[$t] = [];
