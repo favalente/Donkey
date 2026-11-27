@@ -26,6 +26,82 @@ const DH_MALTES_EQUIV = [
 // New England: cada receita, na ordem da alternância, e o lúpulo dela (5 kg)
 const DH_NE_RODIZIO = ['all my love' => 'Mosaic', 'caldo de bila' => 'Galaxy', 'citranela' => 'Citra'];
 const DH_NE_LUPULO_KG = 5;
+// Lúpulo por brassagem de cada cerveja (importado da planilha de pedido): fica só no servidor
+const DH_ARQ_INSUMOS = DH_RAIZ . '/dados/insumos.json';
+// Mesmos lúpulos escritos de jeitos diferentes (planilha, receitas, contagem)
+const DH_LUPULO_NOMES = ['collumbus' => 'Columbus', 'columbus' => 'Columbus', 'ctz' => 'Columbus', 'herkules' => 'Herkules', 'hercules' => 'Herkules',
+    'magnun' => 'Magnum', 'idaho7' => 'Idaho 7', 'idaho 7' => 'Idaho 7', 'sorache ace' => 'Sorachi Ace', 'sorachi ace' => 'Sorachi Ace', 'el dorado' => 'El Dorado'];
+// Colunas da planilha -> cerveja (o "4 X Lager" é dividido por 4)
+const DH_PLANILHA_CERVEJAS = ['velas' => 'Velas do Mucuripe', 'apa' => 'StigmAPA', 'ipa' => 'MandacarIPA', 'soft' => 'Soft Hop', 'asa' => 'Asa Branca', 'miolo' => 'Miolo de Pote', 'lager' => 'Premium Lager'];
+
+function dh_insumos_cfg(): array
+{
+    $r = json_decode((string) @file_get_contents(DH_ARQ_INSUMOS), true);
+    return (is_array($r) ? $r : []) + ['lupulos' => [], 'atualizado_em' => ''];
+}
+
+function dh_insumos_cfg_salvar(array $r): void
+{
+    if (!is_dir(dirname(DH_ARQ_INSUMOS))) {
+        mkdir(dirname(DH_ARQ_INSUMOS), 0755, true);
+    }
+    $tmp = DH_ARQ_INSUMOS . '.' . bin2hex(random_bytes(4)) . '.tmp';
+    if (file_put_contents($tmp, json_encode($r, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX) === false || !rename($tmp, DH_ARQ_INSUMOS)) {
+        @unlink($tmp);
+        throw new RuntimeException('Não foi possível gravar. Verifique a permissão da pasta "dados".');
+    }
+}
+
+// Planilha de pedido de lúpulo: o primeiro bloco ("Lupulo | Quant | Velas | APA | …") vira kg por brassagem.
+// Devolve [grupo => [lúpulo => kg]] e as colunas que não deu para ligar a uma cerveja.
+function dh_insumos_ler_planilha(string $arq, array $grupos): array
+{
+    $linhas = dh_xlsx_linhas($arq);
+    $cab = null;
+    $r = [];
+    $semCerveja = [];
+    foreach ($linhas as $l) {
+        $a = dh_sem_acento(mb_strtolower(trim((string) ($l[0] ?? ''))));
+        if ($cab === null) {
+            if ($a === 'lupulo') {
+                $cab = [];
+                foreach ($l as $i => $v) {
+                    $n = dh_sem_acento(mb_strtolower(trim((string) $v)));
+                    if ($i < 2 || $n === '' || $n === 'total') {
+                        continue;
+                    }
+                    if (preg_match('/new england|all my love|caldo|citranela/', $n)) {
+                        continue; // New England: 5 kg de single hop, já combinado
+                    }
+                    $div = preg_match('/(\d+)\s*x\s*(.+)/', $n, $m) ? max(1, (int) $m[1]) : 1;
+                    $base = trim($m[2] ?? $n);
+                    $nome = DH_PLANILHA_CERVEJAS[$base] ?? $base;
+                    $g = dh_prog_achar_grupo($nome, $grupos);
+                    if ($g === null) {
+                        $semCerveja[] = trim((string) $v);
+                        continue;
+                    }
+                    $cab[$i] = [$g, $div];
+                }
+            }
+            continue;
+        }
+        if ($a === '' || str_starts_with($a, 'total')) {
+            break; // fim do primeiro bloco (Aldeota)
+        }
+        $lup = dh_insumo_lupulo((string) $l[0]);
+        foreach ($cab as $i => [$g, $div]) {
+            $kg = (float) str_replace(',', '.', (string) ($l[$i] ?? ''));
+            if ($kg > 0) {
+                $r[$g][$lup] = round(($r[$g][$lup] ?? 0) + $kg / $div, 3);
+            }
+        }
+    }
+    if ($cab === null) {
+        throw new RuntimeException('Não achei a linha "Lupulo | Quant | …" na planilha.');
+    }
+    return ['lupulos' => $r, 'sem_cerveja' => $semCerveja];
+}
 
 function dh_insumo_malte(string $nome): ?string
 {
@@ -41,8 +117,9 @@ function dh_insumo_malte(string $nome): ?string
 // "Mosaic [12,5%] – Dry hop" -> "Mosaic"
 function dh_insumo_lupulo(string $nome): string
 {
-    $n = trim(preg_split('/\s*[\[(–-]\s*/u', $nome)[0]);
-    return mb_convert_case(mb_strtolower($n), MB_CASE_TITLE);
+    $n = trim(preg_split('/\s*[\[(–]|\s+-\s+/u', $nome)[0]);
+    $k = dh_sem_acento(mb_strtolower($n));
+    return DH_LUPULO_NOMES[$k] ?? mb_convert_case(mb_strtolower($n), MB_CASE_TITLE);
 }
 
 // Malte e lúpulo de uma receita, em kg: ['malte' => [nome => kg], 'lupulo' => [nome => kg], 'sem' => [nomes sem equivalência]]
@@ -182,10 +259,14 @@ function dh_insumos_pedido(array $b, array $grupos, array $brassagens, ?string $
             continue;
         }
         $rc = $grupos[$g]['receitas'][0] ?? null;
-        if (!$rc) {
+        $planilha = dh_insumos_cfg()['lupulos'][$g] ?? null;
+        if (!$rc && !$planilha) {
             continue;
         }
-        $ins = dh_insumos_receita($rc);
+        $ins = $rc ? dh_insumos_receita($rc) : ['malte' => [], 'lupulo' => [], 'sem' => []];
+        if ($planilha) {
+            $ins['lupulo'] = $planilha; // lúpulo por brassagem da planilha vale mais que o da receita
+        }
         foreach (['malte', 'lupulo'] as $t) {
             foreach ($ins[$t] as $nm => $kg) {
                 $precisa[$t][$nm] = ($precisa[$t][$nm] ?? 0) + $kg * $n;
@@ -196,6 +277,7 @@ function dh_insumos_pedido(array $b, array $grupos, array $brassagens, ?string $
     $est = dh_insumos_estoque();
     $linhas = [];
     foreach (['malte', 'lupulo'] as $t) {
+        $linhas[$t] = [];
         $nomes = array_unique(array_merge(array_keys($precisa[$t]), array_keys($est[$t])));
         foreach ($nomes as $nm) {
             $p = round($precisa[$t][$nm] ?? 0, 2);

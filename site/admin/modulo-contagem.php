@@ -48,6 +48,50 @@ function contagem_acao(string $acao): bool
             }
             return true;
 
+        case 'insumos-importar':
+            // Planilha de pedido de lúpulo: kg de cada lúpulo por brassagem de cada cerveja
+            exigir_post();
+            exigir('usuarios');
+            $telaErro = 'contagem-pedido';
+            if (($_FILES['planilha']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                throw new RuntimeException('Escolha a planilha (.xlsx).');
+            }
+            $lido = dh_insumos_ler_planilha($_FILES['planilha']['tmp_name'], dh_prog_grupos(dh_brassagem()));
+            $cfg = dh_insumos_cfg();
+            $cfg['lupulos'] = $lido['lupulos'] + $cfg['lupulos'];
+            $cfg['atualizado_em'] = date('Y-m-d H:i:s');
+            dh_insumos_cfg_salvar($cfg);
+            ir('./?acao=contagem-pedido#lupulo-receitas', 'Planilha lida: lúpulo de ' . count($lido['lupulos']) . ' cervejas.' . ($lido['sem_cerveja'] ? ' Sem receita correspondente: ' . implode(', ', $lido['sem_cerveja']) . '.' : ''));
+
+        case 'insumos-salvar':
+            exigir_post();
+            exigir('usuarios');
+            $telaErro = 'contagem-pedido';
+            $cfg = dh_insumos_cfg();
+            $grupos = dh_prog_grupos(dh_brassagem());
+            foreach ((array) ($_POST['lup'] ?? []) as $g => $txt) {
+                if (!isset($grupos[$g])) {
+                    continue;
+                }
+                $l = [];
+                foreach (preg_split('/\r?\n/', (string) $txt) as $ln) {
+                    if (preg_match('/^\s*(.+?)\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*(kg|g)?\s*$/iu', $ln, $m)) {
+                        $kg = (float) str_replace(',', '.', $m[2]) / (strtolower($m[3] ?? '') === 'g' ? 1000 : 1);
+                        if ($kg > 0) {
+                            $l[dh_insumo_lupulo($m[1])] = round($kg, 3);
+                        }
+                    }
+                }
+                if ($l) {
+                    $cfg['lupulos'][$g] = $l;
+                } else {
+                    unset($cfg['lupulos'][$g]);
+                }
+            }
+            $cfg['atualizado_em'] = date('Y-m-d H:i:s');
+            dh_insumos_cfg_salvar($cfg);
+            ir('./?acao=contagem-pedido#lupulo-receitas', 'Lúpulo por brassagem salvo.');
+
         case 'contagem-nova':
             exigir_post();
             exigir('contagem');
@@ -524,8 +568,26 @@ function contagem_tela_pedido(): void
       <?php if ($ped['sem']): ?><p class="aviso">Sem equivalência com os maltes da contagem (entram pelo nome da receita): <?= e(implode(', ', $ped['sem'])) ?>.</p><?php endif; ?>
       <?php if ($ped['sem_receita']): ?><p class="aviso">Sem receita em Receitas (entra só o lúpulo): <?= e(implode(', ', $ped['sem_receita'])) ?>.</p><?php endif; ?>
       <?php if ($mal || $lup): ?>
-        <p class="botoes-link"><a class="btn primario" href="https://wa.me/?text=<?= e(rawurlencode($txt)) ?>" target="_blank" rel="noopener">Enviar o pedido no WhatsApp</a>
+        <p class="botoes-link" id="enviar-pedido"><a class="btn primario" href="https://wa.me/?text=<?= e(rawurlencode($txt)) ?>" target="_blank" rel="noopener">Enviar o pedido no WhatsApp</a>
           <button type="button" class="btn secundario" onclick="navigator.clipboard.writeText(<?= e(json_encode($txt, JSON_UNESCAPED_UNICODE)) ?>).then(function () { alert('Pedido copiado!'); })">Copiar</button></p>
       <?php else: ?><p class="dica">O estoque dá conta do período: nada a pedir.</p><?php endif; ?>
+    
+      <?php $cfg = dh_insumos_cfg(); $gr = dh_prog_grupos($b); global $csrf; ?>
+      <details class="config-reservas" id="lupulo-receitas"<?= !$cfg['lupulos'] ? ' open' : '' ?>>
+        <summary>🌿 Lúpulo por brassagem de cada cerveja</summary>
+        <p class="dica">Quando a cerveja tem lúpulo aqui, a sugestão usa estes números no lugar dos da receita. Um lúpulo por linha, em kg por brassagem (ex.: <b>Citra 1,41</b>). New England fica de fora (5 kg do lúpulo de cada uma).<?= $cfg['atualizado_em'] !== '' ? ' Atualizado em ' . e(date('d/m/Y', strtotime($cfg['atualizado_em']))) . '.' : '' ?></p>
+        <form method="post" action="./?acao=insumos-importar" enctype="multipart/form-data" class="form-cerveja">
+          <?= $csrf ?>
+          <label>Importar a planilha de pedido de lúpulo (.xlsx) <small>(colunas Velas, APA, IPA, Soft, Asa, 4 X Lager, Miolo…; vale o bloco da Aldeota)</small><input type="file" name="planilha" accept=".xlsx" required></label>
+          <button class="btn secundario">📥 Importar planilha</button>
+        </form>
+        <form method="post" action="./?acao=insumos-salvar" class="form-cerveja ped-lup">
+          <?= $csrf ?>
+          <?php foreach ($gr as $k => $g): if ($k === 'newengland' || ($g['categoria'] === 'fora' && empty($cfg['lupulos'][$k]))) continue; ?>
+            <label><?= e($g['nome']) ?><textarea name="lup[<?= e($k) ?>]" rows="<?= max(1, count($cfg['lupulos'][$k] ?? [])) ?>" placeholder="(usa a receita)"><?= e(implode("\n", array_map(fn($n, $kg) => $n . ' ' . dh_num($kg), array_keys($cfg['lupulos'][$k] ?? []), $cfg['lupulos'][$k] ?? []))) ?></textarea></label>
+          <?php endforeach; ?>
+          <button class="btn primario">Salvar</button>
+        </form>
+      </details>
     <?php
 }
