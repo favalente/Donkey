@@ -484,6 +484,7 @@ function contagem_tela_ver(): void
         <a class="btn secundario" href="https://wa.me/?text=<?= e(rawurlencode($texto)) ?>" target="_blank" rel="noopener">Enviar no WhatsApp</a>
         <button type="button" class="btn secundario" onclick="window.print()">🖨 Imprimir</button>
         <a class="btn secundario" href="./?acao=contagem-editar&amp;id=<?= e($x['id']) ?>">✏️ Corrigir</a>
+        <?php if ($x['casa'] === 'fabrica' && pode('usuarios')): ?><a class="btn primario" href="./?acao=contagem-pedido">🧾 Sugestão de pedido</a><?php endif; ?>
       </p>
       <form method="post" action="./?acao=contagem-excluir" class="botoes-link" onsubmit="return confirm('Apagar esta contagem? Não dá para desfazer.');"><?= $csrf ?><input type="hidden" name="id" value="<?= e($x['id']) ?>"><button class="btn perigo">🗑 Apagar contagem</button></form>
       <?php foreach (dh_contagem_por_local($x['linhas']) as $local => $ls): ?>
